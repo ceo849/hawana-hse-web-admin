@@ -1,32 +1,41 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '@/src/lib/api-client';
-import { login } from '@/src/auth/api';
-import { authStorage } from '@/src/auth/storage';
+
+type LoginErrorPayload = {
+  message?: string | string[];
+  error?: string;
+};
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState('viewer@hawana.com');
   const [password, setPassword] = useState('Hawana@2026');
   const [result, setResult] = useState<string>('');
   const [healthStatus, setHealthStatus] = useState<string>('checking...');
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Contract Consumption Test (GET /v1/health)
   useEffect(() => {
     async function checkHealth() {
       try {
-        const data = await apiClient.get<{ status: string; timestamp: string }>(
-          '/health',
-        );
+        const data = await apiClient.get<{ status: string }>('/health');
         setHealthStatus(`OK: ${data.status}`);
-      } catch (err: any) {
-        setHealthStatus(`ERROR: ${err?.status ?? 'unknown'}`);
+      } catch {
+        setHealthStatus('ERROR');
       }
     }
-
     checkHealth();
   }, []);
+
+  function normalizeLoginError(data: LoginErrorPayload, status: number): string {
+    if (Array.isArray(data?.message)) return data.message.join(' | ');
+    if (typeof data?.message === 'string' && data.message.trim()) return data.message;
+    if (typeof data?.error === 'string' && data.error.trim()) return data.error;
+    return `Login failed (${status})`;
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,21 +43,19 @@ export default function LoginPage() {
     setResult('');
 
     try {
-      const data = await login({ email, password });
+      const r = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-      const token = data?.access_token;
-      if (!token) {
-        setResult('ERROR: token missing in response');
-        return;
+      const data: LoginErrorPayload = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        throw new Error(normalizeLoginError(data, r.status));
       }
 
-      authStorage.setAccessToken(token);
-
-      if (data.refresh_token) {
-        authStorage.setRefreshToken(data.refresh_token);
-      }
-
-      setResult(`SUCCESS: saved token, length = ${token.length}`);
+      router.replace('/dashboard');
     } catch (err: any) {
       setResult(`ERROR: ${err?.message ?? 'unknown error'}`);
     } finally {
