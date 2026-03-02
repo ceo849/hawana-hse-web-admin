@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 import Sidebar, { type SidebarNavItem } from '@/components/layout/sidebar';
 import { decodeJwtPayload } from '@/src/auth/jwt';
-import LogoutButton from './logout-button';
+import DashboardHeader from '@/components/layout/dashboard-header';
 
 type Role = 'OWNER' | 'MANAGER' | 'WORKER' | 'VIEWER' | 'UNKNOWN';
 
@@ -13,19 +14,20 @@ type NavItem = SidebarNavItem & {
 
 const NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', roles: ['OWNER', 'MANAGER', 'WORKER', 'VIEWER'] },
+
+  // ✅ Users يظهر فقط لـ OWNER + MANAGER
+  { href: '/dashboard/users', label: 'Users', roles: ['OWNER', 'MANAGER'] },
+
   { href: '/admin', label: 'Admin Panel', roles: ['OWNER'] },
 ];
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const cookieStore = cookies();
-  const accessToken = cookieStore.get('access_token')?.value;
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('access_token')?.value ?? null;
 
-  const payload = decodeJwtPayload(accessToken ?? null);
+  if (!accessToken) redirect('/login');
 
+  const payload = decodeJwtPayload(accessToken);
   const role = (payload?.role as Role | undefined) ?? 'UNKNOWN';
   const email = payload?.email ?? undefined;
 
@@ -33,29 +35,12 @@ export default async function DashboardLayout({
     .filter((item) => item.roles.includes(role))
     .map(({ href, label }) => ({ href, label }));
 
-  // stable title without relying on headers()
-  const title = navItems[0]?.label ?? 'Dashboard';
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui' }}>
       <Sidebar role={role} email={email} navItems={navItems} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <header
-          style={{
-            height: 56,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 16px',
-            borderBottom: '1px solid #eee',
-            background: '#fff',
-          }}
-        >
-          <div style={{ fontWeight: 700 }}>{title}</div>
-          <LogoutButton />
-        </header>
-
+        <DashboardHeader title="Dashboard" />
         <main style={{ padding: 24 }}>{children}</main>
       </div>
     </div>
