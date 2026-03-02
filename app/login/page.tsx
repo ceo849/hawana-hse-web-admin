@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/src/lib/api-client';
 
 type LoginErrorPayload = {
@@ -9,8 +9,26 @@ type LoginErrorPayload = {
   error?: string;
 };
 
+function normalizeNextPath(nextParam: string | null): string {
+  // default
+  if (!nextParam) return '/dashboard';
+
+  // لازم يكون internal path فقط (يبدأ بـ /) لتجنب open redirect
+  if (!nextParam.startsWith('/')) return '/dashboard';
+
+  // منع تحويل إلى api أو login (حالات سيئة/غير مفيدة)
+  if (nextParam.startsWith('/api')) return '/dashboard';
+  if (nextParam.startsWith('/login')) return '/dashboard';
+
+  return nextParam;
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const nextParam = searchParams.get('next');
+  const nextPath = useMemo(() => normalizeNextPath(nextParam), [nextParam]);
 
   const [email, setEmail] = useState('viewer@hawana.com');
   const [password, setPassword] = useState('Hawana@2026');
@@ -56,7 +74,7 @@ export default function LoginPage() {
       }
 
       // النجاح الحقيقي = cookies اتكتبت من route.ts (HttpOnly)
-      router.replace('/dashboard');
+      router.replace(nextPath);
       router.refresh();
     } catch (err: any) {
       setResult(`ERROR: ${err?.message ?? 'unknown error'}`);

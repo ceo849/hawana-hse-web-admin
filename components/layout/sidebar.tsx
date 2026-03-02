@@ -1,6 +1,9 @@
-import Link from 'next/link';
+'use client';
 
-export type NavItem = {
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+export type SidebarNavItem = {
   href: string;
   label: string;
 };
@@ -8,10 +11,12 @@ export type NavItem = {
 type SidebarProps = {
   role: string;
   email?: string;
-  navItems: NavItem[];
+  navItems?: SidebarNavItem[]; // مهم: optional
 };
 
-export default function Sidebar({ role, email, navItems }: SidebarProps) {
+export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
+  const pathname = usePathname();
+
   return (
     <aside
       style={{
@@ -35,22 +40,29 @@ export default function Sidebar({ role, email, navItems }: SidebarProps) {
       </div>
 
       <nav style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              textDecoration: 'none',
-              color: '#111',
-              padding: '8px 10px',
-              borderRadius: 10,
-              border: '1px solid #eee',
-              background: '#fff',
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.href !== '/' && pathname.startsWith(item.href + '/'));
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                textDecoration: 'none',
+                padding: '8px 10px',
+                borderRadius: 10,
+                border: '1px solid #eee',
+                background: isActive ? '#111' : '#fff',
+                color: isActive ? '#fff' : '#111',
+                fontWeight: isActive ? 700 : 500,
+              }}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

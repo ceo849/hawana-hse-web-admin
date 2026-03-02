@@ -6,7 +6,7 @@ import type { NextRequest } from 'next/server';
 const PUBLIC_PATHS = ['/login', '/favicon.ico'];
 
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
 
   // Allow public routes + Next internal assets + API routes
   if (
@@ -17,12 +17,16 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect dashboard only
+  // Protect dashboard
   if (pathname.startsWith('/dashboard')) {
     const token = request.cookies.get('access_token')?.value;
 
     if (!token) {
       const loginUrl = new URL('/login', request.url);
+
+      // 👇 أهم سطر: حفظ الصفحة المطلوبة
+      loginUrl.searchParams.set('next', `${pathname}${search}`);
+
       return NextResponse.redirect(loginUrl);
     }
   }
