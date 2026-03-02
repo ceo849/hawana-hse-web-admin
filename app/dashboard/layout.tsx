@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 
 import Sidebar, { type SidebarNavItem } from '@/components/layout/sidebar';
 import { decodeJwtPayload } from '@/src/auth/jwt';
-
 import LogoutButton from './logout-button';
 
 type Role = 'OWNER' | 'MANAGER' | 'WORKER' | 'VIEWER' | 'UNKNOWN';
@@ -34,6 +33,9 @@ export default async function DashboardLayout({
     .filter((item) => item.roles.includes(role))
     .map(({ href, label }) => ({ href, label }));
 
+  // stable title without relying on headers()
+  const title = navItems[0]?.label ?? 'Dashboard';
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui' }}>
       <Sidebar role={role} email={email} navItems={navItems} />
@@ -50,7 +52,7 @@ export default async function DashboardLayout({
             background: '#fff',
           }}
         >
-          <div style={{ fontWeight: 700 }}>Dashboard</div>
+          <div style={{ fontWeight: 700 }}>{title}</div>
           <LogoutButton />
         </header>
 
