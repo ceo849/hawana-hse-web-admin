@@ -2,6 +2,9 @@
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
+// default timeout (ms) — تقدر تغيّره من env لاحقًا لو حبيت
+const DEFAULT_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 15_000);
+
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export type ApiError = {
@@ -41,11 +44,20 @@ function normalizeErrorMessage(err: ApiError): string {
   return `Request failed (${err?.status ?? 'unknown'})`;
 }
 
+function makeTimeoutError(timeoutMs: number): ApiError {
+  return {
+    status: 408,
+    message: `Request timeout after ${timeoutMs}ms`,
+    error: 'RequestTimeout',
+  };
+}
+
 async function request<T>(
   path: string,
   method: HttpMethod,
   body?: unknown,
   accessToken?: string,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
   const url = buildUrl(path);
 
@@ -62,29 +74,45 @@ async function request<T>(
 
   const hasBody = body !== undefined && method !== 'GET' && method !== 'DELETE';
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    credentials: 'include',
-    body: hasBody ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const contentType = response.headers.get('content-type') ?? '';
-  const isJson = contentType.includes('application/json');
+  try {
+    const response = await fetch(url, {
+      method,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+      body: hasBody ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+    });
 
-  if (!response.ok) {
-    const payload = isJson ? await response.json().catch(() => ({})) : {};
-    const err: ApiError = { status: response.status, ...(payload ?? {}) };
-    (err as any).message = normalizeErrorMessage(err);
-    throw err;
+    const contentType = response.headers.get('content-type') ?? '';
+    const isJson = contentType.includes('application/json');
+
+    if (!response.ok) {
+      const payload = isJson ? await response.json().catch(() => ({})) : {};
+      const err: ApiError = { status: response.status, ...(payload ?? {}) };
+      (err as any).message = normalizeErrorMessage(err);
+      throw err;
+    }
+
+    if (!isJson) {
+      // @ts-expect-error allow non-json responses if needed later
+      return (await response.text()) as T;
+    }
+
+    return (await response.json()) as T;
+  } catch (e: any) {
+    // Abort => Timeout
+    if (e?.name === 'AbortError') {
+      const err = makeTimeoutError(timeoutMs);
+      (err as any).message = normalizeErrorMessage(err);
+      throw err;
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-
-  if (!isJson) {
-    // @ts-expect-error allow non-json responses if needed later
-    return (await response.text()) as T;
-  }
-
-  return (await response.json()) as T;
 }
 
 export const apiClient = {

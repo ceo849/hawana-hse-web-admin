@@ -55,7 +55,9 @@ export default function LoginPage() {
         throw new Error(normalizeLoginError(data, r.status));
       }
 
+      // النجاح الحقيقي = cookies اتكتبت من route.ts (HttpOnly)
       router.replace('/dashboard');
+      router.refresh();
     } catch (err: any) {
       setResult(`ERROR: ${err?.message ?? 'unknown error'}`);
     } finally {
@@ -80,6 +82,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              inputMode="email"
             />
           </div>
 
