@@ -1,4 +1,3 @@
-// app/api/safety-reports/route.ts
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
@@ -6,7 +5,10 @@ const CORE_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
 ).replace(/\/$/, '');
 
-export async function GET() {
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value ?? null;
 
@@ -14,17 +16,18 @@ export async function GET() {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const upstream = await fetch(`${CORE_BASE_URL}/v1/safety-reports`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: 'no-store',
-  });
+  const upstream = await fetch(
+    `${CORE_BASE_URL}/v1/safety-reports/${params.id}`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    }
+  );
 
-  const bodyText = await upstream.text();
+  const body = await upstream.text();
 
-  return new NextResponse(bodyText, {
+  return new NextResponse(body, {
     status: upstream.status,
     headers: {
       'content-type':
