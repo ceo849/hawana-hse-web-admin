@@ -18,6 +18,8 @@ const NAV: NavItem[] = [
   // ✅ Users يظهر فقط لـ OWNER + MANAGER
   { href: '/dashboard/users', label: 'Users', roles: ['OWNER', 'MANAGER'] },
 
+  { href: '/dashboard/safety-reports', label: 'Safety Reports', roles: ['OWNER', 'MANAGER', 'WORKER', 'VIEWER'] },
+
   { href: '/admin', label: 'Admin Panel', roles: ['OWNER'] },
 ];
 
