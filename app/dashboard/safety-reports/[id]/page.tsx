@@ -1,4 +1,5 @@
 // app/dashboard/safety-reports/[id]/page.tsx
+import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -17,7 +18,12 @@ type SafetyReport = {
   updatedAt?: string | null;
 };
 
-type ActionPlanStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | string;
+type ActionPlanStatus =
+  | 'OPEN'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'VERIFIED'
+  | string;
 
 type ActionPlan = {
   id: string;
@@ -27,17 +33,9 @@ type ActionPlan = {
   createdAt?: string | null;
 };
 
-function getCookieValue(cookieStore: any, name: string): string | null {
-  if (cookieStore && typeof cookieStore.get === 'function') {
-    return cookieStore.get(name)?.value ?? null;
-  }
-  if (cookieStore && typeof cookieStore[Symbol.iterator] === 'function') {
-    for (const entry of cookieStore as any) {
-      if (Array.isArray(entry) && entry[0] === name) return entry?.[1]?.value ?? null;
-    }
-  }
-  return null;
-}
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
 
 async function safeText(res: Response): Promise<string> {
   try {
@@ -47,17 +45,21 @@ async function safeText(res: Response): Promise<string> {
   }
 }
 
-export default async function SafetyReportDetailPage(props: { params: any }) {
+export default async function SafetyReportDetailPage({
+  params,
+}: PageProps) {
   const cookieStore = await cookies();
-  const token = getCookieValue(cookieStore, 'access_token');
+  const token = cookieStore.get('access_token')?.value ?? null;
+
   if (!token) redirect('/login');
 
-  const id = String(props?.params?.id ?? '').trim();
-  if (!id) redirect('/dashboard/safety-reports');
+  const { id } = await params;
+  const safeId = String(id ?? '').trim();
 
-  // ---- Load Safety Report ----
+  if (!safeId) redirect('/dashboard/safety-reports');
+
   const srRes = await fetch(
-    `${CORE_BASE_URL}/v1/safety-reports/${encodeURIComponent(id)}`,
+    `${CORE_BASE_URL}/v1/safety-reports/${encodeURIComponent(safeId)}`,
     {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
@@ -69,6 +71,7 @@ export default async function SafetyReportDetailPage(props: { params: any }) {
 
   if (!srRes.ok) {
     const text = await safeText(srRes);
+
     return (
       <div style={{ fontFamily: 'system-ui', padding: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 12 }}>
@@ -86,21 +89,24 @@ export default async function SafetyReportDetailPage(props: { params: any }) {
 ${text}`}</pre>
 
         <div style={{ marginTop: 14 }}>
-          <a href="/dashboard/safety-reports" style={{ textDecoration: 'underline' }}>
+          <Link
+            href="/dashboard/safety-reports"
+            style={{ textDecoration: 'underline' }}
+          >
             ← Back to Safety Reports
-          </a>
+          </Link>
         </div>
       </div>
     );
   }
 
-  const sr = (await srRes.json()) as SafetyReport;
+  const safetyReport = (await srRes.json()) as SafetyReport;
 
-  // ---- Load related action plans ----
   let actionPlans: ActionPlan[] = [];
+
   try {
     const apUrl = new URL(`${CORE_BASE_URL}/v1/action-plans`);
-    apUrl.searchParams.set('safetyReportId', sr.id);
+    apUrl.searchParams.set('safetyReportId', safetyReport.id);
 
     const apRes = await fetch(apUrl.toString(), {
       method: 'GET',
@@ -113,8 +119,10 @@ ${text}`}</pre>
     if (apRes.ok) {
       const all = (await apRes.json()) as ActionPlan[];
       actionPlans = (Array.isArray(all) ? all : [])
-        .filter((ap) => ap?.safetyReportId === sr.id)
-        .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+        .filter((actionPlan) => actionPlan?.safetyReportId === safetyReport.id)
+        .sort((a, b) =>
+          String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')),
+        );
     }
   } catch {
     // ignore
@@ -135,8 +143,10 @@ ${text}`}</pre>
           flexWrap: 'wrap',
         }}
       >
-        <a
-          href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(sr.id)}`}
+        <Link
+          href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(
+            safetyReport.id,
+          )}`}
           style={{
             display: 'inline-block',
             padding: '10px 12px',
@@ -149,11 +159,14 @@ ${text}`}</pre>
           }}
         >
           + Create Action Plan
-        </a>
+        </Link>
 
-        <a href="/dashboard/safety-reports" style={{ textDecoration: 'underline' }}>
+        <Link
+          href="/dashboard/safety-reports"
+          style={{ textDecoration: 'underline' }}
+        >
           ← Back
-        </a>
+        </Link>
       </div>
 
       <div
@@ -166,12 +179,12 @@ ${text}`}</pre>
         }}
       >
         <div style={{ display: 'grid', gap: 10 }}>
-          <Row label="ID" value={sr.id} />
-          <Row label="Title" value={sr.title ?? '-'} />
-          <Row label="Status" value={sr.status ?? '-'} />
-          <Row label="Description" value={sr.description ?? '-'} />
-          <Row label="Created" value={sr.createdAt ?? '-'} />
-          <Row label="Updated" value={sr.updatedAt ?? '-'} />
+          <Row label="ID" value={safetyReport.id} />
+          <Row label="Title" value={safetyReport.title ?? '-'} />
+          <Row label="Status" value={safetyReport.status ?? '-'} />
+          <Row label="Description" value={safetyReport.description ?? '-'} />
+          <Row label="Created" value={safetyReport.createdAt ?? '-'} />
+          <Row label="Updated" value={safetyReport.updatedAt ?? '-'} />
         </div>
       </div>
 
@@ -186,9 +199,9 @@ ${text}`}</pre>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
-            {actionPlans.map((ap) => (
+            {actionPlans.map((actionPlan) => (
               <div
-                key={ap.id}
+                key={actionPlan.id}
                 style={{
                   border: '1px solid #eee',
                   borderRadius: 12,
@@ -196,17 +209,19 @@ ${text}`}</pre>
                   background: '#fff',
                 }}
               >
-                <div style={{ fontWeight: 900 }}>{ap.title}</div>
+                <div style={{ fontWeight: 900 }}>{actionPlan.title}</div>
                 <div style={{ marginTop: 6, fontSize: 13 }}>
-                  <b>Status:</b> {ap.status ?? '—'}
+                  <b>Status:</b> {actionPlan.status ?? '—'}
                 </div>
                 <div style={{ marginTop: 10 }}>
-                  <a
-                    href={`/dashboard/action-plans/${encodeURIComponent(ap.id)}`}
+                  <Link
+                    href={`/dashboard/action-plans/${encodeURIComponent(
+                      actionPlan.id,
+                    )}`}
                     style={{ textDecoration: 'underline' }}
                   >
                     View
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}

@@ -13,6 +13,12 @@ export type ApiError = {
   error?: string;
 };
 
+type ErrorPayload = {
+  message?: string | string[];
+  error?: string;
+  [key: string]: unknown;
+};
+
 function buildUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
@@ -72,7 +78,8 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const hasBody = body !== undefined && method !== 'GET' && method !== 'DELETE';
+  const hasBody =
+    body !== undefined && method !== 'GET' && method !== 'DELETE';
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -83,16 +90,28 @@ async function request<T>(
       headers,
       credentials: 'include',
       signal: controller.signal,
-      body: hasBody ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+      body: hasBody
+        ? typeof body === 'string'
+          ? body
+          : JSON.stringify(body)
+        : undefined,
     });
 
     const contentType = response.headers.get('content-type') ?? '';
     const isJson = contentType.includes('application/json');
 
     if (!response.ok) {
-      const payload = isJson ? await response.json().catch(() => ({})) : {};
-      const err: ApiError = { status: response.status, ...(payload ?? {}) };
-      (err as any).message = normalizeErrorMessage(err);
+      const payload: ErrorPayload = isJson
+        ? await response.json().catch(() => ({}))
+        : {};
+
+      const err: ApiError = {
+        status: response.status,
+        message: payload.message,
+        error: payload.error,
+      };
+
+      err.message = normalizeErrorMessage(err);
       throw err;
     }
 
@@ -101,10 +120,10 @@ async function request<T>(
     }
 
     return (await response.json()) as T;
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
       const err = makeTimeoutError(timeoutMs);
-      (err as any).message = normalizeErrorMessage(err);
+      err.message = normalizeErrorMessage(err);
       throw err;
     }
 

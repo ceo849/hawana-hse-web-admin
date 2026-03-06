@@ -11,8 +11,13 @@ export default function Home() {
       try {
         const data = await apiClient.get<{ status: string }>('/health');
         setStatus(`OK: ${data.status}`);
-      } catch (err: any) {
-        setStatus(`ERROR: ${err?.status ?? 'unknown'}`);
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'status' in err) {
+          const e = err as { status?: number };
+          setStatus(`ERROR: ${e.status ?? 'unknown'}`);
+        } else {
+          setStatus('ERROR: unknown');
+        }
       }
     }
 

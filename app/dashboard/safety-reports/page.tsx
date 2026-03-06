@@ -1,6 +1,7 @@
 // app/dashboard/safety-reports/page.tsx
-import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 const CORE_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
@@ -24,24 +25,17 @@ type SafetyReportsResponse = {
   };
 };
 
-function toInt(v: unknown, fallback: number) {
-  const n = Number(v);
+type SearchParams = {
+  page?: string;
+  limit?: string;
+};
+
+function toInt(value: unknown, fallback: number): number {
+  const n = Number(value);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
 
-function getCookieValue(cookieStore: any, name: string): string | null {
-  if (cookieStore && typeof cookieStore.get === 'function') {
-    return cookieStore.get(name)?.value ?? null;
-  }
-  if (cookieStore && typeof cookieStore[Symbol.iterator] === 'function') {
-    for (const entry of cookieStore as any) {
-      if (Array.isArray(entry) && entry[0] === name) return entry?.[1]?.value ?? null;
-    }
-  }
-  return null;
-}
-
-async function safeText(res: Response) {
+async function safeText(res: Response): Promise<string> {
   try {
     return (await res.text()).trim();
   } catch {
@@ -49,14 +43,19 @@ async function safeText(res: Response) {
   }
 }
 
-export default async function SafetyReportsPage(props: { searchParams?: any }) {
+export default async function SafetyReportsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>;
+}) {
   const cookieStore = await cookies();
-  const token = getCookieValue(cookieStore, 'access_token');
+  const token = cookieStore.get('access_token')?.value ?? null;
+
   if (!token) redirect('/login');
 
-  const sp = props.searchParams ?? {};
-  const page = toInt(sp?.page ?? '1', 1);
-  const limit = Math.min(Math.max(toInt(sp?.limit ?? '20', 20), 1), 100);
+  const sp = (await searchParams) ?? {};
+  const page = toInt(sp.page ?? '1', 1);
+  const limit = Math.min(Math.max(toInt(sp.limit ?? '20', 20), 1), 100);
 
   const url = new URL(`${CORE_BASE_URL}/v1/safety-reports`);
   url.searchParams.set('page', String(page));
@@ -72,6 +71,7 @@ export default async function SafetyReportsPage(props: { searchParams?: any }) {
 
   if (!res.ok) {
     const text = await safeText(res);
+
     return (
       <div style={{ fontFamily: 'system-ui' }}>
         <Header />
@@ -124,13 +124,16 @@ ${text}`}</pre>
         {items.length === 0 ? (
           <div style={{ padding: 14 }}>No safety reports.</div>
         ) : (
-          items.map((r) => {
-            const created = r.createdAt ? new Date(r.createdAt).toLocaleString() : '-';
-            const status = (r.status ?? 'UNKNOWN').toUpperCase();
+          items.map((report) => {
+            const created = report.createdAt
+              ? new Date(report.createdAt).toLocaleString()
+              : '-';
+
+            const status = (report.status ?? 'UNKNOWN').toUpperCase();
 
             return (
               <div
-                key={r.id}
+                key={report.id}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1.2fr 140px 180px 120px',
@@ -141,9 +144,11 @@ ${text}`}</pre>
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700 }}>{r.title ?? 'Untitled'}</div>
+                  <div style={{ fontWeight: 700 }}>
+                    {report.title ?? 'Untitled'}
+                  </div>
                   <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
-                    {r.description ?? '-'}
+                    {report.description ?? '-'}
                   </div>
                 </div>
 
@@ -166,7 +171,9 @@ ${text}`}</pre>
                 <div style={{ fontSize: 13, color: '#444' }}>{created}</div>
 
                 <div>
-                  <a href={`/dashboard/safety-reports/${r.id}`}>View</a>
+                  <Link href={`/dashboard/safety-reports/${report.id}`}>
+                    View
+                  </Link>
                 </div>
               </div>
             );
@@ -191,9 +198,11 @@ function Header() {
         marginBottom: 16,
       }}
     >
-      <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>Safety Reports</h1>
+      <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>
+        Safety Reports
+      </h1>
 
-      <a
+      <Link
         href="/dashboard/safety-reports/new"
         style={{
           padding: '10px 14px',
@@ -204,7 +213,7 @@ function Header() {
         }}
       >
         New Safety Report
-      </a>
+      </Link>
     </div>
   );
 }

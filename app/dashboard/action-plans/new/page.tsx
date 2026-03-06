@@ -1,12 +1,15 @@
 // app/dashboard/action-plans/new/page.tsx
-import { redirect } from "next/navigation";
-import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
+import { redirect } from 'next/navigation';
+import { requireAccessToken } from '@/lib/server-auth';
+import { api } from '@/lib/core-api';
+
+type PageSearchParams = {
+  safetyReportId?: string;
+  err?: string;
+};
 
 type PageProps = {
-  searchParams?:
-    | { safetyReportId?: string; err?: string }
-    | Promise<{ safetyReportId?: string; err?: string }>;
+  searchParams?: PageSearchParams | Promise<PageSearchParams>;
 };
 
 type UserLite = {
@@ -16,100 +19,122 @@ type UserLite = {
   role?: string | null;
 };
 
-function userLabel(u: UserLite) {
-  const name = (u.fullName ?? "").trim();
-  const email = (u.email ?? "").trim();
+type UsersApiResponse = UserLite[] | { data?: UserLite[] };
+
+type ActionPlanPayload = {
+  title: string;
+  description: string;
+  safetyReportId: string;
+  dueDate?: string;
+  assignedToUserId?: string;
+};
+
+function userLabel(user: UserLite): string {
+  const name = (user.fullName ?? '').trim();
+  const email = (user.email ?? '').trim();
+
   if (name && email) return `${name} — ${email}`;
   if (name) return name;
-  return email || u.id;
+  return email || user.id;
+}
+
+function normalizeUsersResponse(data: UsersApiResponse): UserLite[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
 }
 
 export default async function NewActionPlanPage({ searchParams }: PageProps) {
-  // تأكد إن المستخدم داخل (JWT من cookies)
   const token = await requireAccessToken();
 
-  // Next 16: searchParams ممكن يجي Promise
   const sp = await Promise.resolve(searchParams ?? {});
-  const safetyReportId = String(sp?.safetyReportId ?? "").trim();
-  const err = String(sp?.err ?? "").trim();
+  const safetyReportId = String(sp.safetyReportId ?? '').trim();
+  const err = String(sp.err ?? '').trim();
 
-  // Load users for dropdown (best-effort)
   let users: UserLite[] = [];
+
   try {
-    const r = await fetch(api("/v1/users"), {
-      method: "GET",
+    const response = await fetch(api('/v1/users'), {
+      method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
+      cache: 'no-store',
     });
 
-    if (r.ok) {
-      const data = (await r.json()) as any;
-      users = Array.isArray(data) ? (data as UserLite[]) : [];
+    if (response.ok) {
+      const data = (await response.json()) as UsersApiResponse;
+      users = normalizeUsersResponse(data);
     }
   } catch {
     // ignore
   }
 
   async function createActionPlan(formData: FormData) {
-    "use server";
+    'use server';
 
     const tokenInner = await requireAccessToken();
 
-    const title = String(formData.get("title") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
-    const srId = String(formData.get("safetyReportId") ?? "").trim();
-    const dueDateRaw = String(formData.get("dueDate") ?? "").trim(); // YYYY-MM-DD or ""
-    const assignedToUserId = String(formData.get("assignedToUserId") ?? "").trim();
+    const title = String(formData.get('title') ?? '').trim();
+    const description = String(formData.get('description') ?? '').trim();
+    const srId = String(formData.get('safetyReportId') ?? '').trim();
+    const dueDateRaw = String(formData.get('dueDate') ?? '').trim();
+    const assignedToUserId = String(formData.get('assignedToUserId') ?? '').trim();
 
     const base = `/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(
-      srId || safetyReportId
+      srId || safetyReportId,
     )}`;
 
-    if (!title) redirect(`${base}&err=${encodeURIComponent("Title is required")}`);
-    if (!srId) redirect(`${base}&err=${encodeURIComponent("Safety Report ID is required")}`);
+    if (!title) {
+      redirect(`${base}&err=${encodeURIComponent('Title is required')}`);
+    }
 
-    const payload: Record<string, any> = {
+    if (!srId) {
+      redirect(
+        `${base}&err=${encodeURIComponent('Safety Report ID is required')}`,
+      );
+    }
+
+    const payload: ActionPlanPayload = {
       title,
       description,
       safetyReportId: srId,
     };
 
-    // اختياري: dueDate
     if (dueDateRaw) {
-      payload.dueDate = new Date(`${dueDateRaw}T00:00:00.000Z`).toISOString();
+      payload.dueDate = new Date(
+        `${dueDateRaw}T00:00:00.000Z`,
+      ).toISOString();
     }
 
-    // اختياري: assignedToUserId
     if (assignedToUserId) {
       payload.assignedToUserId = assignedToUserId;
     }
 
-    const res = await fetch(api("/v1/action-plans"), {
-      method: "POST",
+    const res = await fetch(api('/v1/action-plans'), {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${tokenInner}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      cache: "no-store",
+      cache: 'no-store',
     });
 
-    if (res.status === 401) redirect("/login");
+    if (res.status === 401) redirect('/login');
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
+      const text = await res.text().catch(() => '');
       redirect(
         `${base}&err=${encodeURIComponent(
-          `Failed to create Action Plan (${res.status}) ${text}`
-        )}`
+          `Failed to create Action Plan (${res.status}) ${text}`,
+        )}`,
       );
     }
 
-    redirect("/dashboard/action-plans");
+    redirect('/dashboard/action-plans');
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui" }}>
+    <div style={{ padding: 40, fontFamily: 'system-ui' }}>
       <h1 style={{ fontSize: 42, fontWeight: 900, marginBottom: 12 }}>
         Create Action Plan
       </h1>
@@ -120,9 +145,9 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
             marginBottom: 16,
             padding: 12,
             borderRadius: 12,
-            background: "#fff5f5",
-            border: "1px solid #ffd6d6",
-            color: "#b00020",
+            background: '#fff5f5',
+            border: '1px solid #ffd6d6',
+            color: '#b00020',
             fontWeight: 700,
           }}
         >
@@ -136,11 +161,11 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           placeholder="Title"
           required
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             marginBottom: 12,
             borderRadius: 10,
-            border: "1px solid #ddd",
+            border: '1px solid #ddd',
           }}
         />
 
@@ -151,20 +176,20 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           defaultValue={safetyReportId}
           readOnly
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             marginBottom: 8,
             borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "#f7f7f7",
+            border: '1px solid #ddd',
+            background: '#f7f7f7',
           }}
         />
 
-        <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
           Safety Report ID يتم تمريره تلقائيًا من صفحة الـ Safety Report.
         </div>
 
-        <label style={{ display: "block", fontSize: 12, color: "#666" }}>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>
           Assigned To (User) (اختياري)
         </label>
 
@@ -173,19 +198,19 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
             name="assignedToUserId"
             defaultValue=""
             style={{
-              width: "100%",
-              padding: "16px",
+              width: '100%',
+              padding: '16px',
               marginTop: 6,
               marginBottom: 12,
               borderRadius: 10,
-              border: "1px solid #ddd",
-              background: "#fff",
+              border: '1px solid #ddd',
+              background: '#fff',
             }}
           >
             <option value="">— Not assigned —</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {userLabel(u)}
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {userLabel(user)}
               </option>
             ))}
           </select>
@@ -194,12 +219,12 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
             name="assignedToUserId"
             placeholder="User ID responsible for this action"
             style={{
-              width: "100%",
-              padding: "16px",
+              width: '100%',
+              padding: '16px',
               marginTop: 6,
               marginBottom: 12,
               borderRadius: 10,
-              border: "1px solid #ddd",
+              border: '1px solid #ddd',
             }}
           />
         )}
@@ -209,15 +234,15 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           placeholder="Description"
           rows={5}
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             marginBottom: 12,
             borderRadius: 10,
-            border: "1px solid #ddd",
+            border: '1px solid #ddd',
           }}
         />
 
-        <label style={{ display: "block", fontSize: 12, color: "#666" }}>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>
           Due Date (اختياري)
         </label>
 
@@ -225,26 +250,26 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           type="date"
           name="dueDate"
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             marginTop: 6,
             marginBottom: 16,
             borderRadius: 10,
-            border: "1px solid #ddd",
+            border: '1px solid #ddd',
           }}
         />
 
         <button
           type="submit"
           style={{
-            width: "100%",
-            padding: "16px",
+            width: '100%',
+            padding: '16px',
             borderRadius: 12,
-            border: "none",
-            background: "#111",
-            color: "#fff",
+            border: 'none',
+            background: '#111',
+            color: '#fff',
             fontWeight: 700,
-            cursor: "pointer",
+            cursor: 'pointer',
           }}
         >
           Create

@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 type ApiErrorBody = {
   statusCode?: number;
@@ -12,33 +13,33 @@ type ApiErrorBody = {
 };
 
 function extractErrorMessage(text: string): string {
-  const t = (text ?? "").trim();
-  if (!t) return "Request failed";
+  const trimmed = text.trim();
+  if (!trimmed) return 'Request failed';
 
-  // لو السيرفر رجّع JSON (ValidationPipe / GlobalExceptionFilter)
   try {
-    const j = JSON.parse(t) as ApiErrorBody;
-    const msg = j?.message;
+    const parsed = JSON.parse(trimmed) as ApiErrorBody;
+    const message = parsed.message;
 
-    if (Array.isArray(msg)) return msg.join("\n");
-    if (typeof msg === "string" && msg.trim()) return msg;
+    if (Array.isArray(message)) return message.join('\n');
+    if (typeof message === 'string' && message.trim()) return message;
 
-    if (typeof j?.error === "string" && j.error.trim()) return j.error;
+    if (typeof parsed.error === 'string' && parsed.error.trim()) {
+      return parsed.error;
+    }
   } catch {
-    // مش JSON → اعتبره نص
+    // non-JSON response
   }
 
-  return t;
+  return trimmed;
 }
 
 export default function NewSafetyReportPage() {
   const router = useRouter();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState('');
 
   const canSubmit = useMemo(() => {
     return title.trim().length > 0 && !loading;
@@ -49,37 +50,39 @@ export default function NewSafetyReportPage() {
     if (!canSubmit) return;
 
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
-      const r = await fetch("/api/safety-reports", {
-        method: "POST",
+      const response = await fetch('/api/safety-reports', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim() || undefined,
         }),
       });
 
-      if (r.status === 401) {
-        router.push("/login");
+      if (response.status === 401) {
+        router.push('/login');
         router.refresh();
         return;
       }
 
-      if (!r.ok) {
-        const text = await r.text().catch(() => "");
-        throw new Error(extractErrorMessage(text) || `Failed (${r.status})`);
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(
+          extractErrorMessage(text) || `Failed (${response.status})`,
+        );
       }
 
-      router.push("/dashboard/safety-reports");
+      router.push('/dashboard/safety-reports');
       router.refresh();
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Unexpected error";
+        err instanceof Error ? err.message : 'Unexpected error';
       setError(message);
     } finally {
       setLoading(false);
@@ -87,37 +90,37 @@ export default function NewSafetyReportPage() {
   }
 
   return (
-    <div style={{ fontFamily: "system-ui", maxWidth: 720 }}>
+    <div style={{ fontFamily: 'system-ui', maxWidth: 720 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0 }}>
           Create Safety Report
         </h1>
-        <div style={{ marginTop: 8, color: "#555", fontSize: 14 }}>
+        <div style={{ marginTop: 8, color: '#555', fontSize: 14 }}>
           Create a new safety report (server-side validation enforced).
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
         <div>
-          <label style={{ fontWeight: 700, display: "block" }}>Title</label>
+          <label style={{ fontWeight: 700, display: 'block' }}>Title</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
             placeholder="e.g., Unsafe condition near loading area"
             style={{
-              width: "100%",
+              width: '100%',
               marginTop: 6,
               padding: 12,
               borderRadius: 10,
-              border: "1px solid #d1d5db",
-              outline: "none",
+              border: '1px solid #d1d5db',
+              outline: 'none',
             }}
           />
         </div>
 
         <div>
-          <label style={{ fontWeight: 700, display: "block" }}>
+          <label style={{ fontWeight: 700, display: 'block' }}>
             Description
           </label>
           <textarea
@@ -126,13 +129,13 @@ export default function NewSafetyReportPage() {
             rows={8}
             placeholder="Details..."
             style={{
-              width: "100%",
+              width: '100%',
               marginTop: 6,
               padding: 12,
               borderRadius: 10,
-              border: "1px solid #d1d5db",
-              outline: "none",
-              resize: "vertical",
+              border: '1px solid #d1d5db',
+              outline: 'none',
+              resize: 'vertical',
             }}
           />
         </div>
@@ -143,49 +146,49 @@ export default function NewSafetyReportPage() {
               margin: 0,
               padding: 12,
               borderRadius: 12,
-              background: "#fff5f5",
-              border: "1px solid #fecaca",
-              color: "#991b1b",
+              background: '#fff5f5',
+              border: '1px solid #fecaca',
+              color: '#991b1b',
               fontSize: 13,
-              whiteSpace: "pre-wrap",
+              whiteSpace: 'pre-wrap',
             }}
           >
             {error}
           </pre>
         )}
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
             type="submit"
             disabled={!canSubmit}
             style={{
-              padding: "12px 14px",
+              padding: '12px 14px',
               borderRadius: 12,
-              border: "none",
-              background: "#111",
-              color: "#fff",
+              border: 'none',
+              background: '#111',
+              color: '#fff',
               fontWeight: 800,
-              cursor: canSubmit ? "pointer" : "not-allowed",
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
               opacity: canSubmit ? 1 : 0.6,
               minWidth: 180,
             }}
           >
-            {loading ? "Creating..." : "Create / Submit"}
+            {loading ? 'Creating...' : 'Create / Submit'}
           </button>
 
-          <a
+          <Link
             href="/dashboard/safety-reports"
             style={{
-              padding: "12px 14px",
+              padding: '12px 14px',
               borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              textDecoration: "none",
+              border: '1px solid #e5e7eb',
+              textDecoration: 'none',
               fontWeight: 800,
-              color: "#111",
+              color: '#111',
             }}
           >
             Cancel
-          </a>
+          </Link>
         </div>
       </form>
     </div>

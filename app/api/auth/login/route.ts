@@ -4,6 +4,20 @@ const CORE_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
 ).replace(/\/$/, '');
 
+type LoginRouteSuccess = {
+  access_token?: string;
+  accessToken?: string;
+  refresh_token?: string;
+  refreshToken?: string;
+};
+
+type LoginRouteError = {
+  message?: string | string[];
+  error?: string;
+};
+
+type LoginRouteResponse = LoginRouteSuccess & LoginRouteError;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -17,17 +31,14 @@ export async function POST(req: Request) {
       cache: 'no-store',
     });
 
-    const data = await upstream.json().catch(() => ({}));
+    const data: LoginRouteResponse = await upstream.json().catch(() => ({}));
 
     if (!upstream.ok) {
       return NextResponse.json(data, { status: upstream.status });
     }
 
-    const accessToken = String(
-      (data as any).access_token ?? (data as any).accessToken ?? '',
-    );
-    const refreshToken =
-      (data as any).refresh_token ?? (data as any).refreshToken ?? null;
+    const accessToken = String(data.access_token ?? data.accessToken ?? '');
+    const refreshToken = data.refresh_token ?? data.refreshToken ?? null;
 
     if (!accessToken) {
       return NextResponse.json(

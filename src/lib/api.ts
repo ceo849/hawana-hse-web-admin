@@ -4,6 +4,11 @@ type ApiFetchOptions = Omit<RequestInit, "headers"> & {
   headers?: Record<string, string>;
 };
 
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+};
+
 function getApiBaseUrl(): string {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -36,16 +41,23 @@ export async function apiFetch<T>(
   const isJson = contentType.includes("application/json");
 
   if (!res.ok) {
-    const body = isJson
+    const body: unknown = isJson
       ? await res.json().catch(() => null)
       : await res.text().catch(() => "");
 
-    const msg =
-      typeof body === "string" && body
-        ? body
-        : body && typeof body === "object" && "message" in body
-        ? String((body as any).message)
-        : `Request failed: ${res.status} ${res.statusText}`;
+    let msg: string;
+
+    if (typeof body === "string" && body) {
+      msg = body;
+    } else if (body && typeof body === "object") {
+      const err = body as ApiErrorBody;
+      msg =
+        err.message ??
+        err.error ??
+        `Request failed: ${res.status} ${res.statusText}`;
+    } else {
+      msg = `Request failed: ${res.status} ${res.statusText}`;
+    }
 
     throw new Error(msg);
   }
