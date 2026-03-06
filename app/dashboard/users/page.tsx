@@ -1,5 +1,5 @@
 // app/dashboard/users/page.tsx
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 type UserDto = {
@@ -26,12 +26,15 @@ export default async function UsersPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
 
-  // بوابة دخول: بدون توكن = Redirect
-  if (!token) {
-    redirect('/login');
-  }
+  if (!token) redirect('/login');
 
-  const r = await fetch('http://localhost:3000/api/users', {
+  // ✅ build absolute origin for server-side fetch
+  const h = await headers();
+  const host = h.get('host') ?? 'localhost:3000';
+  const proto = h.get('x-forwarded-proto') ?? 'http';
+  const origin = `${proto}://${host}`;
+
+  const r = await fetch(`${origin}/api/users`, {
     method: 'GET',
     cache: 'no-store',
     headers: {
@@ -51,15 +54,12 @@ export default async function UsersPage() {
             background: '#f7f7f7',
             borderRadius: 12,
           }}
-        >
-{`Failed to load users (${r.status})
-${text}`}
-        </pre>
+        >{`Failed to load users (${r.status})
+${text}`}</pre>
       </div>
     );
   }
 
-  // هنا التصحيح المهم
   const json = (await r.json()) as UsersResponse;
   const users: UserDto[] = Array.isArray(json?.data) ? json.data : [];
 
@@ -78,31 +78,13 @@ ${text}`}
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#fafafa' }}>
-              <th
-                style={{
-                  textAlign: 'left',
-                  padding: 12,
-                  borderBottom: '1px solid #eee',
-                }}
-              >
+              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #eee' }}>
                 Full Name
               </th>
-              <th
-                style={{
-                  textAlign: 'left',
-                  padding: 12,
-                  borderBottom: '1px solid #eee',
-                }}
-              >
+              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #eee' }}>
                 Email
               </th>
-              <th
-                style={{
-                  textAlign: 'left',
-                  padding: 12,
-                  borderBottom: '1px solid #eee',
-                }}
-              >
+              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #eee' }}>
                 Role
               </th>
             </tr>
@@ -117,15 +99,9 @@ ${text}`}
             ) : (
               users.map((u) => (
                 <tr key={u.id}>
-                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>
-                    {u.fullName}
-                  </td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>
-                    {u.email}
-                  </td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>
-                    {u.role}
-                  </td>
+                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>{u.fullName}</td>
+                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>{u.email}</td>
+                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>{u.role}</td>
                 </tr>
               ))
             )}

@@ -6,7 +6,11 @@ type ApiFetchOptions = Omit<RequestInit, "headers"> & {
 
 function getApiBaseUrl(): string {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!base) throw new Error("Missing NEXT_PUBLIC_API_BASE_URL in .env.local");
+
+  if (!base) {
+    throw new Error("Missing NEXT_PUBLIC_API_BASE_URL in .env.local");
+  }
+
   return base.replace(/\/$/, "");
 }
 
@@ -15,7 +19,10 @@ export async function apiFetch<T>(
   options: ApiFetchOptions = {},
 ): Promise<T> {
   const baseUrl = getApiBaseUrl();
-  const url = path.startsWith("http") ? path : `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  const url = path.startsWith("http")
+    ? path
+    : `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 
   const res = await fetch(url, {
     ...options,
@@ -29,19 +36,22 @@ export async function apiFetch<T>(
   const isJson = contentType.includes("application/json");
 
   if (!res.ok) {
-    const body = isJson ? await res.json().catch(() => null) : await res.text().catch(() => "");
+    const body = isJson
+      ? await res.json().catch(() => null)
+      : await res.text().catch(() => "");
+
     const msg =
       typeof body === "string" && body
         ? body
-        : body?.message
-          ? String(body.message)
-          : `Request failed: ${res.status} ${res.statusText}`;
+        : body && typeof body === "object" && "message" in body
+        ? String((body as any).message)
+        : `Request failed: ${res.status} ${res.statusText}`;
+
     throw new Error(msg);
   }
 
   if (!isJson) {
-    // @ts-expect-error allow non-json responses if needed later
-    return (await res.text()) as T;
+    return (await res.text()) as unknown as T;
   }
 
   return (await res.json()) as T;
