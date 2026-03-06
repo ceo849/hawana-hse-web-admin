@@ -33,28 +33,28 @@ function getCookieValue(cookieStore: any, name: string): string | null {
   if (cookieStore && typeof cookieStore.get === 'function') {
     return cookieStore.get(name)?.value ?? null;
   }
-
   if (cookieStore && typeof cookieStore[Symbol.iterator] === 'function') {
     for (const entry of cookieStore as any) {
-      if (Array.isArray(entry) && entry[0] === name) {
-        return entry?.[1]?.value ?? null;
-      }
+      if (Array.isArray(entry) && entry[0] === name) return entry?.[1]?.value ?? null;
     }
   }
-
   return null;
 }
 
-export default async function SafetyReportsPage(props: {
-  searchParams?: any;
-}) {
+async function safeText(res: Response) {
+  try {
+    return (await res.text()).trim();
+  } catch {
+    return '';
+  }
+}
+
+export default async function SafetyReportsPage(props: { searchParams?: any }) {
   const cookieStore = await cookies();
   const token = getCookieValue(cookieStore, 'access_token');
-
   if (!token) redirect('/login');
 
-  const sp = props.searchParams ? await props.searchParams : undefined;
-
+  const sp = props.searchParams ?? {};
   const page = toInt(sp?.page ?? '1', 1);
   const limit = Math.min(Math.max(toInt(sp?.limit ?? '20', 20), 1), 100);
 
@@ -71,34 +71,10 @@ export default async function SafetyReportsPage(props: {
   if (res.status === 401) redirect('/login');
 
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
+    const text = await safeText(res);
     return (
       <div style={{ fontFamily: 'system-ui' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 16,
-          }}
-        >
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>
-            Safety Reports
-          </h1>
-
-          <a
-            href="/dashboard/safety-reports/new"
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #e5e7eb',
-              textDecoration: 'none',
-              fontWeight: 700,
-            }}
-          >
-            New Safety Report
-          </a>
-        </div>
+        <Header />
 
         <pre
           style={{
@@ -106,6 +82,7 @@ export default async function SafetyReportsPage(props: {
             padding: 12,
             background: '#f7f7f7',
             borderRadius: 12,
+            overflowX: 'auto',
           }}
         >{`Failed to load safety reports (${res.status})
 ${text}`}</pre>
@@ -114,36 +91,12 @@ ${text}`}</pre>
   }
 
   const json = (await res.json()) as SafetyReportsResponse;
-  const items = json?.data ?? [];
+  const items = Array.isArray(json?.data) ? json.data : [];
   const meta = json?.meta ?? { total: 0, page, limit, totalPages: 1 };
 
   return (
     <div style={{ fontFamily: 'system-ui' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>
-          Safety Reports
-        </h1>
-
-        <a
-          href="/dashboard/safety-reports/new"
-          style={{
-            padding: '10px 14px',
-            borderRadius: 10,
-            border: '1px solid #e5e7eb',
-            textDecoration: 'none',
-            fontWeight: 700,
-          }}
-        >
-          New Safety Report
-        </a>
-      </div>
+      <Header />
 
       <div
         style={{
@@ -172,9 +125,8 @@ ${text}`}</pre>
           <div style={{ padding: 14 }}>No safety reports.</div>
         ) : (
           items.map((r) => {
-            const created = r.createdAt
-              ? new Date(r.createdAt).toLocaleString()
-              : '-';
+            const created = r.createdAt ? new Date(r.createdAt).toLocaleString() : '-';
+            const status = (r.status ?? 'UNKNOWN').toUpperCase();
 
             return (
               <div
@@ -189,9 +141,7 @@ ${text}`}</pre>
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700 }}>
-                    {r.title ?? 'Untitled'}
-                  </div>
+                  <div style={{ fontWeight: 700 }}>{r.title ?? 'Untitled'}</div>
                   <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
                     {r.description ?? '-'}
                   </div>
@@ -209,18 +159,14 @@ ${text}`}</pre>
                       border: '1px solid #e5e7eb',
                     }}
                   >
-                    {(r.status ?? 'UNKNOWN').toUpperCase()}
+                    {status}
                   </span>
                 </div>
 
-                <div style={{ fontSize: 13, color: '#444' }}>
-                  {created}
-                </div>
+                <div style={{ fontSize: 13, color: '#444' }}>{created}</div>
 
                 <div>
-                  <a href={`/dashboard/safety-reports/${r.id}`}>
-                    View
-                  </a>
+                  <a href={`/dashboard/safety-reports/${r.id}`}>View</a>
                 </div>
               </div>
             );
@@ -231,6 +177,34 @@ ${text}`}</pre>
       <div style={{ marginTop: 14, fontSize: 13, color: '#444' }}>
         Page {meta.page} / {meta.totalPages} — Total: {meta.total}
       </div>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+      }}
+    >
+      <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>Safety Reports</h1>
+
+      <a
+        href="/dashboard/safety-reports/new"
+        style={{
+          padding: '10px 14px',
+          borderRadius: 10,
+          border: '1px solid #e5e7eb',
+          textDecoration: 'none',
+          fontWeight: 700,
+        }}
+      >
+        New Safety Report
+      </a>
     </div>
   );
 }

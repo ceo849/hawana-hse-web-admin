@@ -11,11 +11,15 @@ export type SidebarNavItem = {
 type SidebarProps = {
   role: string;
   email?: string;
-  navItems?: SidebarNavItem[]; // مهم: optional
+  navItems?: SidebarNavItem[];
 };
 
 export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
   const pathname = usePathname();
+
+  const uniqueItems = Array.from(
+    new Map(navItems.map((i) => [i.href, i])).values()
+  );
 
   return (
     <aside
@@ -40,7 +44,7 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
       </div>
 
       <nav style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-        {navItems.map((item) => {
+        {uniqueItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href + '/'));

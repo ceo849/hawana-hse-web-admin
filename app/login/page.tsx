@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiClient } from '@/src/lib/api-client';
 
 type LoginErrorPayload = {
@@ -10,21 +10,14 @@ type LoginErrorPayload = {
 };
 
 function normalizeNextPath(nextParam: string | null): string {
-  // default
   if (!nextParam) return '/dashboard';
-
-  // لازم يكون internal path فقط (يبدأ بـ /) لتجنب open redirect
   if (!nextParam.startsWith('/')) return '/dashboard';
-
-  // منع تحويل إلى api أو login (حالات سيئة/غير مفيدة)
   if (nextParam.startsWith('/api')) return '/dashboard';
   if (nextParam.startsWith('/login')) return '/dashboard';
-
   return nextParam;
 }
 
-export default function LoginPage() {
-  const router = useRouter();
+function LoginPageInner() {
   const searchParams = useSearchParams();
 
   const nextParam = searchParams.get('next');
@@ -32,8 +25,8 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('viewer@hawana.com');
   const [password, setPassword] = useState('Hawana@2026');
-  const [result, setResult] = useState<string>('');
-  const [healthStatus, setHealthStatus] = useState<string>('checking...');
+  const [result, setResult] = useState('');
+  const [healthStatus, setHealthStatus] = useState('checking...');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,18 +38,27 @@ export default function LoginPage() {
         setHealthStatus('ERROR');
       }
     }
+
     checkHealth();
   }, []);
 
-  function normalizeLoginError(data: LoginErrorPayload, status: number): string {
+  function normalizeLoginError(
+    data: LoginErrorPayload,
+    status: number,
+  ): string {
     if (Array.isArray(data?.message)) return data.message.join(' | ');
-    if (typeof data?.message === 'string' && data.message.trim()) return data.message;
-    if (typeof data?.error === 'string' && data.error.trim()) return data.error;
+    if (typeof data?.message === 'string' && data.message.trim()) {
+      return data.message;
+    }
+    if (typeof data?.error === 'string' && data.error.trim()) {
+      return data.error;
+    }
     return `Login failed (${status})`;
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function doLogin() {
+    if (loading) return;
+
     setLoading(true);
     setResult('');
 
@@ -64,6 +66,7 @@ export default function LoginPage() {
       const r = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -73,12 +76,12 @@ export default function LoginPage() {
         throw new Error(normalizeLoginError(data, r.status));
       }
 
-      // النجاح الحقيقي = cookies اتكتبت من route.ts (HttpOnly)
-      router.replace(nextPath);
-      router.refresh();
-    } catch (err: any) {
-      setResult(`ERROR: ${err?.message ?? 'unknown error'}`);
-    } finally {
+      window.location.assign(nextPath);
+      return;
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'unknown error';
+      setResult(`ERROR: ${message}`);
       setLoading(false);
     }
   }
@@ -92,7 +95,7 @@ export default function LoginPage() {
           API Status: <strong>{healthStatus}</strong>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Email</label>
             <input
@@ -117,12 +120,13 @@ export default function LoginPage() {
 
           <button
             className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-            type="submit"
+            type="button"
             disabled={loading}
+            onClick={doLogin}
           >
             {loading ? 'Loading...' : 'Login'}
           </button>
-        </form>
+        </div>
 
         {result && (
           <pre className="mt-4 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm">
@@ -131,5 +135,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

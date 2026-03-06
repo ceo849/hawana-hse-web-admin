@@ -1,8 +1,8 @@
+// app/api/action-plans/route.ts
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const CORE_API =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
+const CORE_API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001";
 
 export async function GET(req: Request) {
   try {
@@ -14,19 +14,13 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url);
-    const page = url.searchParams.get("page") ?? "1";
-    const limit = url.searchParams.get("limit") ?? "20";
+    const qs = url.search ? url.search : "";
 
-    const upstream = new URL(`${CORE_API}/v1/safety-reports`);
-    upstream.searchParams.set("page", page);
-    upstream.searchParams.set("limit", limit);
-
-    const r = await fetch(upstream.toString(), {
+    const r = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      cache: "no-store",
     });
 
     const text = await r.text();
@@ -51,7 +45,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const r = await fetch(`${CORE_API}/v1/safety-reports`, {
+    const r = await fetch(`${CORE_API}/v1/action-plans`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -69,4 +63,5 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ message: "Proxy error" }, { status: 500 });
   }
+
 }

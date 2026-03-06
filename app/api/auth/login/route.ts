@@ -1,51 +1,58 @@
 import { NextResponse } from 'next/server';
 
+const CORE_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
+).replace(/\/$/, '');
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl) {
-      return NextResponse.json(
-        { ok: false, message: 'NEXT_PUBLIC_API_BASE_URL is missing' },
-        { status: 500 },
-      );
-    }
-
-    const upstream = await fetch(`${baseUrl}/v1/auth/login`, {
+    const upstream = await fetch(`${CORE_BASE_URL}/v1/auth/login`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+      },
       body: JSON.stringify(body),
+      cache: 'no-store',
     });
 
-    const data = await upstream.json();
+    const data = await upstream.json().catch(() => ({}));
 
     if (!upstream.ok) {
       return NextResponse.json(data, { status: upstream.status });
     }
 
+    const accessToken = String(
+      (data as any).access_token ?? (data as any).accessToken ?? '',
+    );
+    const refreshToken =
+      (data as any).refresh_token ?? (data as any).refreshToken ?? null;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { ok: false, message: 'Missing access token from backend' },
+        { status: 500 },
+      );
+    }
+
     const res = NextResponse.json({ ok: true });
 
-    // Access Token Cookie
-    res.cookies.set('access_token', data.access_token ?? '', {
+    const cookieOptions = {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false, // dev only
+      sameSite: 'lax' as const,
+      secure: false,
       path: '/',
-    });
+    };
 
-    // Refresh Token Cookie (optional)
-    if (data.refresh_token) {
-      res.cookies.set('refresh_token', data.refresh_token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: false, // dev only
-        path: '/',
-      });
+    res.cookies.set('access_token', accessToken, cookieOptions);
+
+    if (refreshToken) {
+      res.cookies.set('refresh_token', String(refreshToken), cookieOptions);
     }
 
     return res;
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { ok: false, message: 'Login route error' },
       { status: 500 },
