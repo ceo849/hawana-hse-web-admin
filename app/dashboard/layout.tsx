@@ -7,22 +7,28 @@ import Sidebar, { type SidebarNavItem } from "@/components/layout/sidebar";
 import DashboardHeader from "@/components/layout/dashboard-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 
-type Role = "OWNER" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
 type NavItem = SidebarNavItem & { roles: Role[] };
 
 const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", roles: ["OWNER", "MANAGER", "WORKER", "VIEWER"] },
+  { href: "/dashboard", label: "Dashboard", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
 
-  // Users: OWNER + MANAGER
-  { href: "/dashboard/users", label: "Users", roles: ["OWNER", "MANAGER"] },
+  // Users: OWNER + ADMIN
+  { href: "/dashboard/users", label: "Users", roles: ["OWNER", "ADMIN"] },
 
-  { href: "/dashboard/safety-reports", label: "Safety Reports", roles: ["OWNER", "MANAGER", "WORKER", "VIEWER"] },
+  // Companies: OWNER only
+  { href: "/dashboard/companies", label: "Companies", roles: ["OWNER"] },
 
-  // ✅ Action Plans: للجميع
-  { href: "/dashboard/action-plans", label: "Action Plans", roles: ["OWNER", "MANAGER", "WORKER", "VIEWER"] },
+  // Sites / Projects: authenticated users within tenant
+  { href: "/dashboard/sites-projects", label: "Sites / Projects", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
 
-  // ✅ Admin Panel داخل /dashboard (عشان مايتكررش/ومايبقاش href غلط)
+  { href: "/dashboard/safety-reports", label: "Safety Reports", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
+
+  // Action Plans: للجميع
+  { href: "/dashboard/action-plans", label: "Action Plans", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
+
+  // Admin Panel داخل /dashboard
   { href: "/dashboard/admin", label: "Admin Panel", roles: ["OWNER"] },
 ];
 

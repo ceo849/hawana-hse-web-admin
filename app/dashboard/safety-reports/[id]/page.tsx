@@ -27,6 +27,10 @@ type ActionPlan = {
   createdAt?: string | null;
 };
 
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
 function getCookieValue(cookieStore: any, name: string): string | null {
   if (cookieStore && typeof cookieStore.get === 'function') {
     return cookieStore.get(name)?.value ?? null;
@@ -47,17 +51,17 @@ async function safeText(res: Response): Promise<string> {
   }
 }
 
-export default async function SafetyReportDetailPage(props: { params: any }) {
+export default async function SafetyReportDetailPage({ params }: PageProps) {
   const cookieStore = await cookies();
   const token = getCookieValue(cookieStore, 'access_token');
   if (!token) redirect('/login');
 
-  const id = String(props?.params?.id ?? '').trim();
-  if (!id) redirect('/dashboard/safety-reports');
+  const { id } = await params;
+  const reportId = String(id ?? '').trim();
+  if (!reportId) redirect('/dashboard/safety-reports');
 
-  // ---- Load Safety Report ----
   const srRes = await fetch(
-    `${CORE_BASE_URL}/v1/safety-reports/${encodeURIComponent(id)}`,
+    `${CORE_BASE_URL}/v1/safety-reports/${encodeURIComponent(reportId)}`,
     {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
@@ -96,7 +100,6 @@ ${text}`}</pre>
 
   const sr = (await srRes.json()) as SafetyReport;
 
-  // ---- Load related action plans ----
   let actionPlans: ActionPlan[] = [];
   try {
     const apUrl = new URL(`${CORE_BASE_URL}/v1/action-plans`);
