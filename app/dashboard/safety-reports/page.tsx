@@ -24,9 +24,25 @@ type SafetyReportsResponse = {
   };
 };
 
+type SearchParams = {
+  page?: string;
+  limit?: string;
+  status?: string;
+};
+
 function toInt(v: unknown, fallback: number) {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+function normalizeStatus(value?: string) {
+  const v = String(value ?? '').trim().toUpperCase();
+
+  if (v === 'OPEN' || v === 'IN_PROGRESS' || v === 'CLOSED') {
+    return v;
+  }
+
+  return '';
 }
 
 function getCookieValue(cookieStore: any, name: string): string | null {
@@ -41,6 +57,55 @@ function getCookieValue(cookieStore: any, name: string): string | null {
   return null;
 }
 
+function getSafetyReportStatusStyle(status?: string | null) {
+  const normalized = String(status ?? '').toUpperCase();
+
+  if (normalized === 'OPEN') {
+    return {
+      background: '#f3f4f6',
+      color: '#111827',
+      border: '1px solid #d1d5db',
+    };
+  }
+
+  if (normalized === 'IN_PROGRESS') {
+    return {
+      background: '#dbeafe',
+      color: '#1d4ed8',
+      border: '1px solid #93c5fd',
+    };
+  }
+
+  if (normalized === 'CLOSED') {
+    return {
+      background: '#dcfce7',
+      color: '#166534',
+      border: '1px solid #86efac',
+    };
+  }
+
+  return {
+    background: '#f3f4f6',
+    color: '#111827',
+    border: '1px solid #d1d5db',
+  };
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '-';
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
 async function safeText(res: Response) {
   try {
     return (await res.text()).trim();
@@ -49,14 +114,20 @@ async function safeText(res: Response) {
   }
 }
 
-export default async function SafetyReportsPage(props: { searchParams?: any }) {
+export default async function SafetyReportsPage(props: {
+  searchParams?: Promise<SearchParams> | SearchParams;
+}) {
   const cookieStore = await cookies();
   const token = getCookieValue(cookieStore, 'access_token');
   if (!token) redirect('/login');
 
-  const sp = props.searchParams ?? {};
-  const page = toInt(sp?.page ?? '1', 1);
-  const limit = Math.min(Math.max(toInt(sp?.limit ?? '20', 20), 1), 100);
+  const sp: SearchParams = props.searchParams
+    ? await Promise.resolve(props.searchParams)
+    : {};
+
+  const page = toInt(sp.page ?? '1', 1);
+  const limit = Math.min(Math.max(toInt(sp.limit ?? '20', 20), 1), 100);
+  const selectedStatus = normalizeStatus(sp.status);
 
   const url = new URL(`${CORE_BASE_URL}/v1/safety-reports`);
   url.searchParams.set('page', String(page));
@@ -92,11 +163,79 @@ ${text}`}</pre>
 
   const json = (await res.json()) as SafetyReportsResponse;
   const items = Array.isArray(json?.data) ? json.data : [];
+  const filteredItems = selectedStatus
+    ? items.filter((r) => String(r.status ?? '').toUpperCase() === selectedStatus)
+    : items;
+
   const meta = json?.meta ?? { total: 0, page, limit, totalPages: 1 };
 
   return (
     <div style={{ fontFamily: 'system-ui' }}>
       <Header />
+
+      <form
+        method="GET"
+        style={{
+          display: 'flex',
+          gap: 10,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          marginBottom: 16,
+          padding: 14,
+          border: '1px solid #eee',
+          borderRadius: 12,
+          background: '#fafafa',
+        }}
+      >
+        <label style={{ fontWeight: 700 }}>Status</label>
+
+        <select
+          name="status"
+          defaultValue={selectedStatus}
+          style={{
+            padding: '10px 12px',
+            borderRadius: 10,
+            border: '1px solid #ddd',
+            minWidth: 180,
+          }}
+        >
+          <option value="">All statuses</option>
+          <option value="OPEN">OPEN</option>
+          <option value="IN_PROGRESS">IN_PROGRESS</option>
+          <option value="CLOSED">CLOSED</option>
+        </select>
+
+        <button
+          type="submit"
+          style={{
+            padding: '10px 16px',
+            borderRadius: 10,
+            border: '1px solid #111',
+            background: '#111',
+            color: '#fff',
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          Apply
+        </button>
+
+        <a
+          href="/dashboard/safety-reports"
+          style={{
+            padding: '10px 16px',
+            borderRadius: 10,
+            border: '1px solid #ddd',
+            background: '#fff',
+            color: '#111',
+            fontWeight: 700,
+            textDecoration: 'none',
+            display: 'inline-block',
+          }}
+        >
+          Reset
+        </a>
+      </form>
 
       <div
         style={{
@@ -121,12 +260,17 @@ ${text}`}</pre>
           <div>Actions</div>
         </div>
 
-        {items.length === 0 ? (
-          <div style={{ padding: 14 }}>No safety reports.</div>
+        {filteredItems.length === 0 ? (
+          <div style={{ padding: 14 }}>
+            {selectedStatus
+              ? `No safety reports match status: ${selectedStatus}`
+              : 'No safety reports.'}
+          </div>
         ) : (
-          items.map((r) => {
-            const created = r.createdAt ? new Date(r.createdAt).toLocaleString() : '-';
+          filteredItems.map((r) => {
+            const created = formatDate(r.createdAt);
             const status = (r.status ?? 'UNKNOWN').toUpperCase();
+            const statusStyle = getSafetyReportStatusStyle(status);
 
             return (
               <div
@@ -151,12 +295,11 @@ ${text}`}</pre>
                   <span
                     style={{
                       display: 'inline-block',
-                      padding: '4px 10px',
+                      padding: '6px 10px',
                       borderRadius: 999,
                       fontSize: 12,
-                      fontWeight: 700,
-                      background: '#fff7ed',
-                      border: '1px solid #e5e7eb',
+                      fontWeight: 800,
+                      ...statusStyle,
                     }}
                   >
                     {status}
