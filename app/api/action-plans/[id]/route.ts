@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const r = await fetch(`${CORE_API}/v1/action-plans/${id}`, {
+  const r = await fetch(`${CORE_API}/v1/users/${id}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
