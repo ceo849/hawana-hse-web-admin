@@ -8,6 +8,12 @@ const CORE_BASE_URL = (
 
 type SafetyReportStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED' | string;
 
+type SiteProjectLite = {
+  id: string;
+  name: string;
+  location?: string | null;
+};
+
 type SafetyReport = {
   id: string;
   title?: string | null;
@@ -15,6 +21,8 @@ type SafetyReport = {
   status?: SafetyReportStatus | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  siteProjectId?: string | null;
+  siteProject?: SiteProjectLite | null;
 };
 
 type ActionPlanStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'VERIFIED' | string;
@@ -51,6 +59,60 @@ async function safeText(res: Response): Promise<string> {
   }
 }
 
+function getSafetyReportStatusStyle(status?: string | null) {
+  const normalized = String(status ?? '').toUpperCase();
+
+  if (normalized === 'OPEN') {
+    return {
+      background: '#f3f4f6',
+      color: '#111827',
+      border: '1px solid #d1d5db',
+    };
+  }
+
+  if (normalized === 'IN_PROGRESS') {
+    return {
+      background: '#dbeafe',
+      color: '#1d4ed8',
+      border: '1px solid #93c5fd',
+    };
+  }
+
+  if (normalized === 'CLOSED') {
+    return {
+      background: '#dcfce7',
+      color: '#166534',
+      border: '1px solid #86efac',
+    };
+  }
+
+  return {
+    background: '#f3f4f6',
+    color: '#111827',
+    border: '1px solid #d1d5db',
+  };
+}
+
+function formatSiteProject(siteProject?: SiteProjectLite | null) {
+  if (!siteProject) return '-';
+  if (siteProject.location) return `${siteProject.name} (${siteProject.location})`;
+  return siteProject.name;
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+
+  const d = new Date(value);
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
 export default async function SafetyReportDetailPage({ params }: PageProps) {
   const cookieStore = await cookies();
   const token = getCookieValue(cookieStore, 'access_token');
@@ -75,6 +137,12 @@ export default async function SafetyReportDetailPage({ params }: PageProps) {
     const text = await safeText(srRes);
     return (
       <div style={{ fontFamily: 'system-ui', padding: 24 }}>
+        <div style={{ marginBottom: 12, fontSize: 13, color: '#666' }}>
+          <a href="/dashboard">Dashboard</a> /
+          <a href="/dashboard/safety-reports"> Safety Reports</a> /
+          <span> Report Details</span>
+        </div>
+
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 12 }}>
           Safety Report
         </h1>
@@ -99,6 +167,7 @@ ${text}`}</pre>
   }
 
   const sr = (await srRes.json()) as SafetyReport;
+  const statusStyle = getSafetyReportStatusStyle(sr.status);
 
   let actionPlans: ActionPlan[] = [];
   try {
@@ -125,6 +194,12 @@ ${text}`}</pre>
 
   return (
     <div style={{ fontFamily: 'system-ui', padding: 24 }}>
+      <div style={{ marginBottom: 12, fontSize: 13, color: '#666' }}>
+        <a href="/dashboard">Dashboard</a> /
+        <a href="/dashboard/safety-reports"> Safety Reports</a> /
+        <span> Report Details</span>
+      </div>
+
       <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 10 }}>
         Safety Report
       </h1>
@@ -138,6 +213,19 @@ ${text}`}</pre>
           flexWrap: 'wrap',
         }}
       >
+        <span
+          style={{
+            display: 'inline-block',
+            padding: '6px 10px',
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 800,
+            ...statusStyle,
+          }}
+        >
+          {sr.status ?? '-'}
+        </span>
+
         <a
           href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(sr.id)}`}
           style={{
@@ -171,10 +259,11 @@ ${text}`}</pre>
         <div style={{ display: 'grid', gap: 10 }}>
           <Row label="ID" value={sr.id} />
           <Row label="Title" value={sr.title ?? '-'} />
+          <Row label="Site / Project" value={formatSiteProject(sr.siteProject)} />
           <Row label="Status" value={sr.status ?? '-'} />
           <Row label="Description" value={sr.description ?? '-'} />
-          <Row label="Created" value={sr.createdAt ?? '-'} />
-          <Row label="Updated" value={sr.updatedAt ?? '-'} />
+          <Row label="Created" value={formatDate(sr.createdAt)} />
+          <Row label="Updated" value={formatDate(sr.updatedAt)} />
         </div>
       </div>
 
@@ -184,8 +273,35 @@ ${text}`}</pre>
         </div>
 
         {actionPlans.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#555' }}>
-            No action plans linked to this safety report.
+          <div
+            style={{
+              border: '1px dashed #d1d5db',
+              borderRadius: 12,
+              padding: 18,
+              background: '#fafafa',
+            }}
+          >
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>
+              No action plans linked yet
+            </div>
+            <div style={{ fontSize: 13, color: '#555', marginBottom: 12 }}>
+              Create the first action plan for this safety report.
+            </div>
+            <a
+              href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(sr.id)}`}
+              style={{
+                display: 'inline-block',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid #111',
+                background: '#111',
+                color: '#fff',
+                fontWeight: 800,
+                textDecoration: 'none',
+              }}
+            >
+              + Create Action Plan
+            </a>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
