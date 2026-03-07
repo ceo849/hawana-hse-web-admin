@@ -5,6 +5,12 @@ import { api } from "@/lib/core-api";
 
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
+type AssignedUserLite = {
+  id: string;
+  fullName?: string | null;
+  email?: string | null;
+};
+
 type ActionPlan = {
   id: string;
   title: string;
@@ -13,23 +19,16 @@ type ActionPlan = {
   dueDate?: string | null;
   safetyReportId?: string | null;
   assignedToUserId?: string | null;
+  assignedTo?: AssignedUserLite | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   deletedAt?: string | null;
-};
-
-type UserLite = {
-  id: string;
-  fullName?: string | null;
-  email?: string | null;
 };
 
 type PageProps = {
   params: { id: string } | Promise<{ id: string }>;
   searchParams?: { err?: string } | Promise<{ err?: string }>;
 };
-
-// ---------------- Helpers ----------------
 
 function normalizeId(raw: unknown): string {
   return String(raw ?? "").trim();
@@ -60,18 +59,75 @@ function toDateInputValue(iso?: string | null): string {
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`; // YYYY-MM-DD
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function formatDateDisplay(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString(); // عرض محلي للمستخدم
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+function getActionPlanStatusStyle(status?: string | null) {
+  const normalized = String(status ?? "").toUpperCase();
+
+  if (normalized === "OPEN") {
+    return {
+      background: "#f3f4f6",
+      color: "#111827",
+      border: "1px solid #d1d5db",
+    };
+  }
+
+  if (normalized === "IN_PROGRESS") {
+    return {
+      background: "#dbeafe",
+      color: "#1d4ed8",
+      border: "1px solid #93c5fd",
+    };
+  }
+
+  if (normalized === "COMPLETED") {
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+    };
+  }
+
+  if (normalized === "VERIFIED") {
+    return {
+      background: "#dcfce7",
+      color: "#14532d",
+      border: "1px solid #4ade80",
+    };
+  }
+
+  return {
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+  };
+}
+
+function formatAssignedUser(user?: AssignedUserLite | null, fallbackId?: string | null) {
+  if (user?.fullName || user?.email) {
+    return `${user.fullName ?? "—"} — ${user.email ?? "—"}`;
+  }
+
+  if (fallbackId) return fallbackId;
+  return "—";
 }
 
 async function readApiErrorText(r: Response): Promise<string> {
-  // نحاول JSON أولاً ثم fallback نص
   try {
     const j = await r.json();
     if (j && typeof j === "object") {
@@ -86,6 +142,7 @@ async function readApiErrorText(r: Response): Promise<string> {
   } catch {
     // ignore
   }
+
   try {
     return (await r.text()).trim();
   } catch {
@@ -98,8 +155,6 @@ function errRedirect(id: string, label: string, status: number, detail: string) 
   redirect(`${actionPlanPath(id)}?err=${encodeURIComponent(clean)}`);
 }
 
-// ---------------- Page ----------------
-
 export default async function ActionPlanPage({ params, searchParams }: PageProps) {
   const resolvedParams = await Promise.resolve(params);
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
@@ -107,10 +162,8 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
 
   if (!id) redirect("/dashboard/action-plans");
 
-  // Auth (JWT from cookies)
   const token = await requireAccessToken();
 
-  // -------- Server Actions --------
   async function changeStatus(formData: FormData) {
     "use server";
 
@@ -118,8 +171,13 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
     const nextStatus = normalizeId(formData.get("nextStatus"));
     if (!nextStatus) redirect(actionPlanPath(id));
 
-    // (اختياري) Harden: لا تسمح بأي قيمة غير الستاتس المعروفة
-    const allowed: ActionPlanStatus[] = ["OPEN", "IN_PROGRESS", "COMPLETED", "VERIFIED"];
+    const allowed: ActionPlanStatus[] = [
+      "OPEN",
+      "IN_PROGRESS",
+      "COMPLETED",
+      "VERIFIED",
+    ];
+
     if (!allowed.includes(nextStatus as ActionPlanStatus)) {
       errRedirect(id, "Invalid status value", 400, `status=${nextStatus}`);
     }
@@ -148,13 +206,14 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
     "use server";
 
     const tokenInner = await requireAccessToken();
-    const dueDateRaw = normalizeId(formData.get("dueDate")); // YYYY-MM-DD أو ""
+    const dueDateRaw = normalizeId(formData.get("dueDate"));
 
     const payload = {
-      dueDate: dueDateRaw ? new Date(`${dueDateRaw}T00:00:00.000Z`).toISOString() : null,
+      dueDate: dueDateRaw
+        ? new Date(`${dueDateRaw}T00:00:00.000Z`).toISOString()
+        : null,
     };
 
-    // ✅ المسار الصحيح حسب الـ backend: /due-date
     const r = await fetch(api(`/v1/action-plans/${id}/due-date`), {
       method: "PATCH",
       headers: {
@@ -175,7 +234,6 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
     redirect(actionPlanPath(id));
   }
 
-  // -------- Load Action Plan --------
   const res = await fetch(api(`/v1/action-plans/${id}`), {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
@@ -188,8 +246,18 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
     const detail = await readApiErrorText(res);
     return (
       <div style={{ padding: 24, fontFamily: "system-ui" }}>
+        <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
+          <a href="/dashboard">Dashboard</a> /
+          <a href="/dashboard/action-plans"> Action Plans</a> /
+          <span> Action Plan Details</span>
+        </div>
+
         <a href="/dashboard/action-plans">← Back</a>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 16 }}>Action Plan</h1>
+
+        <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 16 }}>
+          Action Plan
+        </h1>
+
         <pre
           style={{
             marginTop: 16,
@@ -204,29 +272,19 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
   }
 
   const ap = (await res.json()) as ActionPlan;
-
-  // -------- Load Users (optional) --------
-  let users: UserLite[] = [];
-  try {
-    const u = await fetch(api(`/v1/users`), {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    if (u.ok) users = (await u.json()) as UserLite[];
-  } catch {
-    // ignore
-  }
-
-  const assignedUser = ap.assignedToUserId ? users.find((x) => x.id === ap.assignedToUserId) : undefined;
-
   const nextStatuses = allowedNextStatuses(ap.status);
   const err = normalizeId(resolvedSearchParams?.err);
-
-  const dueDateLocked = ap.status === "VERIFIED"; // ✅ backend يمنع تعديل verified
+  const dueDateLocked = ap.status === "VERIFIED";
+  const statusStyle = getActionPlanStatusStyle(ap.status);
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
+      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
+        <a href="/dashboard">Dashboard</a> /
+        <a href="/dashboard/action-plans"> Action Plans</a> /
+        <span> Action Plan Details</span>
+      </div>
+
       <a href="/dashboard/action-plans">← Back</a>
 
       <h1 style={{ fontSize: 44, fontWeight: 900, marginTop: 16 }}>{ap.title}</h1>
@@ -248,29 +306,53 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
         </div>
       ) : null}
 
+      <div
+        style={{
+          marginTop: 14,
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-block",
+            padding: "6px 10px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 800,
+            ...statusStyle,
+          }}
+        >
+          {ap.status}
+        </span>
+      </div>
+
       <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
         <div>
-          <b>Status:</b> {ap.status}
-        </div>
-
-        <div>
-          <b>Assigned To:</b>{" "}
-          {assignedUser
-            ? `${assignedUser.fullName ?? "—"} — ${assignedUser.email ?? "—"}`
-            : ap.assignedToUserId
-            ? ap.assignedToUserId
-            : "—"}
+          <b>Assigned To:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}
         </div>
       </div>
 
-      {/* Change Status */}
       <div style={{ marginTop: 18 }}>
         <b>Change Status</b>
 
         {nextStatuses.length === 0 ? (
-          <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>No allowed transitions</div>
+          <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>
+            No allowed transitions
+          </div>
         ) : (
-          <form action={changeStatus} style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center" }}>
+          <form
+            action={changeStatus}
+            style={{
+              marginTop: 10,
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <select
               name="nextStatus"
               defaultValue={nextStatuses[0]}
@@ -306,12 +388,19 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
         )}
       </div>
 
-      {/* Due Date */}
       <div style={{ marginTop: 18 }}>
         <b>Due Date:</b> {formatDateDisplay(ap.dueDate)}
 
         <div style={{ marginTop: 10 }}>
-          <form action={updateDueDate} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <form
+            action={updateDueDate}
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <input
               type="date"
               name="dueDate"
@@ -344,19 +433,21 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
             </button>
 
             <span style={{ fontSize: 12, color: "#666" }}>
-              {dueDateLocked ? "(Locked: VERIFIED plan)" : "(سيتم حفظ التاريخ أو مسحه لو تركته فارغًا)"}
+              {dueDateLocked
+                ? "(Locked: VERIFIED plan)"
+                : "(سيتم حفظ التاريخ أو مسحه لو تركته فارغًا)"}
             </span>
           </form>
         </div>
       </div>
 
-      {/* Description */}
       <div style={{ marginTop: 18 }}>
         <b>Description</b>
-        <p style={{ marginTop: 8, lineHeight: 1.6 }}>{ap.description?.trim() ? ap.description : "No description"}</p>
+        <p style={{ marginTop: 8, lineHeight: 1.6 }}>
+          {ap.description?.trim() ? ap.description : "No description"}
+        </p>
       </div>
 
-      {/* Meta */}
       <div style={{ marginTop: 20, fontSize: 12, color: "#555" }}>
         <div>ID: {ap.id}</div>
         <div>Safety Report: {ap.safetyReportId ?? "—"}</div>
