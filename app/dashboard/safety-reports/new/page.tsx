@@ -1,186 +1,143 @@
-"use client";
+import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
+import { api } from "@/lib/core-api";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-
-type ApiErrorBody = {
-  statusCode?: number;
-  message?: string | string[];
-  error?: string;
-  path?: string;
-  timestamp?: string;
+type PageProps = {
+  searchParams?: Promise<{ error?: string }>;
 };
 
-function extractErrorMessage(text: string): string {
-  const t = (text ?? "").trim();
-  if (!t) return "Request failed";
+export default async function NewSafetyReportPage({ searchParams }: PageProps) {
+  await requireAccessToken();
 
-  // لو السيرفر رجّع JSON (ValidationPipe / GlobalExceptionFilter)
-  try {
-    const j = JSON.parse(t) as ApiErrorBody;
-    const msg = j?.message;
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const error = String(resolvedSearchParams?.error ?? "").trim();
 
-    if (Array.isArray(msg)) return msg.join("\n");
-    if (typeof msg === "string" && msg.trim()) return msg;
+  async function createSafetyReport(formData: FormData) {
+    "use server";
 
-    if (typeof j?.error === "string" && j.error.trim()) return j.error;
-  } catch {
-    // مش JSON → اعتبره نص
-  }
+    const token = await requireAccessToken();
 
-  return t;
-}
+    const title = String(formData.get("title") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
 
-export default function NewSafetyReportPage() {
-  const router = useRouter();
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-
-  const canSubmit = useMemo(() => {
-    return title.trim().length > 0 && !loading;
-  }, [title, loading]);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!canSubmit) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const r = await fetch("/api/safety-reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-        }),
-      });
-
-      if (r.status === 401) {
-        router.push("/login");
-        router.refresh();
-        return;
-      }
-
-      if (!r.ok) {
-        const text = await r.text().catch(() => "");
-        throw new Error(extractErrorMessage(text) || `Failed (${r.status})`);
-      }
-
-      router.push("/dashboard/safety-reports");
-      router.refresh();
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Unexpected error";
-      setError(message);
-    } finally {
-      setLoading(false);
+    if (!title) {
+      redirect(
+        `/dashboard/safety-reports/new?error=${encodeURIComponent(
+          "Title is required",
+        )}`,
+      );
     }
+
+    const payload: Record<string, string> = { title };
+
+    if (description) {
+      payload.description = description;
+    }
+
+    const res = await fetch(api("/v1/safety-reports"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+
+    if (res.status === 401) redirect("/login");
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      redirect(
+        `/dashboard/safety-reports/new?error=${encodeURIComponent(
+          `Create safety report failed (${res.status}) ${text}`,
+        )}`,
+      );
+    }
+
+    redirect("/dashboard/safety-reports");
   }
 
   return (
-    <div style={{ fontFamily: "system-ui", maxWidth: 720 }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0 }}>
-          Create Safety Report
-        </h1>
-        <div style={{ marginTop: 8, color: "#555", fontSize: 14 }}>
-          Create a new safety report (server-side validation enforced).
-        </div>
+    <div style={{ fontFamily: "system-ui", maxWidth: 900 }}>
+      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
+        <a href="/dashboard">Dashboard</a> /
+        <a href="/dashboard/safety-reports"> Safety Reports</a> /
+        <span> Create Safety Report</span>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
-        <div>
-          <label style={{ fontWeight: 700, display: "block" }}>Title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            placeholder="e.g., Unsafe condition near loading area"
-            style={{
-              width: "100%",
-              marginTop: 6,
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #d1d5db",
-              outline: "none",
-            }}
-          />
+      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
+        Create Safety Report
+      </h1>
+
+      {error ? (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            borderRadius: 10,
+            background: "#fef2f2",
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {error}
         </div>
+      ) : null}
 
-        <div>
-          <label style={{ fontWeight: 700, display: "block" }}>
-            Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={8}
-            placeholder="Details..."
-            style={{
-              width: "100%",
-              marginTop: 6,
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #d1d5db",
-              outline: "none",
-              resize: "vertical",
-            }}
-          />
-        </div>
+      <form action={createSafetyReport} style={{ maxWidth: 800 }}>
+        <input
+          name="title"
+          placeholder="Title"
+          required
+          style={{
+            width: "100%",
+            padding: 16,
+            marginBottom: 12,
+            borderRadius: 10,
+            border: "1px solid #ddd",
+          }}
+        />
 
-        {error && (
-          <pre
-            style={{
-              margin: 0,
-              padding: 12,
-              borderRadius: 12,
-              background: "#fff5f5",
-              border: "1px solid #fecaca",
-              color: "#991b1b",
-              fontSize: 13,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {error}
-          </pre>
-        )}
+        <textarea
+          name="description"
+          rows={8}
+          placeholder="Description"
+          style={{
+            width: "100%",
+            padding: 16,
+            marginBottom: 16,
+            borderRadius: 10,
+            border: "1px solid #ddd",
+            resize: "vertical",
+          }}
+        />
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             type="submit"
-            disabled={!canSubmit}
             style={{
-              padding: "12px 14px",
-              borderRadius: 12,
+              padding: "16px 20px",
+              borderRadius: 10,
               border: "none",
               background: "#111",
               color: "#fff",
-              fontWeight: 800,
-              cursor: canSubmit ? "pointer" : "not-allowed",
-              opacity: canSubmit ? 1 : 0.6,
-              minWidth: 180,
+              fontWeight: 700,
+              cursor: "pointer",
             }}
           >
-            {loading ? "Creating..." : "Create / Submit"}
+            Create Safety Report
           </button>
 
           <a
             href="/dashboard/safety-reports"
             style={{
-              padding: "12px 14px",
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
+              display: "inline-block",
+              padding: "16px 20px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
               textDecoration: "none",
-              fontWeight: 800,
               color: "#111",
             }}
           >
