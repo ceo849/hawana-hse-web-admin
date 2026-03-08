@@ -50,6 +50,7 @@ export async function POST(req: Request) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    cache: 'no-store',
   });
 
   const bodyText = await r.text();
