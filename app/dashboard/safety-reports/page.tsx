@@ -8,10 +8,10 @@ const CORE_BASE_URL = (
 
 type SafetyReport = {
   id: string;
-  title?: string | null;
-  description?: string | null;
-  status?: string | null;
-  createdAt?: string | null;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  createdAt: string | null;
 };
 
 type SafetyReportsResponse = {
@@ -29,6 +29,50 @@ type SearchParams = {
   limit?: string;
   status?: string;
 };
+
+function isSafetyReport(value: unknown): value is SafetyReport {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.id === 'string' &&
+    (typeof candidate.title === 'string' || candidate.title === null) &&
+    (typeof candidate.description === 'string' ||
+      candidate.description === null) &&
+    (typeof candidate.status === 'string' || candidate.status === null) &&
+    (typeof candidate.createdAt === 'string' || candidate.createdAt === null)
+  );
+}
+
+function parseSafetyReportsResponse(value: unknown): SafetyReportsResponse {
+  if (typeof value !== 'object' || value === null) {
+    return { data: [], meta: undefined };
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const data = Array.isArray(candidate.data)
+    ? candidate.data.filter(isSafetyReport)
+    : [];
+
+  const metaRaw =
+    typeof candidate.meta === 'object' && candidate.meta !== null
+      ? (candidate.meta as Record<string, unknown>)
+      : null;
+
+  const meta = metaRaw
+    ? {
+        total:
+          typeof metaRaw.total === 'number' ? metaRaw.total : data.length,
+        page: typeof metaRaw.page === 'number' ? metaRaw.page : 1,
+        limit: typeof metaRaw.limit === 'number' ? metaRaw.limit : 20,
+        totalPages:
+          typeof metaRaw.totalPages === 'number' ? metaRaw.totalPages : 1,
+      }
+    : undefined;
+
+  return { data, meta };
+}
 
 function toInt(v: unknown, fallback: number) {
   const n = Number(v);
@@ -49,11 +93,15 @@ function getCookieValue(cookieStore: any, name: string): string | null {
   if (cookieStore && typeof cookieStore.get === 'function') {
     return cookieStore.get(name)?.value ?? null;
   }
+
   if (cookieStore && typeof cookieStore[Symbol.iterator] === 'function') {
     for (const entry of cookieStore as any) {
-      if (Array.isArray(entry) && entry[0] === name) return entry?.[1]?.value ?? null;
+      if (Array.isArray(entry) && entry[0] === name) {
+        return entry?.[1]?.value ?? null;
+      }
     }
   }
+
   return null;
 }
 
@@ -119,6 +167,7 @@ export default async function SafetyReportsPage(props: {
 }) {
   const cookieStore = await cookies();
   const token = getCookieValue(cookieStore, 'access_token');
+
   if (!token) redirect('/login');
 
   const sp: SearchParams = props.searchParams
@@ -143,6 +192,7 @@ export default async function SafetyReportsPage(props: {
 
   if (!res.ok) {
     const text = await safeText(res);
+
     return (
       <div style={{ fontFamily: 'system-ui' }}>
         <Header />
@@ -154,6 +204,7 @@ export default async function SafetyReportsPage(props: {
             background: '#f7f7f7',
             borderRadius: 12,
             overflowX: 'auto',
+            whiteSpace: 'pre-wrap',
           }}
         >{`Failed to load safety reports (${res.status})
 ${text}`}</pre>
@@ -161,13 +212,14 @@ ${text}`}</pre>
     );
   }
 
-  const json = (await res.json()) as SafetyReportsResponse;
-  const items = Array.isArray(json?.data) ? json.data : [];
+  const json = parseSafetyReportsResponse(await res.json());
+  const items = json.data;
+
   const filteredItems = selectedStatus
     ? items.filter((r) => String(r.status ?? '').toUpperCase() === selectedStatus)
     : items;
 
-  const meta = json?.meta ?? { total: 0, page, limit, totalPages: 1 };
+  const meta = json.meta ?? { total: 0, page, limit, totalPages: 1 };
 
   return (
     <div style={{ fontFamily: 'system-ui' }}>
@@ -247,7 +299,7 @@ ${text}`}</pre>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.2fr 140px 180px 120px',
+            gridTemplateColumns: '1.2fr 150px 170px 240px 120px',
             gap: 12,
             padding: 14,
             fontWeight: 800,
@@ -256,7 +308,8 @@ ${text}`}</pre>
         >
           <div>Title</div>
           <div>Status</div>
-          <div>Created</div>
+          <div>Created At</div>
+          <div>Report ID</div>
           <div>Actions</div>
         </div>
 
@@ -277,7 +330,7 @@ ${text}`}</pre>
                 key={r.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1.2fr 140px 180px 120px',
+                  gridTemplateColumns: '1.2fr 150px 170px 240px 120px',
                   gap: 12,
                   padding: 14,
                   borderTop: '1px solid #eee',
@@ -308,8 +361,28 @@ ${text}`}</pre>
 
                 <div style={{ fontSize: 13, color: '#444' }}>{created}</div>
 
+                <div
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    color: '#444',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {r.id}
+                </div>
+
                 <div>
-                  <a href={`/dashboard/safety-reports/${r.id}`}>View</a>
+                  <a
+                    href={`/dashboard/safety-reports/${r.id}`}
+                    style={{
+                      color: '#2563eb',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    View
+                  </a>
                 </div>
               </div>
             );
@@ -334,7 +407,9 @@ function Header() {
         marginBottom: 16,
       }}
     >
-      <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>Safety Reports</h1>
+      <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>
+        Safety Reports
+      </h1>
 
       <a
         href="/dashboard/safety-reports/new"
