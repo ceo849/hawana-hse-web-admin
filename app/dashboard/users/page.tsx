@@ -98,6 +98,22 @@ ${text}`}</pre>
     <div style={{ fontFamily: "system-ui" }}>
       <h1 style={{ fontSize: 22, fontWeight: 800 }}>Users</h1>
 
+      <Link
+        href="/dashboard/users/new"
+        style={{
+          display: "inline-block",
+          marginTop: 12,
+          padding: "8px 14px",
+          background: "#2563eb",
+          color: "#fff",
+          borderRadius: 8,
+          textDecoration: "none",
+          fontWeight: 600,
+        }}
+      >
+        Create User
+      </Link>
+
       <div
         style={{
           marginTop: 16,
