@@ -12,6 +12,40 @@ type UserDto = {
   updatedAt: string;
 };
 
+function isUserDto(value: unknown): value is UserDto {
+  if (typeof value !== "object" || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.email === "string" &&
+    typeof candidate.fullName === "string" &&
+    typeof candidate.role === "string" &&
+    typeof candidate.companyId === "string" &&
+    typeof candidate.createdAt === "string" &&
+    typeof candidate.updatedAt === "string"
+  );
+}
+
+function parseUsers(value: unknown): UserDto[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isUserDto);
+}
+
+function formatDate(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
 export default async function UsersPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
@@ -58,7 +92,7 @@ ${text}`}</pre>
   }
 
   const json = (await r.json()) as unknown;
-  const users: UserDto[] = Array.isArray(json) ? (json as UserDto[]) : [];
+  const users = parseUsers(json);
 
   return (
     <div style={{ fontFamily: "system-ui" }}>
@@ -155,7 +189,7 @@ ${text}`}</pre>
                     {u.companyId}
                   </td>
                   <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    {new Date(u.createdAt).toLocaleString()}
+                    {formatDate(u.createdAt)}
                   </td>
                 </tr>
               ))
