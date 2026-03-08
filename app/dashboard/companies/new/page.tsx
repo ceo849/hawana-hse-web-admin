@@ -3,14 +3,14 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 
 type PageProps = {
-  searchParams?: Promise<{ err?: string }>;
+  searchParams?: Promise<{ error?: string }>;
 };
 
 export default async function NewCompanyPage({ searchParams }: PageProps) {
   await requireAccessToken();
 
-  const sp = searchParams ? await searchParams : undefined;
-  const err = String(sp?.err ?? "").trim();
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const error = String(resolvedSearchParams?.error ?? "").trim();
 
   async function createCompany(formData: FormData) {
     "use server";
@@ -23,7 +23,9 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
 
     if (!name) {
       redirect(
-        `/dashboard/companies/new?err=${encodeURIComponent("Name is required")}`
+        `/dashboard/companies/new?error=${encodeURIComponent(
+          "Name is required",
+        )}`,
       );
     }
 
@@ -47,9 +49,9 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/companies/new?err=${encodeURIComponent(
-          `Create failed (${res.status}) ${text}`
-        )}`
+        `/dashboard/companies/new?error=${encodeURIComponent(
+          `Create company failed (${res.status}) ${text}`,
+        )}`,
       );
     }
 
@@ -57,24 +59,30 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui" }}>
+    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
+      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
+        <a href="/dashboard">Dashboard</a> /
+        <a href="/dashboard/companies"> Companies</a> /
+        <span> Create Company</span>
+      </div>
+
       <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
         Create Company
       </h1>
 
-      {err ? (
+      {error ? (
         <div
           style={{
             marginBottom: 16,
             padding: 12,
-            borderRadius: 12,
-            background: "#fff5f5",
-            border: "1px solid #ffd6d6",
-            color: "#b00020",
-            fontWeight: 700,
+            borderRadius: 10,
+            background: "#fef2f2",
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            whiteSpace: "pre-wrap",
           }}
         >
-          {err}
+          {error}
         </div>
       ) : null}
 
@@ -116,21 +124,36 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
           }}
         />
 
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            padding: 16,
-            borderRadius: 10,
-            border: "none",
-            background: "#111",
-            color: "#fff",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Create Company
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="submit"
+            style={{
+              padding: "16px 20px",
+              borderRadius: 10,
+              border: "none",
+              background: "#111",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Create Company
+          </button>
+
+          <a
+            href="/dashboard/companies"
+            style={{
+              display: "inline-block",
+              padding: "16px 20px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              textDecoration: "none",
+              color: "#111",
+            }}
+          >
+            Cancel
+          </a>
+        </div>
       </form>
     </div>
   );
