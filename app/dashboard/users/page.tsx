@@ -152,7 +152,25 @@ ${text}`}</pre>
                   borderBottom: "1px solid #eee",
                 }}
               >
+                User ID
+              </th>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 12,
+                  borderBottom: "1px solid #eee",
+                }}
+              >
                 Created At
+              </th>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 12,
+                  borderBottom: "1px solid #eee",
+                }}
+              >
+                Updated At
               </th>
             </tr>
           </thead>
@@ -160,7 +178,7 @@ ${text}`}</pre>
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: 12 }}>
+                <td colSpan={7} style={{ padding: 12 }}>
                   No users found.
                 </td>
               </tr>
@@ -188,8 +206,21 @@ ${text}`}</pre>
                   <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
                     {u.companyId}
                   </td>
+                  <td
+                    style={{
+                      padding: 12,
+                      borderBottom: "1px solid #eee",
+                      fontFamily: "monospace",
+                      fontSize: 12,
+                    }}
+                  >
+                    {u.id}
+                  </td>
                   <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
                     {formatDate(u.createdAt)}
+                  </td>
+                  <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
+                    {formatDate(u.updatedAt)}
                   </td>
                 </tr>
               ))
