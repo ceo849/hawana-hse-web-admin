@@ -11,6 +11,39 @@ type CompanyDto = {
   updatedAt: string;
 };
 
+function isCompanyDto(value: unknown): value is CompanyDto {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    (typeof candidate.country === 'string' || candidate.country === null) &&
+    (typeof candidate.industry === 'string' || candidate.industry === null) &&
+    typeof candidate.createdAt === 'string' &&
+    typeof candidate.updatedAt === 'string'
+  );
+}
+
+function parseCompanies(value: unknown): CompanyDto[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isCompanyDto);
+}
+
+function formatDate(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
 export default async function CompaniesPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
@@ -55,7 +88,7 @@ ${text}`}</pre>
   }
 
   const json = (await r.json()) as unknown;
-  const companies: CompanyDto[] = Array.isArray(json) ? (json as CompanyDto[]) : [];
+  const companies = parseCompanies(json);
 
   return (
     <div style={{ fontFamily: 'system-ui' }}>
@@ -106,7 +139,13 @@ ${text}`}</pre>
                 Industry
               </th>
               <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #eee' }}>
+                Company ID
+              </th>
+              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #eee' }}>
                 Created At
+              </th>
+              <th style={{ textAlign: 'left', padding: 12, borderBottom: '1px solid #eee' }}>
+                Updated At
               </th>
             </tr>
           </thead>
@@ -114,7 +153,7 @@ ${text}`}</pre>
           <tbody>
             {companies.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ padding: 12 }}>
+                <td colSpan={6} style={{ padding: 12 }}>
                   No companies found.
                 </td>
               </tr>
@@ -139,8 +178,21 @@ ${text}`}</pre>
                   <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>
                     {c.industry ?? '-'}
                   </td>
+                  <td
+                    style={{
+                      padding: 12,
+                      borderBottom: '1px solid #eee',
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    }}
+                  >
+                    {c.id}
+                  </td>
                   <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>
-                    {new Date(c.createdAt).toLocaleString()}
+                    {formatDate(c.createdAt)}
+                  </td>
+                  <td style={{ padding: 12, borderBottom: '1px solid #eee' }}>
+                    {formatDate(c.updatedAt)}
                   </td>
                 </tr>
               ))
