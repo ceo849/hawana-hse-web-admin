@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
+import PageHeader from "@/components/ui/page-header";
 
 type UserRole = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER";
 
@@ -16,7 +17,7 @@ type User = {
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
 function isUser(value: unknown): value is User {
@@ -54,8 +55,12 @@ export default async function EditUserPage({
 }: PageProps) {
   const token = await requireAccessToken();
   const { id } = await params;
-  const resolvedSearchParams = await Promise.resolve(searchParams);
-  const error = resolvedSearchParams?.error ?? "";
+
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
+  const error = String(resolvedSearchParams?.error ?? "").trim();
 
   const r = await fetch(api(`/v1/users/${id}`), {
     headers: {
@@ -68,6 +73,7 @@ export default async function EditUserPage({
   if (!r.ok) redirect("/dashboard/users");
 
   const json = (await r.json()) as unknown;
+
   if (!isUser(json)) {
     redirect("/dashboard/users");
   }
@@ -139,16 +145,11 @@ export default async function EditUserPage({
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
-      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <a href="/dashboard">Dashboard</a> /
-        <a href="/dashboard/users"> Users</a> /
-        <span> Edit User</span>
-      </div>
-
-      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
-        Edit User
-      </h1>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+      <PageHeader
+        title="Edit User"
+        subtitle="Update user information and access role"
+      />
 
       {error ? (
         <div
@@ -168,7 +169,7 @@ export default async function EditUserPage({
 
       <div
         style={{
-          marginBottom: 20,
+          marginBottom: 16,
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -191,58 +192,95 @@ export default async function EditUserPage({
         </div>
       </div>
 
-      <form action={updateUser} style={{ maxWidth: 700 }}>
-        <input
-          name="fullName"
-          defaultValue={user.fullName}
-          placeholder="Full Name"
+      <form action={updateUser} style={{ display: "grid", gap: 16 }}>
+        <div
           style={{
-            width: "100%",
+            border: "1px solid #eee",
+            borderRadius: 12,
+            background: "#fff",
             padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <input
-          value={user.email}
-          disabled
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "#f7f7f7",
-          }}
-        />
-
-        <select
-          name="role"
-          defaultValue={user.role}
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 10,
-            border: "1px solid #ddd",
+            display: "grid",
+            gap: 14,
           }}
         >
-          <option value="OWNER">OWNER</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="MANAGER">MANAGER</option>
-          <option value="WORKER">WORKER</option>
-          <option value="VIEWER">VIEWER</option>
-        </select>
+          <div>
+            <label
+              htmlFor="fullName"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Full Name
+            </label>
+            <input
+              id="fullName"
+              name="fullName"
+              defaultValue={user.fullName}
+              placeholder="Enter full name"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="email"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              value={user.email}
+              disabled
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                background: "#f7f7f7",
+                color: "#555",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="role"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Role
+            </label>
+            <select
+              id="role"
+              name="role"
+              defaultValue={user.role}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                background: "#fff",
+              }}
+            >
+              <option value="OWNER">OWNER</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="MANAGER">MANAGER</option>
+              <option value="WORKER">WORKER</option>
+              <option value="VIEWER">VIEWER</option>
+            </select>
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             type="submit"
             style={{
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
-              border: "none",
+              border: "1px solid #111",
               background: "#111",
               color: "#fff",
               fontWeight: 700,
@@ -256,11 +294,13 @@ export default async function EditUserPage({
             href="/dashboard/users"
             style={{
               display: "inline-block",
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid #ddd",
+              background: "#fff",
               textDecoration: "none",
               color: "#111",
+              fontWeight: 600,
             }}
           >
             Cancel
@@ -272,7 +312,7 @@ export default async function EditUserPage({
         <button
           type="submit"
           style={{
-            padding: "16px 20px",
+            padding: "10px 16px",
             borderRadius: 10,
             border: "1px solid #dc2626",
             background: "#fff",

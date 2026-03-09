@@ -4,47 +4,71 @@ import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
 
 type PageProps = {
-  searchParams?: Promise<{ error?: string }> | { error?: string };
+  params: { id: string } | Promise<{ id: string }>;
+  searchParams?: { error?: string } | Promise<{ error?: string }>;
 };
 
-export default async function NewCompanyPage({ searchParams }: PageProps) {
-  await requireAccessToken();
+type ActionPlan = {
+  id: string;
+  title: string;
+  description?: string | null;
+};
 
-  const resolvedSearchParams = searchParams
-    ? await Promise.resolve(searchParams)
-    : {};
+function normalize(v: unknown) {
+  return String(v ?? "").trim();
+}
 
-  const error = String(resolvedSearchParams?.error ?? "").trim();
+export default async function EditActionPlanPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const resolvedParams = await Promise.resolve(params);
+  const resolvedSearch = await Promise.resolve(searchParams ?? {});
 
-  async function createCompany(formData: FormData) {
+  const id = normalize(resolvedParams?.id);
+  if (!id) redirect("/dashboard/action-plans");
+
+  const token = await requireAccessToken();
+
+  const r = await fetch(api(`/v1/action-plans/${id}`), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (r.status === 401) redirect("/login");
+  if (!r.ok) redirect(`/dashboard/action-plans/${id}`);
+
+  const ap = (await r.json()) as ActionPlan;
+  const error = normalize(resolvedSearch?.error);
+
+  async function updateActionPlan(formData: FormData) {
     "use server";
 
-    const token = await requireAccessToken();
+    const tokenInner = await requireAccessToken();
 
-    const name = String(formData.get("name") ?? "").trim();
-    const country = String(formData.get("country") ?? "").trim();
-    const industry = String(formData.get("industry") ?? "").trim();
+    const title = normalize(formData.get("title"));
+    const description = normalize(formData.get("description"));
 
-    if (!name) {
+    if (!title) {
       redirect(
-        `/dashboard/companies/new?error=${encodeURIComponent(
-          "Name is required",
+        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
+          "Title is required",
         )}`,
       );
     }
 
-    const payload: Record<string, string> = { name };
-
-    if (country) payload.country = country;
-    if (industry) payload.industry = industry;
-
-    const res = await fetch(api("/v1/companies"), {
-      method: "POST",
+    const res = await fetch(api(`/v1/action-plans/${id}`), {
+      method: "PATCH",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${tokenInner}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        title,
+        description: description || null,
+      }),
       cache: "no-store",
     });
 
@@ -53,20 +77,20 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/companies/new?error=${encodeURIComponent(
-          `Create company failed (${res.status}) ${text}`,
+        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
+          `Update failed (${res.status}) ${text}`,
         )}`,
       );
     }
 
-    redirect("/dashboard/companies");
+    redirect(`/dashboard/action-plans/${id}`);
   }
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
       <PageHeader
-        title="Create Company"
-        subtitle="Add a new tenant company to the platform"
+        title="Edit Action Plan"
+        subtitle="Update the action plan title and description"
       />
 
       {error ? (
@@ -85,7 +109,7 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <form action={createCompany} style={{ display: "grid", gap: 16 }}>
+      <form action={updateActionPlan} style={{ display: "grid", gap: 16 }}>
         <div
           style={{
             border: "1px solid #eee",
@@ -98,19 +122,20 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
         >
           <div>
             <label
-              htmlFor="name"
+              htmlFor="title"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Company Name
+              Title
             </label>
             <input
-              id="name"
-              name="name"
-              placeholder="Enter company name"
+              id="title"
+              name="title"
+              defaultValue={ap.title}
+              placeholder="Enter action plan title"
               required
               style={{
                 width: "100%",
-                padding: 10,
+                padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
               }}
@@ -119,40 +144,23 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
 
           <div>
             <label
-              htmlFor="country"
+              htmlFor="description"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Country
+              Description
             </label>
-            <input
-              id="country"
-              name="country"
-              placeholder="Enter country"
+            <textarea
+              id="description"
+              name="description"
+              defaultValue={ap.description ?? ""}
+              rows={8}
+              placeholder="Enter action plan description"
               style={{
                 width: "100%",
-                padding: 10,
+                padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
-              }}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="industry"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Industry
-            </label>
-            <input
-              id="industry"
-              name="industry"
-              placeholder="Enter industry"
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 10,
-                border: "1px solid #ddd",
+                resize: "vertical",
               }}
             />
           </div>
@@ -171,11 +179,11 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
               cursor: "pointer",
             }}
           >
-            Create Company
+            Update Action Plan
           </button>
 
           <a
-            href="/dashboard/companies"
+            href={`/dashboard/action-plans/${ap.id}`}
             style={{
               display: "inline-block",
               padding: "10px 16px",

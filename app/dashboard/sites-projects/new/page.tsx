@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
+import PageHeader from "@/components/ui/page-header";
 
 type PageProps = {
   searchParams?:
@@ -25,13 +26,13 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
 
     if (!name) {
       redirect(
-        `/dashboard/sites-projects/new?err=${encodeURIComponent("Name is required")}`
+        `/dashboard/sites-projects/new?err=${encodeURIComponent(
+          "Name is required",
+        )}`,
       );
     }
 
-    const payload: Record<string, string> = {
-      name,
-    };
+    const payload: Record<string, string> = { name };
 
     if (location) {
       payload.location = location;
@@ -59,8 +60,8 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
       const text = await res.text().catch(() => "");
       redirect(
         `/dashboard/sites-projects/new?err=${encodeURIComponent(
-          `Failed to create Site / Project (${res.status}) ${text}`
-        )}`
+          `Failed to create Site / Project (${res.status}) ${text}`,
+        )}`,
       );
     }
 
@@ -68,85 +69,137 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui" }}>
-      <h1 style={{ fontSize: 42, fontWeight: 900, marginBottom: 12 }}>
-        Create Site / Project
-      </h1>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+      <PageHeader
+        title="Create Site / Project"
+        subtitle="Add a new operational site or project to the platform"
+      />
 
       {err ? (
         <div
           style={{
             marginBottom: 16,
             padding: 12,
-            borderRadius: 12,
-            background: "#fff5f5",
-            border: "1px solid #ffd6d6",
-            color: "#b00020",
-            fontWeight: 700,
+            borderRadius: 10,
+            background: "#fef2f2",
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            whiteSpace: "pre-wrap",
           }}
         >
           {err}
         </div>
       ) : null}
 
-      <form action={createSiteProject} style={{ maxWidth: 800 }}>
-        <input
-          name="name"
-          placeholder="Name"
-          required
+      <form action={createSiteProject} style={{ display: "grid", gap: 16 }}>
+        <div
           style={{
-            width: "100%",
-            padding: "16px",
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <input
-          name="location"
-          placeholder="Location"
-          style={{
-            width: "100%",
-            padding: "16px",
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <select
-          name="status"
-          defaultValue="ACTIVE"
-          style={{
-            width: "100%",
-            padding: "16px",
-            marginBottom: 16,
-            borderRadius: 10,
-            border: "1px solid #ddd",
+            border: "1px solid #eee",
+            borderRadius: 12,
             background: "#fff",
+            padding: 16,
+            display: "grid",
+            gap: 14,
           }}
         >
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="INACTIVE">INACTIVE</option>
-        </select>
+          <div>
+            <label
+              htmlFor="name"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Name
+            </label>
+            <input
+              id="name"
+              name="name"
+              placeholder="Enter site or project name"
+              required
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
 
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            padding: "16px",
-            borderRadius: 10,
-            border: "none",
-            background: "#111",
-            color: "#fff",
-            fontSize: 16,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Create Site / Project
-        </button>
+          <div>
+            <label
+              htmlFor="location"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Location
+            </label>
+            <input
+              id="location"
+              name="location"
+              placeholder="Enter location"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="status"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue="ACTIVE"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                background: "#fff",
+              }}
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="submit"
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #111",
+              background: "#111",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Create Site / Project
+          </button>
+
+          <a
+            href="/dashboard/sites-projects"
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              background: "#fff",
+              textDecoration: "none",
+              color: "#111",
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </a>
+        </div>
       </form>
     </div>
   );

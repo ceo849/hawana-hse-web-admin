@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
+import PageHeader from "@/components/ui/page-header";
 
 type Company = {
   id: string;
@@ -13,7 +14,7 @@ type Company = {
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
 function isCompany(value: unknown): value is Company {
@@ -50,8 +51,12 @@ export default async function EditCompanyPage({
 }: PageProps) {
   const token = await requireAccessToken();
   const { id } = await params;
-  const resolvedSearchParams = await Promise.resolve(searchParams);
-  const error = resolvedSearchParams?.error ?? "";
+
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
+  const error = String(resolvedSearchParams?.error ?? "").trim();
 
   const r = await fetch(api(`/v1/companies/${id}`), {
     headers: {
@@ -64,6 +69,7 @@ export default async function EditCompanyPage({
   if (!r.ok) redirect("/dashboard/companies");
 
   const json = (await r.json()) as unknown;
+
   if (!isCompany(json)) {
     redirect("/dashboard/companies");
   }
@@ -137,16 +143,11 @@ export default async function EditCompanyPage({
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
-      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <a href="/dashboard">Dashboard</a> /
-        <a href="/dashboard/companies"> Companies</a> /
-        <span> Edit Company</span>
-      </div>
-
-      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
-        Edit Company
-      </h1>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+      <PageHeader
+        title="Edit Company"
+        subtitle="Update company information and tenant record details"
+      />
 
       {error ? (
         <div
@@ -166,7 +167,7 @@ export default async function EditCompanyPage({
 
       <div
         style={{
-          marginBottom: 20,
+          marginBottom: 16,
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -186,53 +187,88 @@ export default async function EditCompanyPage({
         </div>
       </div>
 
-      <form action={updateCompany} style={{ maxWidth: 700 }}>
-        <input
-          name="name"
-          defaultValue={company.name}
-          placeholder="Company Name"
+      <form action={updateCompany} style={{ display: "grid", gap: 16 }}>
+        <div
           style={{
-            width: "100%",
+            border: "1px solid #eee",
+            borderRadius: 12,
+            background: "#fff",
             padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
+            display: "grid",
+            gap: 14,
           }}
-        />
+        >
+          <div>
+            <label
+              htmlFor="name"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Company Name
+            </label>
+            <input
+              id="name"
+              name="name"
+              defaultValue={company.name}
+              placeholder="Enter company name"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
 
-        <input
-          name="country"
-          defaultValue={company.country ?? ""}
-          placeholder="Country"
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
+          <div>
+            <label
+              htmlFor="country"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Country
+            </label>
+            <input
+              id="country"
+              name="country"
+              defaultValue={company.country ?? ""}
+              placeholder="Enter country"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
 
-        <input
-          name="industry"
-          defaultValue={company.industry ?? ""}
-          placeholder="Industry"
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
+          <div>
+            <label
+              htmlFor="industry"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Industry
+            </label>
+            <input
+              id="industry"
+              name="industry"
+              defaultValue={company.industry ?? ""}
+              placeholder="Enter industry"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             type="submit"
             style={{
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
-              border: "none",
+              border: "1px solid #111",
               background: "#111",
               color: "#fff",
               fontWeight: 700,
@@ -246,11 +282,13 @@ export default async function EditCompanyPage({
             href="/dashboard/companies"
             style={{
               display: "inline-block",
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid #ddd",
+              background: "#fff",
               textDecoration: "none",
               color: "#111",
+              fontWeight: 600,
             }}
           >
             Cancel
@@ -262,7 +300,7 @@ export default async function EditCompanyPage({
         <button
           type="submit"
           style={{
-            padding: "16px 20px",
+            padding: "10px 16px",
             borderRadius: 10,
             border: "1px solid #dc2626",
             background: "#fff",

@@ -14,6 +14,21 @@ type SidebarProps = {
   navItems?: SidebarNavItem[];
 };
 
+function getIcon(label: string) {
+  const icons: Record<string, string> = {
+    Dashboard: '🏠',
+    Users: '👥',
+    Companies: '🏢',
+    'Sites / Projects': '📍',
+    'Safety Reports': '⚠️',
+    'Action Plans': '🛠',
+    Admin: '⚙️',
+    'Admin Panel': '⚙️',
+  };
+
+  return icons[label] ?? '•';
+}
+
 export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
   const pathname = usePathname();
 
@@ -25,25 +40,46 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
     <aside
       style={{
         width: 260,
-        padding: 16,
-        borderRight: '1px solid #eee',
-        background: '#fafafa',
+        padding: 20,
+        borderRight: '1px solid #e5e7eb',
+        background: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
       }}
     >
-      <div style={{ fontWeight: 800, fontSize: 18 }}>Hawana Admin</div>
-
-      <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-        Phase 4 — Web Admin Skeleton
+      {/* Logo / Brand */}
+      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 4 }}>
+        Hawana
       </div>
 
-      <div style={{ marginTop: 12, fontSize: 12, color: '#444' }}>
+      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 20 }}>
+        HSE Administration
+      </div>
+
+      {/* User info */}
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 10,
+          background: '#f9fafb',
+          border: '1px solid #eee',
+          fontSize: 13,
+          marginBottom: 20,
+        }}
+      >
         <div>
           Role: <strong>{role}</strong>
         </div>
-        {email && <div style={{ marginTop: 4 }}>{email}</div>}
+        {email && (
+          <div style={{ marginTop: 4, color: '#555', fontSize: 12 }}>
+            {email}
+          </div>
+        )}
       </div>
 
-      <nav style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+      {/* Navigation */}
+      <nav style={{ display: 'grid', gap: 6 }}>
         {uniqueItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -54,20 +90,37 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
               key={item.href}
               href={item.href}
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
                 textDecoration: 'none',
-                padding: '8px 10px',
+                padding: '10px 12px',
                 borderRadius: 10,
-                border: '1px solid #eee',
+                border: isActive ? '1px solid #111' : '1px solid #eee',
                 background: isActive ? '#111' : '#fff',
                 color: isActive ? '#fff' : '#111',
-                fontWeight: isActive ? 700 : 500,
+                fontWeight: 600,
+                transition: 'all 0.15s ease',
               }}
             >
+              <span style={{ fontSize: 16 }}>{getIcon(item.label)}</span>
               {item.label}
             </Link>
           );
         })}
       </nav>
+
+      {/* Footer */}
+      <div
+        style={{
+          marginTop: 'auto',
+          fontSize: 11,
+          color: '#999',
+          paddingTop: 20,
+        }}
+      >
+        Hawana HSE Platform
+      </div>
     </aside>
   );
 }
