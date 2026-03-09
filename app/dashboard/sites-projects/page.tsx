@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import PageHeader from "@/components/ui/page-header";
 
 type SiteProject = {
   id: string;
@@ -27,8 +28,19 @@ function isSiteProject(value: unknown): value is SiteProject {
 }
 
 function parseSiteProjects(value: unknown): SiteProject[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(isSiteProject);
+  if (Array.isArray(value)) {
+    return value.filter(isSiteProject);
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { data?: unknown }).data)
+  ) {
+    return ((value as { data: unknown[] }).data).filter(isSiteProject);
+  }
+
+  return [];
 }
 
 function formatDate(value: string): string {
@@ -42,6 +54,32 @@ function formatDate(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(d);
+}
+
+function getStatusStyle(status: string) {
+  const normalized = String(status).toUpperCase();
+
+  if (normalized === "ACTIVE") {
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+    };
+  }
+
+  if (normalized === "INACTIVE") {
+    return {
+      background: "#f3f4f6",
+      color: "#111827",
+      border: "1px solid #d1d5db",
+    };
+  }
+
+  return {
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+  };
 }
 
 export default async function SitesProjectsPage() {
@@ -63,8 +101,11 @@ export default async function SitesProjectsPage() {
     const text = await r.text().catch(() => "");
 
     return (
-      <div style={{ fontFamily: "system-ui" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800 }}>Sites / Projects</h1>
+      <div style={{ fontFamily: "system-ui", padding: 24 }}>
+        <PageHeader
+          title="Sites / Projects"
+          subtitle="Manage sites and projects across tenant operations"
+        />
 
         <pre
           style={{
@@ -85,62 +126,119 @@ ${text}`}</pre>
   const items = parseSiteProjects(json);
 
   return (
-    <div style={{ fontFamily: "system-ui" }}>
+    <div style={{ fontFamily: "system-ui", padding: 24 }}>
+      <PageHeader
+        title="Sites / Projects"
+        subtitle="Manage sites and projects across tenant operations"
+        action={
+          <Link
+            href="/dashboard/sites-projects/new"
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              background: "#111",
+              color: "#fff",
+              borderRadius: 10,
+              textDecoration: "none",
+              fontWeight: 800,
+            }}
+          >
+            + New Site / Project
+          </Link>
+        }
+      />
+
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
+          marginBottom: 12,
+          padding: "12px 14px",
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fafafa",
+          fontSize: 14,
+          color: "#444",
         }}
       >
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
-          Sites / Projects
-        </h1>
-
-        <Link
-          href="/dashboard/sites-projects/new"
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 700,
-          }}
-        >
-          Create Site / Project
-        </Link>
+        Total sites / projects: <strong>{items.length}</strong>
       </div>
 
       <div
         style={{
-          marginTop: 16,
           border: "1px solid #eee",
           borderRadius: 12,
-          overflow: "hidden",
+          overflowX: "auto",
+          background: "#fff",
         }}
       >
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table
+          style={{
+            width: "100%",
+            minWidth: 1100,
+            borderCollapse: "collapse",
+          }}
+        >
           <thead>
             <tr style={{ background: "#fafafa" }}>
-              <th style={{ textAlign: "left", padding: 12, borderBottom: "1px solid #eee" }}>
-                Name
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
+                Site / Project
               </th>
-              <th style={{ textAlign: "left", padding: 12, borderBottom: "1px solid #eee" }}>
-                Location
-              </th>
-              <th style={{ textAlign: "left", padding: 12, borderBottom: "1px solid #eee" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
                 Status
               </th>
-              <th style={{ textAlign: "left", padding: 12, borderBottom: "1px solid #eee" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
                 Site / Project ID
               </th>
-              <th style={{ textAlign: "left", padding: 12, borderBottom: "1px solid #eee" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
                 Created At
               </th>
-              <th style={{ textAlign: "left", padding: 12, borderBottom: "1px solid #eee" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
                 Updated At
+              </th>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: 14,
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                  width: 120,
+                }}
+              >
+                Actions
               </th>
             </tr>
           </thead>
@@ -148,54 +246,131 @@ ${text}`}</pre>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: 12 }}>
+                <td
+                  colSpan={6}
+                  style={{
+                    padding: 24,
+                    color: "#555",
+                  }}
+                >
                   No sites / projects found.
                 </td>
               </tr>
             ) : (
-              items.map((s) => (
-                <tr key={s.id}>
-                  <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    <Link
-                      href={`/dashboard/sites-projects/${s.id}`}
+              items.map((s) => {
+                const statusStyle = getStatusStyle(s.status);
+
+                return (
+                  <tr key={s.id}>
+                    <td
                       style={{
-                        color: "#2563eb",
-                        fontWeight: 700,
-                        textDecoration: "none",
+                        padding: 14,
+                        borderBottom: "1px solid #eee",
+                        verticalAlign: "top",
                       }}
                     >
-                      {s.name}
-                    </Link>
-                  </td>
+                      <Link
+                        href={`/dashboard/sites-projects/${s.id}`}
+                        style={{
+                          color: "#111",
+                          fontWeight: 800,
+                          textDecoration: "none",
+                        }}
+                      >
+                        {s.name}
+                      </Link>
 
-                  <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    {s.location ?? "-"}
-                  </td>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 13,
+                          color: "#666",
+                        }}
+                      >
+                        {s.location ?? "-"}
+                      </div>
+                    </td>
 
-                  <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    {s.status}
-                  </td>
+                    <td
+                      style={{
+                        padding: 14,
+                        borderBottom: "1px solid #eee",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          ...statusStyle,
+                        }}
+                      >
+                        {s.status}
+                      </span>
+                    </td>
 
-                  <td
-                    style={{
-                      padding: 12,
-                      borderBottom: "1px solid #eee",
-                      fontFamily: "monospace",
-                      fontSize: 12,
-                    }}
-                  >
-                    {s.id}
-                  </td>
+                    <td
+                      style={{
+                        padding: 14,
+                        borderBottom: "1px solid #eee",
+                        verticalAlign: "top",
+                        fontFamily: "monospace",
+                        fontSize: 12,
+                        color: "#444",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {s.id}
+                    </td>
 
-                  <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    {formatDate(s.createdAt)}
-                  </td>
+                    <td
+                      style={{
+                        padding: 14,
+                        borderBottom: "1px solid #eee",
+                        verticalAlign: "top",
+                        fontSize: 13,
+                        color: "#444",
+                      }}
+                    >
+                      {formatDate(s.createdAt)}
+                    </td>
 
-                  <td style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    {formatDate(s.updatedAt)}
-                  </td>
-                </tr>
-              ))
+                    <td
+                      style={{
+                        padding: 14,
+                        borderBottom: "1px solid #eee",
+                        verticalAlign: "top",
+                        fontSize: 13,
+                        color: "#444",
+                      }}
+                    >
+                      {formatDate(s.updatedAt)}
+                    </td>
+
+                    <td
+                      style={{
+                        padding: 14,
+                        borderBottom: "1px solid #eee",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      <Link
+                        href={`/dashboard/sites-projects/${s.id}`}
+                        style={{
+                          textDecoration: "underline",
+                          color: "#111",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Open
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

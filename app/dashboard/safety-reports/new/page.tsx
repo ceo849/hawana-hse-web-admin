@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
+import PageHeader from "@/components/ui/page-header";
 
 type PageProps = {
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
 type SiteProject = {
@@ -26,15 +27,36 @@ function isSiteProject(value: unknown): value is SiteProject {
   );
 }
 
+function parseSiteProjects(value: unknown): SiteProject[] {
+  if (Array.isArray(value)) {
+    return value.filter(isSiteProject);
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { data?: unknown }).data)
+  ) {
+    return ((value as { data: unknown[] }).data).filter(isSiteProject);
+  }
+
+  return [];
+}
+
 function formatSiteProjectLabel(site: SiteProject): string {
   if (site.location) return `${site.name} (${site.location})`;
   return site.name;
 }
 
-export default async function NewSafetyReportPage({ searchParams }: PageProps) {
+export default async function NewSafetyReportPage({
+  searchParams,
+}: PageProps) {
   const token = await requireAccessToken();
 
-  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
   const sitesRes = await fetch(api("/v1/sites-projects"), {
@@ -47,9 +69,7 @@ export default async function NewSafetyReportPage({ searchParams }: PageProps) {
   if (sitesRes.status === 401) redirect("/login");
 
   const sitesJson = sitesRes.ok ? ((await sitesRes.json()) as unknown) : [];
-  const siteProjects = Array.isArray(sitesJson)
-    ? sitesJson.filter(isSiteProject)
-    : [];
+  const siteProjects = parseSiteProjects(sitesJson);
 
   async function createSafetyReport(formData: FormData) {
     "use server";
@@ -103,16 +123,11 @@ export default async function NewSafetyReportPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div style={{ fontFamily: "system-ui", maxWidth: 900 }}>
-      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <a href="/dashboard">Dashboard</a> /
-        <a href="/dashboard/safety-reports"> Safety Reports</a> /
-        <span> Create Safety Report</span>
-      </div>
-
-      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
-        Create Safety Report
-      </h1>
+    <div style={{ fontFamily: "system-ui", padding: 24, maxWidth: 760 }}>
+      <PageHeader
+        title="Create Safety Report"
+        subtitle="Register a new safety report and optionally link it to a site or project"
+      />
 
       {error ? (
         <div
@@ -130,61 +145,96 @@ export default async function NewSafetyReportPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <form action={createSafetyReport} style={{ maxWidth: 800 }}>
-        <input
-          name="title"
-          placeholder="Title"
-          required
+      <form action={createSafetyReport} style={{ display: "grid", gap: 16 }}>
+        <div
           style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <select
-          name="siteProjectId"
-          defaultValue=""
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
+            border: "1px solid #eee",
+            borderRadius: 12,
             background: "#fff",
+            padding: 16,
+            display: "grid",
+            gap: 14,
           }}
         >
-          <option value="">No Site / Project</option>
-          {siteProjects.map((site) => (
-            <option key={site.id} value={site.id}>
-              {formatSiteProjectLabel(site)}
-            </option>
-          ))}
-        </select>
+          <div>
+            <label
+              htmlFor="title"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Title
+            </label>
+            <input
+              id="title"
+              name="title"
+              placeholder="Enter safety report title"
+              required
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
 
-        <textarea
-          name="description"
-          rows={8}
-          placeholder="Description"
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            resize: "vertical",
-          }}
-        />
+          <div>
+            <label
+              htmlFor="siteProjectId"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Site / Project
+            </label>
+            <select
+              id="siteProjectId"
+              name="siteProjectId"
+              defaultValue=""
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                background: "#fff",
+              }}
+            >
+              <option value="">No Site / Project</option>
+              {siteProjects.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {formatSiteProjectLabel(site)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="description"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={8}
+              placeholder="Enter report description"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                resize: "vertical",
+              }}
+            />
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             type="submit"
             style={{
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
-              border: "none",
+              border: "1px solid #111",
               background: "#111",
               color: "#fff",
               fontWeight: 700,
@@ -198,11 +248,13 @@ export default async function NewSafetyReportPage({ searchParams }: PageProps) {
             href="/dashboard/safety-reports"
             style={{
               display: "inline-block",
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid #ddd",
+              background: "#fff",
               textDecoration: "none",
               color: "#111",
+              fontWeight: 600,
             }}
           >
             Cancel

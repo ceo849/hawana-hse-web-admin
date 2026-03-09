@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
+import PageHeader from "@/components/ui/page-header";
 
 type SiteProject = {
   id: string;
@@ -13,7 +14,7 @@ type SiteProject = {
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
 function isSiteProject(value: unknown): value is SiteProject {
@@ -51,8 +52,11 @@ export default async function EditSiteProjectPage({
   const token = await requireAccessToken();
 
   const { id } = await params;
-  const resolvedSearchParams = await Promise.resolve(searchParams);
-  const error = resolvedSearchParams?.error ?? "";
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
+  const error = String(resolvedSearchParams?.error ?? "").trim();
 
   const r = await fetch(api(`/v1/sites-projects/${id}`), {
     headers: {
@@ -138,16 +142,11 @@ export default async function EditSiteProjectPage({
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
-      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <a href="/dashboard">Dashboard</a> /
-        <a href="/dashboard/sites-projects"> Sites / Projects</a> /
-        <span> Edit Site / Project</span>
-      </div>
-
-      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
-        Edit Site / Project
-      </h1>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+      <PageHeader
+        title="Edit Site / Project"
+        subtitle="Update site or project information and operational status"
+      />
 
       {error ? (
         <div
@@ -167,7 +166,7 @@ export default async function EditSiteProjectPage({
 
       <div
         style={{
-          marginBottom: 20,
+          marginBottom: 16,
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -187,56 +186,91 @@ export default async function EditSiteProjectPage({
         </div>
       </div>
 
-      <form action={updateSiteProject} style={{ maxWidth: 800 }}>
-        <input
-          name="name"
-          defaultValue={site.name}
-          placeholder="Name"
+      <form action={updateSiteProject} style={{ display: "grid", gap: 16 }}>
+        <div
           style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <input
-          name="location"
-          defaultValue={site.location ?? ""}
-          placeholder="Location"
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <select
-          name="status"
-          defaultValue={site.status}
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 10,
-            border: "1px solid #ddd",
+            border: "1px solid #eee",
+            borderRadius: 12,
             background: "#fff",
+            padding: 16,
+            display: "grid",
+            gap: 14,
           }}
         >
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="INACTIVE">INACTIVE</option>
-        </select>
+          <div>
+            <label
+              htmlFor="name"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Name
+            </label>
+            <input
+              id="name"
+              name="name"
+              defaultValue={site.name}
+              placeholder="Enter site or project name"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="location"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Location
+            </label>
+            <input
+              id="location"
+              name="location"
+              defaultValue={site.location ?? ""}
+              placeholder="Enter location"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="status"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={site.status}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                background: "#fff",
+              }}
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             type="submit"
             style={{
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
-              border: "none",
+              border: "1px solid #111",
               background: "#111",
               color: "#fff",
               fontWeight: 700,
@@ -250,11 +284,13 @@ export default async function EditSiteProjectPage({
             href="/dashboard/sites-projects"
             style={{
               display: "inline-block",
-              padding: "16px 20px",
+              padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid #ddd",
+              background: "#fff",
               textDecoration: "none",
               color: "#111",
+              fontWeight: 600,
             }}
           >
             Cancel
@@ -262,16 +298,15 @@ export default async function EditSiteProjectPage({
         </div>
       </form>
 
-      <form action={deleteSiteProject} style={{ maxWidth: 800, marginTop: 16 }}>
+      <form action={deleteSiteProject} style={{ marginTop: 16 }}>
         <button
           type="submit"
           style={{
-            width: "100%",
-            padding: 16,
+            padding: "10px 16px",
             borderRadius: 10,
-            border: "1px solid #d11a2a",
+            border: "1px solid #dc2626",
             background: "#fff",
-            color: "#d11a2a",
+            color: "#dc2626",
             fontWeight: 700,
             cursor: "pointer",
           }}

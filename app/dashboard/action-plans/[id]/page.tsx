@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
+import PageHeader from "@/components/ui/page-header";
 
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
@@ -36,6 +37,10 @@ function normalizeId(raw: unknown): string {
 
 function actionPlanPath(id: string) {
   return `/dashboard/action-plans/${encodeURIComponent(id)}`;
+}
+
+function safetyReportPath(id: string) {
+  return `/dashboard/safety-reports/${encodeURIComponent(id)}`;
 }
 
 function allowedNextStatuses(current: ActionPlanStatus): ActionPlanStatus[] {
@@ -118,7 +123,10 @@ function getActionPlanStatusStyle(status?: string | null) {
   };
 }
 
-function formatAssignedUser(user?: AssignedUserLite | null, fallbackId?: string | null) {
+function formatAssignedUser(
+  user?: AssignedUserLite | null,
+  fallbackId?: string | null,
+) {
   if (user?.fullName || user?.email) {
     return `${user.fullName ?? "—"} — ${user.email ?? "—"}`;
   }
@@ -155,7 +163,10 @@ function errRedirect(id: string, label: string, status: number, detail: string) 
   redirect(`${actionPlanPath(id)}?err=${encodeURIComponent(clean)}`);
 }
 
-export default async function ActionPlanPage({ params, searchParams }: PageProps) {
+export default async function ActionPlanPage({
+  params,
+  searchParams,
+}: PageProps) {
   const resolvedParams = await Promise.resolve(params);
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const id = normalizeId(resolvedParams?.id);
@@ -246,17 +257,10 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
     const detail = await readApiErrorText(res);
     return (
       <div style={{ padding: 24, fontFamily: "system-ui" }}>
-        <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-          <a href="/dashboard">Dashboard</a> /
-          <a href="/dashboard/action-plans"> Action Plans</a> /
-          <span> Action Plan Details</span>
-        </div>
-
-        <a href="/dashboard/action-plans">← Back</a>
-
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 16 }}>
-          Action Plan
-        </h1>
+        <PageHeader
+          title="Action Plan"
+          subtitle="View details, update workflow status, and manage due date"
+        />
 
         <pre
           style={{
@@ -265,8 +269,15 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
             background: "#f7f7f7",
             borderRadius: 12,
             overflowX: "auto",
+            whiteSpace: "pre-wrap",
           }}
         >{`Failed to load action plan (${res.status})\n${detail}`}</pre>
+
+        <div style={{ marginTop: 14 }}>
+          <a href="/dashboard/action-plans" style={{ textDecoration: "underline" }}>
+            Back to Action Plans
+          </a>
+        </div>
       </div>
     );
   }
@@ -278,26 +289,40 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
   const statusStyle = getActionPlanStatusStyle(ap.status);
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui" }}>
-      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <a href="/dashboard">Dashboard</a> /
-        <a href="/dashboard/action-plans"> Action Plans</a> /
-        <span> Action Plan Details</span>
-      </div>
-
-      <a href="/dashboard/action-plans">← Back</a>
-
-      <h1 style={{ fontSize: 44, fontWeight: 900, marginTop: 16 }}>{ap.title}</h1>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 860 }}>
+      <PageHeader
+        title={ap.title}
+        subtitle="View details, update workflow status, and manage due date"
+        action={
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a
+              href="/dashboard/action-plans"
+              style={{
+                display: "inline-block",
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Back
+            </a>
+          </div>
+        }
+      />
 
       {err ? (
         <div
           style={{
-            marginTop: 12,
+            marginBottom: 16,
             padding: 12,
-            borderRadius: 12,
-            border: "1px solid #f3c2c2",
-            background: "#fff5f5",
-            color: "#7a1c1c",
+            borderRadius: 10,
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
             fontSize: 13,
             whiteSpace: "pre-wrap",
           }}
@@ -308,7 +333,7 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
 
       <div
         style={{
-          marginTop: 14,
+          marginBottom: 16,
           display: "flex",
           gap: 10,
           alignItems: "center",
@@ -329,24 +354,66 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
         </span>
       </div>
 
-      <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
-        <div>
-          <b>Assigned To:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 16,
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fff",
+        }}
+      >
+        <div style={{ display: "grid", gap: 8 }}>
+          <div>
+            <b>Assigned To:</b>{" "}
+            {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}
+          </div>
+
+          <div>
+            <b>Safety Report:</b>{" "}
+            {ap.safetyReportId ? (
+              <a
+                href={safetyReportPath(ap.safetyReportId)}
+                style={{ textDecoration: "underline" }}
+              >
+                {ap.safetyReportId}
+              </a>
+            ) : (
+              "—"
+            )}
+          </div>
+
+          <div>
+            <b>Action Plan ID:</b> {ap.id}
+          </div>
+
+          <div>
+            <b>Created:</b> {formatDateDisplay(ap.createdAt)}
+          </div>
+
+          <div>
+            <b>Updated:</b> {formatDateDisplay(ap.updatedAt)}
+          </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 18 }}>
-        <b>Change Status</b>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 16,
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fff",
+        }}
+      >
+        <div style={{ fontWeight: 800, marginBottom: 10 }}>Change Status</div>
 
         {nextStatuses.length === 0 ? (
-          <div style={{ marginTop: 8, fontSize: 13, color: "#555" }}>
-            No allowed transitions
-          </div>
+          <div style={{ fontSize: 13, color: "#555" }}>No allowed transitions</div>
         ) : (
           <form
             action={changeStatus}
             style={{
-              marginTop: 10,
               display: "flex",
               gap: 10,
               alignItems: "center",
@@ -361,6 +428,7 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
                 borderRadius: 10,
                 border: "1px solid #ddd",
                 minWidth: 180,
+                background: "#fff",
               }}
             >
               {nextStatuses.map((s) => (
@@ -374,85 +442,94 @@ export default async function ActionPlanPage({ params, searchParams }: PageProps
               type="submit"
               style={{
                 padding: "10px 16px",
-                borderRadius: 12,
+                borderRadius: 10,
                 border: "1px solid #111",
                 background: "#111",
                 color: "#fff",
-                fontWeight: 800,
+                fontWeight: 700,
                 cursor: "pointer",
               }}
             >
-              Update
+              Update Status
             </button>
           </form>
         )}
       </div>
 
-      <div style={{ marginTop: 18 }}>
-        <b>Due Date:</b> {formatDateDisplay(ap.dueDate)}
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 16,
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fff",
+        }}
+      >
+        <div style={{ fontWeight: 800, marginBottom: 10 }}>
+          Due Date: {formatDateDisplay(ap.dueDate)}
+        </div>
 
-        <div style={{ marginTop: 10 }}>
-          <form
-            action={updateDueDate}
+        <form
+          action={updateDueDate}
+          style={{
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <input
+            type="date"
+            name="dueDate"
+            defaultValue={toDateInputValue(ap.dueDate)}
+            disabled={dueDateLocked}
             style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              minWidth: 220,
+              opacity: dueDateLocked ? 0.6 : 1,
+              background: "#fff",
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={dueDateLocked}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #111",
+              background: dueDateLocked ? "#777" : "#111",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: dueDateLocked ? "not-allowed" : "pointer",
+              opacity: dueDateLocked ? 0.7 : 1,
             }}
           >
-            <input
-              type="date"
-              name="dueDate"
-              defaultValue={toDateInputValue(ap.dueDate)}
-              disabled={dueDateLocked}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                minWidth: 220,
-                opacity: dueDateLocked ? 0.6 : 1,
-              }}
-            />
+            Save Due Date
+          </button>
 
-            <button
-              type="submit"
-              disabled={dueDateLocked}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: "1px solid #111",
-                background: dueDateLocked ? "#777" : "#111",
-                color: "#fff",
-                fontWeight: 800,
-                cursor: dueDateLocked ? "not-allowed" : "pointer",
-                opacity: dueDateLocked ? 0.7 : 1,
-              }}
-            >
-              Save Due Date
-            </button>
-
-            <span style={{ fontSize: 12, color: "#666" }}>
-              {dueDateLocked
-                ? "(Locked: VERIFIED plan)"
-                : "(سيتم حفظ التاريخ أو مسحه لو تركته فارغًا)"}
-            </span>
-          </form>
-        </div>
+          <span style={{ fontSize: 12, color: "#666" }}>
+            {dueDateLocked
+              ? "(Locked: VERIFIED plan)"
+              : "(Leave empty to clear the due date)"}
+          </span>
+        </form>
       </div>
 
-      <div style={{ marginTop: 18 }}>
-        <b>Description</b>
-        <p style={{ marginTop: 8, lineHeight: 1.6 }}>
+      <div
+        style={{
+          padding: 16,
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fff",
+        }}
+      >
+        <div style={{ fontWeight: 800, marginBottom: 8 }}>Description</div>
+        <p style={{ margin: 0, lineHeight: 1.6 }}>
           {ap.description?.trim() ? ap.description : "No description"}
         </p>
-      </div>
-
-      <div style={{ marginTop: 20, fontSize: 12, color: "#555" }}>
-        <div>ID: {ap.id}</div>
-        <div>Safety Report: {ap.safetyReportId ?? "—"}</div>
-        <div>Created: {formatDateDisplay(ap.createdAt)}</div>
-        <div>Updated: {formatDateDisplay(ap.updatedAt)}</div>
       </div>
     </div>
   );
