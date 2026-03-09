@@ -1,9 +1,5 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-
-const CORE_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001"
-).replace(/\/$/, "");
 
 type SafetyReport = {
   id: string;
@@ -82,18 +78,29 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const origin = `${proto}://${host}`;
+
   let safetyReports: SafetyReport[] = [];
   let actionPlans: ActionPlan[] = [];
 
   try {
     const [srRes, apRes] = await Promise.all([
-      fetch(`${CORE_BASE_URL}/v1/safety-reports`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetch(`${origin}/api/safety-reports?page=1&limit=100`, {
+        method: "GET",
         cache: "no-store",
+        headers: {
+          cookie: cookieStore.toString(),
+        },
       }),
-      fetch(`${CORE_BASE_URL}/v1/action-plans`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetch(`${origin}/api/action-plans`, {
+        method: "GET",
         cache: "no-store",
+        headers: {
+          cookie: cookieStore.toString(),
+        },
       }),
     ]);
 
@@ -101,11 +108,22 @@ export default async function DashboardPage() {
       redirect("/login");
     }
 
-    const srJson = await srRes.json();
-    const apJson = await apRes.json();
+    const srJson = (await srRes.json()) as unknown;
+    const apJson = (await apRes.json()) as unknown;
 
-    safetyReports = Array.isArray(srJson) ? srJson : srJson?.data ?? [];
-    actionPlans = Array.isArray(apJson) ? apJson : apJson?.data ?? [];
+    safetyReports =
+      Array.isArray(srJson)
+        ? (srJson as SafetyReport[])
+        : Array.isArray((srJson as { data?: unknown[] })?.data)
+          ? (((srJson as { data: unknown[] }).data ?? []) as SafetyReport[])
+          : [];
+
+    actionPlans =
+      Array.isArray(apJson)
+        ? (apJson as ActionPlan[])
+        : Array.isArray((apJson as { data?: unknown[] })?.data)
+          ? (((apJson as { data: unknown[] }).data ?? []) as ActionPlan[])
+          : [];
   } catch {
     safetyReports = [];
     actionPlans = [];
