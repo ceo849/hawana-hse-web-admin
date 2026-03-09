@@ -1,11 +1,7 @@
 // app/dashboard/safety-reports/page.tsx
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
-
-const CORE_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001"
-).replace(/\/$/, "");
 
 type SafetyReport = {
   id: string;
@@ -97,22 +93,6 @@ function normalizeStatus(value?: string) {
   return "";
 }
 
-function getCookieValue(cookieStore: any, name: string): string | null {
-  if (cookieStore && typeof cookieStore.get === "function") {
-    return cookieStore.get(name)?.value ?? null;
-  }
-
-  if (cookieStore && typeof cookieStore[Symbol.iterator] === "function") {
-    for (const entry of cookieStore as any) {
-      if (Array.isArray(entry) && entry[0] === name) {
-        return entry?.[1]?.value ?? null;
-      }
-    }
-  }
-
-  return null;
-}
-
 function getSafetyReportStatusStyle(status?: string | null) {
   const normalized = String(status ?? "").toUpperCase();
 
@@ -174,9 +154,14 @@ export default async function SafetyReportsPage(props: {
   searchParams?: Promise<SearchParams> | SearchParams;
 }) {
   const cookieStore = await cookies();
-  const token = getCookieValue(cookieStore, "access_token");
+  const token = cookieStore.get("access_token")?.value;
 
   if (!token) redirect("/login");
+
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const origin = `${proto}://${host}`;
 
   const sp: SearchParams = props.searchParams
     ? await Promise.resolve(props.searchParams)
@@ -186,14 +171,16 @@ export default async function SafetyReportsPage(props: {
   const limit = Math.min(Math.max(toInt(sp.limit ?? "20", 20), 1), 100);
   const selectedStatus = normalizeStatus(sp.status);
 
-  const url = new URL(`${CORE_BASE_URL}/v1/safety-reports`);
+  const url = new URL(`${origin}/api/safety-reports`);
   url.searchParams.set("page", String(page));
   url.searchParams.set("limit", String(limit));
 
   const res = await fetch(url.toString(), {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
+    headers: {
+      cookie: cookieStore.toString(),
+    },
   });
 
   if (res.status === 401) redirect("/login");
@@ -227,7 +214,9 @@ ${text}`}</pre>
   const items = json.data;
 
   const filteredItems = selectedStatus
-    ? items.filter((r) => String(r.status ?? "").toUpperCase() === selectedStatus)
+    ? items.filter(
+        (r) => String(r.status ?? "").toUpperCase() === selectedStatus,
+      )
     : items;
 
   const meta = json.meta ?? {
