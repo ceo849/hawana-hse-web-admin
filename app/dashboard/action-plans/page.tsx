@@ -2,6 +2,9 @@
 import { redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
+import { decodeJwtPayload } from "@/src/auth/jwt";
+
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
 type AssignedUserLite = {
   id: string;
@@ -205,6 +208,14 @@ export default async function ActionPlansPage({ searchParams }: PageProps) {
   const selectedStatus = normalizeStatus(resolvedSearchParams.status);
 
   const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
+
+  if (!token) redirect("/login");
+
+  const payload = decodeJwtPayload(token);
+  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const canCreateActionPlans = currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
+
   const cookieHeader = cookieStore.toString();
 
   const res = await fetch(`${origin}/api/action-plans`, {
@@ -257,20 +268,22 @@ ${text}`}</pre>
         title="Action Plans"
         subtitle="Track execution, ownership, due dates, and workflow progress"
         action={
-          <a
-            href="/dashboard/action-plans/new"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
-              background: "#111",
-              color: "#fff",
-              borderRadius: 10,
-              textDecoration: "none",
-              fontWeight: 800,
-            }}
-          >
-            + New Action Plan
-          </a>
+          canCreateActionPlans ? (
+            <a
+              href="/dashboard/action-plans/new"
+              style={{
+                display: "inline-block",
+                padding: "10px 16px",
+                background: "#111",
+                color: "#fff",
+                borderRadius: 10,
+                textDecoration: "none",
+                fontWeight: 800,
+              }}
+            >
+              + New Action Plan
+            </a>
+          ) : undefined
         }
       />
 

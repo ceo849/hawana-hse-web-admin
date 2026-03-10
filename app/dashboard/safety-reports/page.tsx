@@ -2,6 +2,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
+import { decodeJwtPayload } from "@/src/auth/jwt";
+
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
 type SafetyReport = {
   id: string;
@@ -158,6 +161,10 @@ export default async function SafetyReportsPage(props: {
 
   if (!token) redirect("/login");
 
+  const payload = decodeJwtPayload(token);
+  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const canCreateSafetyReports = currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
+
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? "http";
@@ -232,20 +239,22 @@ ${text}`}</pre>
         title="Safety Reports"
         subtitle="Review, filter, and manage operational safety reports"
         action={
-          <a
-            href="/dashboard/safety-reports/new"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
-              borderRadius: 10,
-              background: "#111",
-              color: "#fff",
-              textDecoration: "none",
-              fontWeight: 800,
-            }}
-          >
-            + New Safety Report
-          </a>
+          canCreateSafetyReports ? (
+            <a
+              href="/dashboard/safety-reports/new"
+              style={{
+                display: "inline-block",
+                padding: "10px 16px",
+                borderRadius: 10,
+                background: "#111",
+                color: "#fff",
+                textDecoration: "none",
+                fontWeight: 800,
+              }}
+            >
+              + New Safety Report
+            </a>
+          ) : undefined
         }
       />
 
