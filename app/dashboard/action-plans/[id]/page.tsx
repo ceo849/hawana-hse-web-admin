@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
+import { decodeJwtPayload } from "@/src/auth/jwt";
 
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
 type AssignedUserLite = {
@@ -144,7 +146,9 @@ async function readApiErrorText(r: Response): Promise<string> {
         (j.error && String(j.error)) ||
         (j.statusCode && `statusCode=${j.statusCode}`) ||
         "";
-      const path = j.path ? ` path=${String(j.path)}` : "";
+      const path = (j as { path?: unknown }).path
+        ? ` path=${String((j as { path?: unknown }).path)}`
+        : "";
       return `${msg}${path}`.trim() || JSON.stringify(j);
     }
   } catch {
@@ -174,6 +178,9 @@ export default async function ActionPlanPage({
   if (!id) redirect("/dashboard/action-plans");
 
   const token = await requireAccessToken();
+  const payload = decodeJwtPayload(token);
+  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const canOperateWorkflow = currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
 
   async function changeStatus(formData: FormData) {
     "use server";
@@ -285,7 +292,7 @@ export default async function ActionPlanPage({
   const ap = (await res.json()) as ActionPlan;
   const nextStatuses = allowedNextStatuses(ap.status);
   const err = normalizeId(resolvedSearchParams?.err);
-  const dueDateLocked = ap.status === "VERIFIED";
+  const dueDateLocked = ap.status === "VERIFIED" || !canOperateWorkflow;
   const statusStyle = getActionPlanStatusStyle(ap.status);
 
   return (
@@ -352,6 +359,22 @@ export default async function ActionPlanPage({
         >
           {ap.status}
         </span>
+
+        {!canOperateWorkflow ? (
+          <span
+            style={{
+              fontSize: 12,
+              color: "#6b7280",
+              padding: "6px 10px",
+              borderRadius: 999,
+              border: "1px solid #e5e7eb",
+              background: "#f9fafb",
+              fontWeight: 700,
+            }}
+          >
+            Read only
+          </span>
+        ) : null}
       </div>
 
       <div
@@ -408,7 +431,11 @@ export default async function ActionPlanPage({
       >
         <div style={{ fontWeight: 800, marginBottom: 10 }}>Change Status</div>
 
-        {nextStatuses.length === 0 ? (
+        {!canOperateWorkflow ? (
+          <div style={{ fontSize: 13, color: "#555" }}>
+            Status transitions are hidden for read-only roles.
+          </div>
+        ) : nextStatuses.length === 0 ? (
           <div style={{ fontSize: 13, color: "#555" }}>No allowed transitions</div>
         ) : (
           <form
@@ -511,9 +538,11 @@ export default async function ActionPlanPage({
           </button>
 
           <span style={{ fontSize: 12, color: "#666" }}>
-            {dueDateLocked
+            {ap.status === "VERIFIED"
               ? "(Locked: VERIFIED plan)"
-              : "(Leave empty to clear the due date)"}
+              : !canOperateWorkflow
+                ? "(Locked: read-only role)"
+                : "(Leave empty to clear the due date)"}
           </span>
         </form>
       </div>
