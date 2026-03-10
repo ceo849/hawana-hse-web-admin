@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
+import StatsCard from "@/components/ui/stats-card";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
@@ -32,46 +33,6 @@ function isOverdue(dueDate?: string | null) {
   if (Number.isNaN(d.getTime())) return false;
 
   return d.getTime() < Date.now();
-}
-
-function cardStyle() {
-  return {
-    display: "block",
-    border: "1px solid #e5e7eb",
-    borderRadius: 16,
-    padding: 18,
-    background: "#fff",
-    textDecoration: "none",
-    color: "#111",
-  } as const;
-}
-
-type DashboardCardProps = {
-  label: string;
-  value: number;
-  helper: string;
-  href: string;
-};
-
-function DashboardCard({
-  label,
-  value,
-  helper,
-  href,
-}: DashboardCardProps) {
-  return (
-    <a href={href} style={cardStyle()}>
-      <div style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
-        {label}
-      </div>
-
-      <div style={{ fontSize: 34, fontWeight: 900 }}>{value}</div>
-
-      <div style={{ marginTop: 10, fontSize: 14, color: "#333" }}>
-        {helper}
-      </div>
-    </a>
-  );
 }
 
 export default async function DashboardPage() {
@@ -244,70 +205,70 @@ export default async function DashboardPage() {
           gap: 14,
         }}
       >
-        <DashboardCard
+        <StatsCard
           label="Safety Reports"
           value={safetyReports.length}
           helper="Total reports"
           href="/dashboard/safety-reports"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Open Reports"
           value={openReports}
           helper="Waiting for action"
           href="/dashboard/safety-reports?status=OPEN"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Reports In Progress"
           value={inProgressReports}
           helper="Under treatment"
           href="/dashboard/safety-reports?status=IN_PROGRESS"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Closed Reports"
           value={closedReports}
           helper="Resolved reports"
           href="/dashboard/safety-reports?status=CLOSED"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Action Plans"
           value={actionPlans.length}
           helper="Total plans"
           href="/dashboard/action-plans"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Open Action Plans"
           value={openPlans}
           helper="Not started yet"
           href="/dashboard/action-plans?status=OPEN"
         />
 
-        <DashboardCard
+        <StatsCard
           label="In Progress Plans"
           value={inProgressPlans}
           helper="Execution active"
           href="/dashboard/action-plans?status=IN_PROGRESS"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Completed Plans"
           value={completedPlans}
           helper="Waiting for verification"
           href="/dashboard/action-plans?status=COMPLETED"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Verified Plans"
           value={verifiedPlans}
           helper="Fully closed"
           href="/dashboard/action-plans?status=VERIFIED"
         />
 
-        <DashboardCard
+        <StatsCard
           label="Overdue Plans"
           value={overduePlans}
           helper="Past due date"
