@@ -1,5 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import PageHeader from "@/components/ui/page-header";
+import { decodeJwtPayload } from "@/src/auth/jwt";
+
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
 type SafetyReport = {
   id: string;
@@ -78,6 +82,19 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const payload = decodeJwtPayload(token);
+  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
+
+  const canCreateSafetyReports =
+    currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
+  const canCreateActionPlans =
+    currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
+  const canCreateSites =
+    currentRole === "OWNER" ||
+    currentRole === "ADMIN" ||
+    currentRole === "MANAGER";
+  const canCreateUsers = currentRole === "OWNER" || currentRole === "ADMIN";
+
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? "http";
@@ -148,80 +165,77 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 34, fontWeight: 900, margin: 0 }}>
-          Dashboard
-        </h1>
+      <PageHeader
+        title="Dashboard"
+        subtitle="HSE operational overview"
+        action={
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {canCreateSafetyReports ? (
+              <a
+                href="/dashboard/safety-reports/new"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  background: "#111",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                + Safety Report
+              </a>
+            ) : null}
 
-        <div style={{ marginTop: 8, color: "#555", fontSize: 14 }}>
-          HSE operational overview
-        </div>
-      </div>
+            {canCreateActionPlans ? (
+              <a
+                href="/dashboard/action-plans/new"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  background: "#111",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                + Action Plan
+              </a>
+            ) : null}
 
-      <div
-        style={{
-          marginBottom: 28,
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <a
-          href="/dashboard/safety-reports/new"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 700,
-          }}
-        >
-          + Safety Report
-        </a>
+            {canCreateSites ? (
+              <a
+                href="/dashboard/sites-projects/new"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  background: "#111",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                + Site / Project
+              </a>
+            ) : null}
 
-        <a
-          href="/dashboard/action-plans/new"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 700,
-          }}
-        >
-          + Action Plan
-        </a>
-
-        <a
-          href="/dashboard/sites-projects/new"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 700,
-          }}
-        >
-          + Site / Project
-        </a>
-
-        <a
-          href="/dashboard/users/new"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 700,
-          }}
-        >
-          + User
-        </a>
-      </div>
+            {canCreateUsers ? (
+              <a
+                href="/dashboard/users/new"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  background: "#111",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                + User
+              </a>
+            ) : null}
+          </div>
+        }
+      />
 
       <div
         style={{
