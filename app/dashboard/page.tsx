@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
+import ActionButton from "@/components/ui/action-button";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
@@ -132,67 +133,27 @@ export default async function DashboardPage() {
         action={
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {canCreateSafetyReports ? (
-              <a
-                href="/dashboard/safety-reports/new"
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  background: "#111",
-                  color: "#fff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
+              <ActionButton href="/dashboard/safety-reports/new">
                 + Safety Report
-              </a>
+              </ActionButton>
             ) : null}
 
             {canCreateActionPlans ? (
-              <a
-                href="/dashboard/action-plans/new"
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  background: "#111",
-                  color: "#fff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
+              <ActionButton href="/dashboard/action-plans/new">
                 + Action Plan
-              </a>
+              </ActionButton>
             ) : null}
 
             {canCreateSites ? (
-              <a
-                href="/dashboard/sites-projects/new"
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  background: "#111",
-                  color: "#fff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
+              <ActionButton href="/dashboard/sites-projects/new">
                 + Site / Project
-              </a>
+              </ActionButton>
             ) : null}
 
             {canCreateUsers ? (
-              <a
-                href="/dashboard/users/new"
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  background: "#111",
-                  color: "#fff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
+              <ActionButton href="/dashboard/users/new">
                 + User
-              </a>
+              </ActionButton>
             ) : null}
           </div>
         }
