@@ -66,7 +66,7 @@ export default async function EditSafetyReportPage({
   const sp = searchParams ? await searchParams : undefined;
   const error = String(sp?.error ?? "").trim();
 
-  const reportRes = await fetch(api(`/v1/safety-reports/${id}`), {
+  const reportRes = await fetch(api(`/safety-reports/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -83,7 +83,7 @@ export default async function EditSafetyReportPage({
 
   const report = reportJson;
 
-  const sitesRes = await fetch(api("/v1/sites-projects"), {
+  const sitesRes = await fetch(api("/sites-projects"), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -114,7 +114,7 @@ export default async function EditSafetyReportPage({
     if (status) payload.status = status;
     payload.siteProjectId = siteProjectId || null;
 
-    const res = await fetch(api(`/v1/safety-reports/${id}`), {
+    const res = await fetch(api(`/safety-reports/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,

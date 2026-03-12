@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hawana-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: hawana_hse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hawana_hse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  core:
+    image: hawana-hse-core:latest
+    container_name: hawana-core
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hawana_hse?schema=public
+      JWT_SECRET: hawana-dev-jwt-secret-32chars-min-2026
+      REFRESH_TOKEN_SECRET: hawana-dev-refresh-secret-32chars-2026
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://core:3001
+        NEXT_PUBLIC_API_PREFIX: /v1
+    image: hawana-hse-web-admin:fix
+    container_name: hawana-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - core
+
+volumes:
+  postgres_data:

@@ -200,7 +200,7 @@ export default async function ActionPlanPage({
       errRedirect(id, "Invalid status value", 400, `status=${nextStatus}`);
     }
 
-    const r = await fetch(api(`/v1/action-plans/${id}/status`), {
+    const r = await fetch(api(`/action-plans/${id}/status`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -232,7 +232,7 @@ export default async function ActionPlanPage({
         : null,
     };
 
-    const r = await fetch(api(`/v1/action-plans/${id}/due-date`), {
+    const r = await fetch(api(`/action-plans/${id}/due-date`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -252,7 +252,7 @@ export default async function ActionPlanPage({
     redirect(actionPlanPath(id));
   }
 
-  const res = await fetch(api(`/v1/action-plans/${id}`), {
+  const res = await fetch(api(`/action-plans/${id}`), {
     method: "GET",
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",

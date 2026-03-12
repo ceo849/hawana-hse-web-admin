@@ -1,6 +1,6 @@
-// app/dashboard/safety-reports/[id]/page.tsx
-import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
+import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
 
 type SafetyReportStatus = "OPEN" | "IN_PROGRESS" | "CLOSED" | string;
@@ -183,31 +183,19 @@ function formatAssignedTo(
 }
 
 export default async function SafetyReportDetailPage({ params }: PageProps) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) redirect("/login");
-
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
-
+  const token = await requireAccessToken();
   const { id } = await params;
   const reportId = String(id ?? "").trim();
 
   if (!reportId) redirect("/dashboard/safety-reports");
 
-  const srRes = await fetch(
-    `${origin}/api/safety-reports/${encodeURIComponent(reportId)}`,
-    {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        cookie: cookieStore.toString(),
-      },
+  const srRes = await fetch(api(`/safety-reports/${encodeURIComponent(reportId)}`), {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
 
   if (srRes.status === 401) redirect("/login");
 
@@ -248,14 +236,11 @@ ${text}`}</pre>
   let actionPlans: ActionPlan[] = [];
 
   try {
-    const apUrl = new URL(`${origin}/api/action-plans`);
-    apUrl.searchParams.set("safetyReportId", sr.id);
-
-    const apRes = await fetch(apUrl.toString(), {
+    const apRes = await fetch(api("/action-plans"), {
       method: "GET",
       cache: "no-store",
       headers: {
-        cookie: cookieStore.toString(),
+        Authorization: `Bearer ${token}`,
       },
     });
 
@@ -263,7 +248,11 @@ ${text}`}</pre>
 
     if (apRes.ok) {
       const all = (await apRes.json()) as ActionPlan[] | ActionPlansApiResponse;
-      const raw = Array.isArray(all) ? all : Array.isArray(all?.data) ? all.data : [];
+      const raw = Array.isArray(all)
+        ? all
+        : Array.isArray(all?.data)
+          ? all.data
+          : [];
 
       actionPlans = raw
         .filter((ap) => ap?.safetyReportId === sr.id)

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -113,25 +114,18 @@ export default async function UsersPage() {
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
   const canManageUsers = currentRole === "OWNER" || currentRole === "ADMIN";
 
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
+  let users: UserDto[] = [];
 
-  const r = await fetch(`${origin}/api/users`, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      cookie: cookieStore.toString(),
-    },
-  });
+  try {
+    const json = await serverAppFetch("/api/users");
+    users = parseUsers(json);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown users fetch error";
 
-  if (r.status === 401) {
-    redirect("/login");
-  }
-
-  if (!r.ok) {
-    const text = await r.text().catch(() => "");
+    if (message.includes("401")) {
+      redirect("/login");
+    }
 
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
@@ -149,14 +143,11 @@ export default async function UsersPage() {
             overflowX: "auto",
             whiteSpace: "pre-wrap",
           }}
-        >{`Failed to load users (${r.status})
-${text}`}</pre>
+        >{`Failed to load users
+${message}`}</pre>
       </div>
     );
   }
-
-  const json = (await r.json()) as unknown;
-  const users = parseUsers(json);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>

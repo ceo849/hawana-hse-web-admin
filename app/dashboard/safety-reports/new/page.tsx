@@ -59,7 +59,7 @@ export default async function NewSafetyReportPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const sitesRes = await fetch(api("/v1/sites-projects"), {
+  const sitesRes = await fetch(api("/sites-projects"), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -98,7 +98,7 @@ export default async function NewSafetyReportPage({
       payload.siteProjectId = siteProjectId;
     }
 
-    const res = await fetch(api("/v1/safety-reports"), {
+    const res = await fetch(api("/safety-reports"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${tokenInner}`,

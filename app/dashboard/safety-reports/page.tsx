@@ -1,8 +1,9 @@
 // app/dashboard/safety-reports/page.tsx
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -145,14 +146,6 @@ function formatDate(value?: string | null) {
   }).format(d);
 }
 
-async function safeText(res: Response) {
-  try {
-    return (await res.text()).trim();
-  } catch {
-    return "";
-  }
-}
-
 export default async function SafetyReportsPage(props: {
   searchParams?: Promise<SearchParams> | SearchParams;
 }) {
@@ -163,12 +156,8 @@ export default async function SafetyReportsPage(props: {
 
   const payload = decodeJwtPayload(token);
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const canCreateSafetyReports = currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
-
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
+  const canCreateSafetyReports =
+    currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
 
   const sp: SearchParams = props.searchParams
     ? await Promise.resolve(props.searchParams)
@@ -178,22 +167,21 @@ export default async function SafetyReportsPage(props: {
   const limit = Math.min(Math.max(toInt(sp.limit ?? "20", 20), 1), 100);
   const selectedStatus = normalizeStatus(sp.status);
 
-  const url = new URL(`${origin}/api/safety-reports`);
-  url.searchParams.set("page", String(page));
-  url.searchParams.set("limit", String(limit));
+  let json: SafetyReportsResponse;
 
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      cookie: cookieStore.toString(),
-    },
-  });
+  try {
+    json = parseSafetyReportsResponse(
+      await serverAppFetch(`/api/safety-reports?page=${page}&limit=${limit}`),
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown safety reports fetch error";
 
-  if (res.status === 401) redirect("/login");
-
-  if (!res.ok) {
-    const text = await safeText(res);
+    if (message.includes("401")) {
+      redirect("/login");
+    }
 
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
@@ -211,13 +199,12 @@ export default async function SafetyReportsPage(props: {
             overflowX: "auto",
             whiteSpace: "pre-wrap",
           }}
-        >{`Failed to load safety reports (${res.status})
-${text}`}</pre>
+        >{`Failed to load safety reports
+${message}`}</pre>
       </div>
     );
   }
 
-  const json = parseSafetyReportsResponse(await res.json());
   const items = json.data;
 
   const filteredItems = selectedStatus

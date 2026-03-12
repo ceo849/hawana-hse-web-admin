@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 
 const CORE_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://hawana-core:3001'
 ).replace(/\/$/, '');
 
 function getCookieValue(cookieHeader: string, name: string): string | null {

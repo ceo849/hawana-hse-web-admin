@@ -1,20 +1,41 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { api } from "@/lib/core-api";
 
-const CORE_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
-).replace(/\/$/, '');
+type LoginBody = {
+  email?: string;
+  password?: string;
+};
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body: LoginBody = {};
 
-    const upstream = await fetch(`${CORE_BASE_URL}/v1/auth/login`, {
-      method: 'POST',
+    try {
+      body = (await req.json()) as LoginBody;
+    } catch {
+      return NextResponse.json(
+        { ok: false, message: "Invalid or empty request body" },
+        { status: 400 },
+      );
+    }
+
+    const email = String(body.email ?? "").trim();
+    const password = String(body.password ?? "");
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { ok: false, message: "Email and password are required" },
+        { status: 400 },
+      );
+    }
+
+    const upstream = await fetch(api("/auth/login"), {
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
       },
-      body: JSON.stringify(body),
-      cache: 'no-store',
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
     });
 
     const data = await upstream.json().catch(() => ({}));
@@ -24,14 +45,15 @@ export async function POST(req: Request) {
     }
 
     const accessToken = String(
-      (data as any).access_token ?? (data as any).accessToken ?? '',
+      (data as any).access_token ?? (data as any).accessToken ?? "",
     );
+
     const refreshToken =
       (data as any).refresh_token ?? (data as any).refreshToken ?? null;
 
     if (!accessToken) {
       return NextResponse.json(
-        { ok: false, message: 'Missing access token from backend' },
+        { ok: false, message: "Missing access token from backend" },
         { status: 500 },
       );
     }
@@ -40,21 +62,24 @@ export async function POST(req: Request) {
 
     const cookieOptions = {
       httpOnly: true,
-      sameSite: 'lax' as const,
-      secure: false,
-      path: '/',
+      sameSite: "lax" as const,
+      secure: true,
+      path: "/",
+      domain: "hawanaglobal.com",
     };
 
-    res.cookies.set('access_token', accessToken, cookieOptions);
+    res.cookies.set("access_token", accessToken, cookieOptions);
 
     if (refreshToken) {
-      res.cookies.set('refresh_token', String(refreshToken), cookieOptions);
+      res.cookies.set("refresh_token", String(refreshToken), cookieOptions);
     }
 
     return res;
-  } catch {
+  } catch (error) {
+    console.error("Login route error:", error);
+
     return NextResponse.json(
-      { ok: false, message: 'Login route error' },
+      { ok: false, message: "Login route error" },
       { status: 500 },
     );
   }

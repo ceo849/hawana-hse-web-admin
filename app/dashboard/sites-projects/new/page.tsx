@@ -42,7 +42,7 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
       payload.status = status;
     }
 
-    const res = await fetch(api("/v1/sites-projects"), {
+    const res = await fetch(api("/sites-projects"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

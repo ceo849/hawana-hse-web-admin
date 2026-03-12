@@ -38,7 +38,7 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (country) payload.country = country;
     if (industry) payload.industry = industry;
 
-    const res = await fetch(api("/v1/companies"), {
+    const res = await fetch(api("/companies"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
