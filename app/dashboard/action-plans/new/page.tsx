@@ -69,7 +69,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
 
   let users: UserLite[] = [];
   try {
-    const r = await fetch(api("/v1/users"), {
+    const r = await fetch(api("/users"), {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -98,15 +98,16 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       formData.get("assignedToUserId") ?? "",
     ).trim();
 
+    const effectiveSafetyReportId = srId || safetyReportId;
     const base = `/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(
-      srId || safetyReportId,
+      effectiveSafetyReportId,
     )}`;
 
     if (!title) {
       redirect(`${base}&err=${encodeURIComponent("Title is required")}`);
     }
 
-    if (!srId) {
+    if (!effectiveSafetyReportId) {
       redirect(
         `${base}&err=${encodeURIComponent("Safety Report ID is required")}`,
       );
@@ -115,7 +116,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
     const payload: Record<string, unknown> = {
       title,
       description,
-      safetyReportId: srId,
+      safetyReportId: effectiveSafetyReportId,
     };
 
     if (dueDateRaw) {
@@ -126,7 +127,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       payload.assignedToUserId = assignedToUserId;
     }
 
-    const res = await fetch(api("/v1/action-plans"), {
+    const res = await fetch(api("/action-plans"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -174,6 +175,8 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       ) : null}
 
       <form action={createActionPlan} style={{ display: "grid", gap: 16 }}>
+        <input type="hidden" name="safetyReportId" value={safetyReportId} />
+
         <div
           style={{
             border: "1px solid #eee",
@@ -207,17 +210,15 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
 
           <div>
             <label
-              htmlFor="safetyReportId"
+              htmlFor="safetyReportIdDisplay"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
               Safety Report ID
             </label>
             <input
-              id="safetyReportId"
-              name="safetyReportId"
+              id="safetyReportIdDisplay"
+              value={safetyReportId}
               placeholder="Safety Report ID"
-              required
-              defaultValue={safetyReportId}
               readOnly
               style={{
                 width: "100%",

@@ -1,7 +1,5 @@
 // hawana-hse-web-admin/src/lib/api-client.ts
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-
 // default timeout (ms)
 const DEFAULT_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 15000);
 
@@ -20,16 +18,9 @@ function buildUrl(path: string): string {
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
+  // كل طلبات الواجهة تذهب إلى Next.js API routes فقط
   if (cleanPath.startsWith('/api/')) {
     return cleanPath;
-  }
-
-  if (typeof window !== 'undefined') {
-    return `/api${cleanPath}`;
-  }
-
-  if (API_BASE_URL) {
-    return `${API_BASE_URL}/api${cleanPath}`;
   }
 
   return `/api${cleanPath}`;

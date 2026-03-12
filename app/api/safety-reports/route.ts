@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 const CORE_API =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://hawana-core:3001").replace(/\/$/, "");
 
 export async function GET(req: Request) {
   try {
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const page = url.searchParams.get("page") ?? "1";
     const limit = url.searchParams.get("limit") ?? "20";
 
-    const upstream = new URL(`${CORE_API}/v1/safety-reports`);
+    const upstream = new URL(`${CORE_API}/api/v1/safety-reports`);
     upstream.searchParams.set("page", page);
     upstream.searchParams.set("limit", limit);
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const r = await fetch(`${CORE_API}/v1/safety-reports`, {
+    const r = await fetch(`${CORE_API}/api/v1/safety-reports`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

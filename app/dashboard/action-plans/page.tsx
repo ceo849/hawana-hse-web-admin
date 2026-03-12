@@ -1,8 +1,9 @@
 // app/dashboard/action-plans/page.tsx
 import { redirect } from "next/navigation";
-import { headers, cookies } from "next/headers";
+import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -94,13 +95,6 @@ function parseActionPlans(value: unknown): ActionPlan[] {
   }
 
   return [];
-}
-
-async function getAppOrigin() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "127.0.0.1:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
 }
 
 function normalizeStatus(value?: string) {
@@ -199,8 +193,6 @@ function formatAssignedTo(
 }
 
 export default async function ActionPlansPage({ searchParams }: PageProps) {
-  const origin = await getAppOrigin();
-
   const resolvedSearchParams: SearchParams = searchParams
     ? await Promise.resolve(searchParams)
     : {};
@@ -214,22 +206,21 @@ export default async function ActionPlansPage({ searchParams }: PageProps) {
 
   const payload = decodeJwtPayload(token);
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const canCreateActionPlans = currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
+  const canCreateActionPlans =
+    currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
 
-  const cookieHeader = cookieStore.toString();
+  let actionPlans: ActionPlan[] = [];
 
-  const res = await fetch(`${origin}/api/action-plans`, {
-    method: "GET",
-    headers: {
-      cookie: cookieHeader,
-    },
-    cache: "no-store",
-  });
+  try {
+    const json = await serverAppFetch("/api/action-plans");
+    actionPlans = parseActionPlans(json);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown action plans fetch error";
 
-  if (res.status === 401) redirect("/login?next=/dashboard/action-plans");
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    if (message.includes("401")) {
+      redirect("/login?next=/dashboard/action-plans");
+    }
 
     return (
       <div style={{ padding: 24, fontFamily: "system-ui" }}>
@@ -247,14 +238,11 @@ export default async function ActionPlansPage({ searchParams }: PageProps) {
             overflowX: "auto",
             whiteSpace: "pre-wrap",
           }}
-        >{`Failed to load action plans (${res.status})
-${text}`}</pre>
+        >{`Failed to load action plans
+${message}`}</pre>
       </div>
     );
   }
-
-  const json = (await res.json()) as unknown;
-  const actionPlans = parseActionPlans(json);
 
   const filteredActionPlans = selectedStatus
     ? actionPlans.filter(

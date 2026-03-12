@@ -58,7 +58,7 @@ export default async function EditCompanyPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await fetch(api(`/v1/companies/${id}`), {
+  const r = await fetch(api(`/companies/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -91,7 +91,7 @@ export default async function EditCompanyPage({
     if (country) payload.country = country;
     if (industry) payload.industry = industry;
 
-    const res = await fetch(api(`/v1/companies/${id}`), {
+    const res = await fetch(api(`/companies/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -120,7 +120,7 @@ export default async function EditCompanyPage({
 
     const tokenInner = await requireAccessToken();
 
-    const res = await fetch(api(`/v1/companies/${id}`), {
+    const res = await fetch(api(`/companies/${id}`), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${tokenInner}`,

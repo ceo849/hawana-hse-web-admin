@@ -62,7 +62,7 @@ export default async function EditUserPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await fetch(api(`/v1/users/${id}`), {
+  const r = await fetch(api(`/users/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -93,7 +93,7 @@ export default async function EditUserPage({
     if (fullName) payload.fullName = fullName;
     if (role) payload.role = role;
 
-    const res = await fetch(api(`/v1/users/${id}`), {
+    const res = await fetch(api(`/users/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -122,7 +122,7 @@ export default async function EditUserPage({
 
     const tokenInner = await requireAccessToken();
 
-    const res = await fetch(api(`/v1/users/${id}`), {
+    const res = await fetch(api(`/users/${id}`), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${tokenInner}`,

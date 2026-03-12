@@ -30,7 +30,7 @@ export default async function EditActionPlanPage({
 
   const token = await requireAccessToken();
 
-  const r = await fetch(api(`/v1/action-plans/${id}`), {
+  const r = await fetch(api(`/action-plans/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -59,7 +59,7 @@ export default async function EditActionPlanPage({
       );
     }
 
-    const res = await fetch(api(`/v1/action-plans/${id}`), {
+    const res = await fetch(api(`/action-plans/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,

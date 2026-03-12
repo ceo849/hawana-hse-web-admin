@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 const CORE_API = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:3001'
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://hawana-core:3001'
 ).replace(/\/$/, '');
 
 type RouteContext = {

@@ -58,7 +58,7 @@ export default async function EditSiteProjectPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await fetch(api(`/v1/sites-projects/${id}`), {
+  const r = await fetch(api(`/sites-projects/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -90,7 +90,7 @@ export default async function EditSiteProjectPage({
     if (location) payload.location = location;
     if (status) payload.status = status;
 
-    const res = await fetch(api(`/v1/sites-projects/${id}`), {
+    const res = await fetch(api(`/sites-projects/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -119,7 +119,7 @@ export default async function EditSiteProjectPage({
 
     const tokenInner = await requireAccessToken();
 
-    const res = await fetch(api(`/v1/sites-projects/${id}`), {
+    const res = await fetch(api(`/sites-projects/${id}`), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${tokenInner}`,

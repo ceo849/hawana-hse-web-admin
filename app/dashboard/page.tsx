@@ -1,9 +1,10 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -57,38 +58,14 @@ export default async function DashboardPage() {
     currentRole === "MANAGER";
   const canCreateUsers = currentRole === "OWNER" || currentRole === "ADMIN";
 
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
-
   let safetyReports: SafetyReport[] = [];
   let actionPlans: ActionPlan[] = [];
 
   try {
-    const [srRes, apRes] = await Promise.all([
-      fetch(`${origin}/api/safety-reports?page=1&limit=100`, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          cookie: cookieStore.toString(),
-        },
-      }),
-      fetch(`${origin}/api/action-plans`, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          cookie: cookieStore.toString(),
-        },
-      }),
+    const [srJson, apJson] = await Promise.all([
+      serverAppFetch("/api/safety-reports?page=1&limit=100"),
+      serverAppFetch("/api/action-plans"),
     ]);
-
-    if (srRes.status === 401 || apRes.status === 401) {
-      redirect("/login");
-    }
-
-    const srJson = (await srRes.json()) as unknown;
-    const apJson = (await apRes.json()) as unknown;
 
     safetyReports =
       Array.isArray(srJson)
@@ -103,7 +80,14 @@ export default async function DashboardPage() {
         : Array.isArray((apJson as { data?: unknown[] })?.data)
           ? (((apJson as { data: unknown[] }).data ?? []) as ActionPlan[])
           : [];
-  } catch {
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown dashboard fetch error";
+
+    if (message.includes("401")) {
+      redirect("/login");
+    }
+
     safetyReports = [];
     actionPlans = [];
   }

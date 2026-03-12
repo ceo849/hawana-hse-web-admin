@@ -2,7 +2,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const CORE_API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001";
+const CORE_API = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://hawana-core:3001").replace(/\/$/, "");
 
 export async function GET(req: Request) {
   try {
@@ -16,11 +16,12 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ? url.search : "";
 
-    const r = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
+    const r = await fetch(`${CORE_API}/api/v1/action-plans${qs}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      cache: "no-store",
     });
 
     const text = await r.text();
@@ -45,13 +46,14 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const r = await fetch(`${CORE_API}/v1/action-plans`, {
+    const r = await fetch(`${CORE_API}/api/v1/action-plans`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
+      cache: "no-store",
     });
 
     const text = await r.text();
@@ -63,5 +65,4 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ message: "Proxy error" }, { status: 500 });
   }
-
 }
