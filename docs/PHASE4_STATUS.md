@@ -62,7 +62,7 @@ Sites / Projects
 - Edit sites
 
 Safety Reports
-- Crety report
+- Create safety report
 - Link to site/project
 - View reports
 
@@ -119,7 +119,7 @@ NEXT_PUBLIC_API_PREFIX
 
 --------------------------------------------------
 
-6. Proction Smoke Tests
+6. Production Smoke Tests
 
 Three verification scripts were created.
 
@@ -180,7 +180,7 @@ This tag represents the first operational deployment of the Hawana HSE platform.
 
 10. Next Steps
 
-Rng Phase 4 work:
+Remaining Phase 4 work:
 
 Admin UI improvements
 Monitoring
