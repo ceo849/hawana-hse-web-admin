@@ -19,16 +19,12 @@ type ActionPlan = {
   dueDate?: string | null;
 };
 
-type Company = {
-  id: string;
-};
-
-type User = {
-  id: string;
-};
-
-type SiteProject = {
-  id: string;
+type PlatformMetrics = {
+  companies: number;
+  users: number;
+  sites: number;
+  safetyReports: number;
+  actionPlans: number;
 };
 
 function countByStatus<T extends { status?: string | null }>(
@@ -65,6 +61,20 @@ function parseArray<T>(value: unknown): T[] {
   return [];
 }
 
+function isPlatformMetrics(value: unknown): value is PlatformMetrics {
+  if (typeof value !== "object" || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.companies === "number" &&
+    typeof candidate.users === "number" &&
+    typeof candidate.sites === "number" &&
+    typeof candidate.safetyReports === "number" &&
+    typeof candidate.actionPlans === "number"
+  );
+}
+
 export default async function DashboardPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
@@ -87,9 +97,14 @@ export default async function DashboardPage() {
   const canCreateUsers = currentRole === "OWNER" || currentRole === "ADMIN";
   const canViewPlatformMetrics = currentRole === "OWNER";
 
-  let companies: Company[] = [];
-  let users: User[] = [];
-  let sites: SiteProject[] = [];
+  let platformMetrics: PlatformMetrics = {
+    companies: 0,
+    users: 0,
+    sites: 0,
+    safetyReports: 0,
+    actionPlans: 0,
+  };
+
   let safetyReports: SafetyReport[] = [];
   let actionPlans: ActionPlan[] = [];
 
@@ -97,23 +112,19 @@ export default async function DashboardPage() {
     const requests: Promise<unknown>[] = [
       serverAppFetch("/api/safety-reports?page=1&limit=100"),
       serverAppFetch("/api/action-plans"),
-      serverAppFetch("/api/sites-projects"),
-      serverAppFetch("/api/users"),
     ];
 
     if (canViewPlatformMetrics) {
-      requests.push(serverAppFetch("/api/companies"));
+      requests.push(serverAppFetch("/api/platform/metrics"));
     }
 
     const results = await Promise.all(requests);
 
     safetyReports = parseArray<SafetyReport>(results[0]);
     actionPlans = parseArray<ActionPlan>(results[1]);
-    sites = parseArray<SiteProject>(results[2]);
-    users = parseArray<User>(results[3]);
 
-    if (canViewPlatformMetrics) {
-      companies = parseArray<Company>(results[4]);
+    if (canViewPlatformMetrics && isPlatformMetrics(results[2])) {
+      platformMetrics = results[2];
     }
   } catch (error) {
     const message =
@@ -123,9 +134,13 @@ export default async function DashboardPage() {
       redirect("/login");
     }
 
-    companies = [];
-    users = [];
-    sites = [];
+    platformMetrics = {
+      companies: 0,
+      users: 0,
+      sites: 0,
+      safetyReports: 0,
+      actionPlans: 0,
+    };
     safetyReports = [];
     actionPlans = [];
   }
@@ -204,35 +219,35 @@ export default async function DashboardPage() {
           >
             <StatsCard
               label="Companies"
-              value={companies.length}
+              value={platformMetrics.companies}
               helper="Total tenant companies"
               href="/dashboard/companies"
             />
 
             <StatsCard
               label="Users"
-              value={users.length}
+              value={platformMetrics.users}
               helper="Total company users"
               href="/dashboard/users"
             />
 
             <StatsCard
               label="Sites / Projects"
-              value={sites.length}
+              value={platformMetrics.sites}
               helper="Operational locations"
               href="/dashboard/sites-projects"
             />
 
             <StatsCard
               label="Safety Reports"
-              value={safetyReports.length}
+              value={platformMetrics.safetyReports}
               helper="Total reports"
               href="/dashboard/safety-reports"
             />
 
             <StatsCard
               label="Action Plans"
-              value={actionPlans.length}
+              value={platformMetrics.actionPlans}
               helper="Total plans"
               href="/dashboard/action-plans"
             />
