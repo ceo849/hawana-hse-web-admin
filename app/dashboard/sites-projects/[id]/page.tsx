@@ -1,13 +1,17 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
 
-type SiteProject = {
+type UserRole = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER";
+
+type User = {
   id: string;
-  name: string;
-  location: string | null;
-  status: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  companyId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -17,16 +21,17 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
-function isSiteProject(value: unknown): value is SiteProject {
+function isUser(value: unknown): value is User {
   if (typeof value !== "object" || value === null) return false;
 
   const candidate = value as Record<string, unknown>;
 
   return (
     typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.location === "string" || candidate.location === null) &&
-    typeof candidate.status === "string" &&
+    typeof candidate.email === "string" &&
+    typeof candidate.fullName === "string" &&
+    typeof candidate.role === "string" &&
+    typeof candidate.companyId === "string" &&
     typeof candidate.createdAt === "string" &&
     typeof candidate.updatedAt === "string"
   );
@@ -45,20 +50,20 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
-export default async function EditSiteProjectPage({
+export default async function UserOverviewPage({
   params,
   searchParams,
 }: PageProps) {
   const token = await requireAccessToken();
-
   const { id } = await params;
+
   const resolvedSearchParams = searchParams
     ? await Promise.resolve(searchParams)
     : {};
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await fetch(api(`/sites-projects/${id}`), {
+  const r = await fetch(api(`/users/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -66,31 +71,30 @@ export default async function EditSiteProjectPage({
   });
 
   if (r.status === 401) redirect("/login");
-  if (!r.ok) redirect("/dashboard/sites-projects");
+  if (!r.ok) redirect("/dashboard/users");
 
   const json = (await r.json()) as unknown;
-  if (!isSiteProject(json)) {
-    redirect("/dashboard/sites-projects");
+
+  if (!isUser(json)) {
+    redirect("/dashboard/users");
   }
 
-  const site = json;
+  const user = json;
 
-  async function updateSiteProject(formData: FormData) {
+  async function updateUser(formData: FormData) {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
-    const name = String(formData.get("name") ?? "").trim();
-    const location = String(formData.get("location") ?? "").trim();
-    const status = String(formData.get("status") ?? "").trim();
+    const fullName = String(formData.get("fullName") ?? "").trim();
+    const role = String(formData.get("role") ?? "").trim();
 
     const payload: Record<string, string> = {};
 
-    if (name) payload.name = name;
-    if (location) payload.location = location;
-    if (status) payload.status = status;
+    if (fullName) payload.fullName = fullName;
+    if (role) payload.role = role;
 
-    const res = await fetch(api(`/sites-projects/${id}`), {
+    const res = await fetch(api(`/users/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -105,21 +109,21 @@ export default async function EditSiteProjectPage({
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
-          `Update failed (${res.status}) ${text}`,
+        `/dashboard/users/${id}?error=${encodeURIComponent(
+          `Update user failed (${res.status}) ${text}`,
         )}`,
       );
     }
 
-    redirect("/dashboard/sites-projects");
+    redirect(`/dashboard/users/${id}`);
   }
 
-  async function deleteSiteProject() {
+  async function deleteUser() {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
-    const res = await fetch(api(`/sites-projects/${id}`), {
+    const res = await fetch(api(`/users/${id}`), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -132,20 +136,20 @@ export default async function EditSiteProjectPage({
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
-          `Delete failed (${res.status}) ${text}`,
+        `/dashboard/users/${id}?error=${encodeURIComponent(
+          `Delete user failed (${res.status}) ${text}`,
         )}`,
       );
     }
 
-    redirect("/dashboard/sites-projects");
+    redirect("/dashboard/users");
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 960 }}>
       <PageHeader
-        title="Edit Site / Project"
-        subtitle="Update site or project information and operational status"
+        title="User Overview"
+        subtitle="User insight first, followed by user control actions"
       />
 
       {error ? (
@@ -166,7 +170,18 @@ export default async function EditSiteProjectPage({
 
       <div
         style={{
-          marginBottom: 16,
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        User Insight
+      </div>
+
+      <div
+        style={{
+          marginBottom: 24,
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -175,18 +190,41 @@ export default async function EditSiteProjectPage({
       >
         <div style={{ display: "grid", gap: 8 }}>
           <div>
-            <b>Site / Project ID:</b> {site.id}
+            <b>User ID:</b> {user.id}
           </div>
           <div>
-            <b>Created At:</b> {formatDate(site.createdAt)}
+            <b>Full Name:</b> {user.fullName}
           </div>
           <div>
-            <b>Updated At:</b> {formatDate(site.updatedAt)}
+            <b>Email:</b> {user.email}
+          </div>
+          <div>
+            <b>Role:</b> {user.role}
+          </div>
+          <div>
+            <b>Company ID:</b> {user.companyId}
+          </div>
+          <div>
+            <b>Created At:</b> {formatDate(user.createdAt)}
+          </div>
+          <div>
+            <b>Updated At:</b> {formatDate(user.updatedAt)}
           </div>
         </div>
       </div>
 
-      <form action={updateSiteProject} style={{ display: "grid", gap: 16 }}>
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        User Control Actions
+      </div>
+
+      <form action={updateUser} style={{ display: "grid", gap: 16 }}>
         <div
           style={{
             border: "1px solid #eee",
@@ -199,16 +237,16 @@ export default async function EditSiteProjectPage({
         >
           <div>
             <label
-              htmlFor="name"
+              htmlFor="fullName"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Name
+              Full Name
             </label>
             <input
-              id="name"
-              name="name"
-              defaultValue={site.name}
-              placeholder="Enter site or project name"
+              id="fullName"
+              name="fullName"
+              defaultValue={user.fullName}
+              placeholder="Enter full name"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -220,36 +258,37 @@ export default async function EditSiteProjectPage({
 
           <div>
             <label
-              htmlFor="location"
+              htmlFor="email"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Location
+              Email
             </label>
             <input
-              id="location"
-              name="location"
-              defaultValue={site.location ?? ""}
-              placeholder="Enter location"
+              id="email"
+              value={user.email}
+              disabled
               style={{
                 width: "100%",
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
+                background: "#f7f7f7",
+                color: "#555",
               }}
             />
           </div>
 
           <div>
             <label
-              htmlFor="status"
+              htmlFor="role"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Status
+              Role
             </label>
             <select
-              id="status"
-              name="status"
-              defaultValue={site.status}
+              id="role"
+              name="role"
+              defaultValue={user.role}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -258,8 +297,11 @@ export default async function EditSiteProjectPage({
                 background: "#fff",
               }}
             >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
+              <option value="OWNER">OWNER</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="MANAGER">MANAGER</option>
+              <option value="WORKER">WORKER</option>
+              <option value="VIEWER">VIEWER</option>
             </select>
           </div>
         </div>
@@ -277,11 +319,11 @@ export default async function EditSiteProjectPage({
               cursor: "pointer",
             }}
           >
-            Update Site / Project
+            Update User
           </button>
 
-          <a
-            href="/dashboard/sites-projects"
+          <Link
+            href="/dashboard/users"
             style={{
               display: "inline-block",
               padding: "10px 16px",
@@ -293,12 +335,12 @@ export default async function EditSiteProjectPage({
               fontWeight: 600,
             }}
           >
-            Cancel
-          </a>
+            Back to Users
+          </Link>
         </div>
       </form>
 
-      <form action={deleteSiteProject} style={{ marginTop: 16 }}>
+      <form action={deleteUser} style={{ marginTop: 16 }}>
         <button
           type="submit"
           style={{
@@ -311,7 +353,7 @@ export default async function EditSiteProjectPage({
             cursor: "pointer",
           }}
         >
-          Delete Site / Project
+          Deactivate User
         </button>
       </form>
     </div>
