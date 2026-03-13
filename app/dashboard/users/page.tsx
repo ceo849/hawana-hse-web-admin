@@ -17,6 +17,34 @@ type UserDto = {
   updatedAt: string;
 };
 
+type UsersResponse = {
+  data: UserDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+type SearchParamsInput =
+  | {
+      page?: string;
+      limit?: string;
+      q?: string;
+      role?: string;
+    }
+  | Promise<{
+      page?: string;
+      limit?: string;
+      q?: string;
+      role?: string;
+    }>;
+
+type PageProps = {
+  searchParams?: SearchParamsInput;
+};
+
 function isUserDto(value: unknown): value is UserDto {
   if (typeof value !== "object" || value === null) return false;
 
@@ -33,20 +61,21 @@ function isUserDto(value: unknown): value is UserDto {
   );
 }
 
-function parseUsers(value: unknown): UserDto[] {
-  if (Array.isArray(value)) {
-    return value.filter(isUserDto);
-  }
+function isUsersResponse(value: unknown): value is UsersResponse {
+  if (typeof value !== "object" || value === null) return false;
 
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as { data?: unknown }).data)
-  ) {
-    return ((value as { data: unknown[] }).data).filter(isUserDto);
-  }
+  const candidate = value as Record<string, unknown>;
+  const meta = candidate.meta as Record<string, unknown> | undefined;
 
-  return [];
+  return (
+    Array.isArray(candidate.data) &&
+    candidate.data.every(isUserDto) &&
+    !!meta &&
+    typeof meta.page === "number" &&
+    typeof meta.limit === "number" &&
+    typeof meta.total === "number" &&
+    typeof meta.totalPages === "number"
+  );
 }
 
 function formatDate(value: string): string {
@@ -104,21 +133,71 @@ function getRoleBadgeStyle(role: string) {
   };
 }
 
-export default async function UsersPage() {
+function buildUsersUrl(page: number, limit: number, q: string, role: string) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  if (q) params.set("q", q);
+  if (role) params.set("role", role);
+
+  return `/api/users?${params.toString()}`;
+}
+
+function buildDashboardUsersUrl(
+  page: number,
+  limit: number,
+  q: string,
+  role: string,
+) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  if (q) params.set("q", q);
+  if (role) params.set("role", role);
+
+  return `/dashboard/users?${params.toString()}`;
+}
+
+export default async function UsersPage({ searchParams }: PageProps) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
 
   if (!token) redirect("/login");
+
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
+  const page = Math.max(1, Number(resolvedSearchParams.page ?? "1") || 1);
+  const limit = Math.max(1, Number(resolvedSearchParams.limit ?? "20") || 20);
+  const q = String(resolvedSearchParams.q ?? "").trim();
+  const roleFilter = String(resolvedSearchParams.role ?? "").trim().toUpperCase();
 
   const payload = decodeJwtPayload(token);
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
   const canManageUsers = currentRole === "OWNER" || currentRole === "ADMIN";
 
   let users: UserDto[] = [];
+  let meta = {
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 1,
+  };
 
   try {
-    const json = await serverAppFetch("/api/users");
-    users = parseUsers(json);
+    const json = await serverAppFetch(buildUsersUrl(page, limit, q, roleFilter));
+
+    if (!isUsersResponse(json)) {
+      throw new Error("Unexpected users response shape");
+    }
+
+    users = json.data;
+    meta = json.meta;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown users fetch error";
@@ -149,11 +228,14 @@ ${message}`}</pre>
     );
   }
 
+  const prevPage = Math.max(1, meta.page - 1);
+  const nextPage = Math.min(meta.totalPages || 1, meta.page + 1);
+
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
         title="Users Administration"
-        subtitle="Control actions for tenant users and access roles. User insight remains inside each user detail page."
+        subtitle="Control actions for tenant users and access roles. User detail insight and edit controls remain inside the individual user page."
         action={
           canManageUsers ? (
             <Link
@@ -174,6 +256,102 @@ ${message}`}</pre>
         }
       />
 
+      <form
+        method="GET"
+        action="/dashboard/users"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr auto",
+          gap: 12,
+          marginBottom: 16,
+          alignItems: "end",
+        }}
+      >
+        <div>
+          <label
+            htmlFor="q"
+            style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+          >
+            Search
+          </label>
+          <input
+            id="q"
+            name="q"
+            defaultValue={q}
+            placeholder="Search by full name or email"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+            }}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="role"
+            style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+          >
+            Role
+          </label>
+          <select
+            id="role"
+            name="role"
+            defaultValue={roleFilter}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              background: "#fff",
+            }}
+          >
+            <option value="">All Roles</option>
+            <option value="OWNER">OWNER</option>
+            <option value="ADMIN">ADMIN</option>
+            <option value="MANAGER">MANAGER</option>
+            <option value="WORKER">WORKER</option>
+            <option value="VIEWER">VIEWER</option>
+          </select>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <input type="hidden" name="page" value="1" />
+          <input type="hidden" name="limit" value={String(limit)} />
+          <button
+            type="submit"
+            style={{
+              padding: "10px 16px",
+              background: "#111",
+              color: "#fff",
+              border: "1px solid #111",
+              borderRadius: 10,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Apply
+          </button>
+
+          <Link
+            href={`/dashboard/users?page=1&limit=${limit}`}
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Reset
+          </Link>
+        </div>
+      </form>
+
       <div
         style={{
           marginBottom: 12,
@@ -185,7 +363,8 @@ ${message}`}</pre>
           color: "#444",
         }}
       >
-        Total users: <strong>{users.length}</strong>
+        Showing <strong>{users.length}</strong> of <strong>{meta.total}</strong>{" "}
+        users
       </div>
 
       <div
@@ -444,6 +623,61 @@ ${message}`}</pre>
             )}
           </tbody>
         </table>
+      </div>
+
+      <div
+        style={{
+          marginTop: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontSize: 13, color: "#555" }}>
+          Page <strong>{meta.page}</strong> of{" "}
+          <strong>{Math.max(meta.totalPages, 1)}</strong>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link
+            href={buildDashboardUsersUrl(prevPage, limit, q, roleFilter)}
+            style={{
+              pointerEvents: meta.page <= 1 ? "none" : "auto",
+              opacity: meta.page <= 1 ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Previous
+          </Link>
+
+          <Link
+            href={buildDashboardUsersUrl(nextPage, limit, q, roleFilter)}
+            style={{
+              pointerEvents:
+                meta.page >= Math.max(meta.totalPages, 1) ? "none" : "auto",
+              opacity: meta.page >= Math.max(meta.totalPages, 1) ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Next
+          </Link>
+        </div>
       </div>
     </div>
   );
