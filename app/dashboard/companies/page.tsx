@@ -15,36 +15,15 @@ type CompanyDto = {
   updatedAt: string;
 };
 
-function isCompanyDto(value: unknown): value is CompanyDto {
-  if (typeof value !== "object" || value === null) return false;
-
-  const candidate = value as Record<string, unknown>;
-
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.country === "string" || candidate.country === null) &&
-    (typeof candidate.industry === "string" || candidate.industry === null) &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string"
-  );
-}
-
-function parseCompanies(value: unknown): CompanyDto[] {
-  if (Array.isArray(value)) {
-    return value.filter(isCompanyDto);
-  }
-
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as { data?: unknown }).data)
-  ) {
-    return ((value as { data: unknown[] }).data).filter(isCompanyDto);
-  }
-
-  return [];
-}
+type CompaniesResponse = {
+  data: CompanyDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
 
 function formatDate(value: string): string {
   const d = new Date(value);
@@ -59,7 +38,11 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
-export default async function CompaniesPage() {
+export default async function CompaniesPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; search?: string };
+}) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
 
@@ -69,12 +52,20 @@ export default async function CompaniesPage() {
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
   const canManageCompanies = currentRole === "OWNER";
 
+  const page = Number(searchParams.page ?? "1");
+  const search = searchParams.search ?? "";
+  const limit = 10;
+
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? "http";
   const origin = `${proto}://${host}`;
 
-  const r = await fetch(`${origin}/api/companies`, {
+  const url =
+    `${origin}/api/companies?page=${page}&limit=${limit}` +
+    (search ? `&search=${encodeURIComponent(search)}` : "");
+
+  const r = await fetch(url, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -82,49 +73,34 @@ export default async function CompaniesPage() {
     },
   });
 
-  if (r.status === 401) {
-    redirect("/login");
-  }
+  if (r.status === 401) redirect("/login");
 
   if (!r.ok) {
     const text = await r.text().catch(() => "");
 
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
-        <PageHeader
-          title="Companies Administration"
-          subtitle="Platform control layer for tenant company records"
-        />
-
-        <pre
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f7f7f7",
-            borderRadius: 12,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-          }}
-        >{`Failed to load companies (${r.status})
-${text}`}</pre>
+        <PageHeader title="Companies Administration" subtitle="Failed to load companies" />
+        <pre>{text}</pre>
       </div>
     );
   }
 
-  const json = (await r.json()) as unknown;
-  const companies = parseCompanies(json);
+  const json = (await r.json()) as CompaniesResponse;
+
+  const companies = json.data;
+  const meta = json.meta;
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
         title="Companies Administration"
-        subtitle="Platform control actions for tenant companies. Insight metrics remain inside each company overview."
+        subtitle="Tenant company administration"
         action={
           canManageCompanies ? (
             <Link
               href="/dashboard/companies/new"
               style={{
-                display: "inline-block",
                 padding: "10px 16px",
                 background: "#111",
                 color: "#fff",
@@ -139,252 +115,60 @@ ${text}`}</pre>
         }
       />
 
-      <div
-        style={{
-          marginBottom: 12,
-          padding: "12px 14px",
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fafafa",
-          fontSize: 14,
-          color: "#444",
-        }}
-      >
-        Total companies: <strong>{companies.length}</strong>
+      <div style={{ marginBottom: 20 }}>
+        Total companies: <strong>{meta.total}</strong>
       </div>
 
-      <div
+      <table
         style={{
-          marginBottom: 16,
-          padding: 14,
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          background: "#fff",
-          fontSize: 13,
-          color: "#444",
-        }}
-      >
-        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
-          Scope of this page
-        </div>
-        <div>
-          This page is for company administration actions. Company insight and
-          operational metrics are displayed inside the individual company
-          overview page.
-        </div>
-      </div>
-
-      <div
-        style={{
-          border: "1px solid #eee",
-          borderRadius: 12,
-          overflowX: "auto",
+          width: "100%",
+          borderCollapse: "collapse",
           background: "#fff",
         }}
       >
-        <table
-          style={{
-            width: "100%",
-            minWidth: 1080,
-            borderCollapse: "collapse",
-          }}
-        >
-          <thead>
-            <tr style={{ background: "#fafafa" }}>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Company
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Country
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Industry
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Company ID
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Created At
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Updated At
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                  width: 140,
-                }}
-              >
-                Actions
-              </th>
+        <thead>
+          <tr style={{ background: "#fafafa" }}>
+            <th style={{ padding: 12, textAlign: "left" }}>Company</th>
+            <th style={{ padding: 12, textAlign: "left" }}>Country</th>
+            <th style={{ padding: 12, textAlign: "left" }}>Industry</th>
+            <th style={{ padding: 12, textAlign: "left" }}>Created</th>
+            <th style={{ padding: 12, textAlign: "left" }}>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {companies.map((c) => (
+            <tr key={c.id}>
+              <td style={{ padding: 12 }}>
+                <Link href={`/dashboard/companies/${c.id}`} style={{ fontWeight: 700 }}>
+                  {c.name}
+                </Link>
+              </td>
+
+              <td style={{ padding: 12 }}>{c.country ?? "-"}</td>
+              <td style={{ padding: 12 }}>{c.industry ?? "-"}</td>
+              <td style={{ padding: 12 }}>{formatDate(c.createdAt)}</td>
+
+              <td style={{ padding: 12 }}>
+                <Link href={`/dashboard/companies/${c.id}`}>Open</Link>
+              </td>
             </tr>
-          </thead>
+          ))}
+        </tbody>
+      </table>
 
-          <tbody>
-            {companies.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  style={{
-                    padding: 24,
-                    color: "#555",
-                  }}
-                >
-                  No companies found.
-                </td>
-              </tr>
-            ) : (
-              companies.map((c) => (
-                <tr key={c.id}>
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                    }}
-                  >
-                    <Link
-                      href={`/dashboard/companies/${c.id}`}
-                      style={{
-                        color: "#111",
-                        fontWeight: 800,
-                        textDecoration: "none",
-                      }}
-                    >
-                      {c.name}
-                    </Link>
-                  </td>
+      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+        {page > 1 && (
+          <Link href={`/dashboard/companies?page=${page - 1}`}>
+            ← Previous
+          </Link>
+        )}
 
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 14,
-                      color: "#444",
-                    }}
-                  >
-                    {c.country ?? "-"}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 14,
-                      color: "#444",
-                    }}
-                  >
-                    {c.industry ?? "-"}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontFamily: "monospace",
-                      fontSize: 12,
-                      color: "#444",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {c.id}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 13,
-                      color: "#444",
-                    }}
-                  >
-                    {formatDate(c.createdAt)}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 13,
-                      color: "#444",
-                    }}
-                  >
-                    {formatDate(c.updatedAt)}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                    }}
-                  >
-                    <Link
-                      href={`/dashboard/companies/${c.id}`}
-                      style={{
-                        textDecoration: "underline",
-                        color: "#111",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Open overview
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {page < meta.totalPages && (
+          <Link href={`/dashboard/companies?page=${page + 1}`}>
+            Next →
+          </Link>
+        )}
       </div>
     </div>
   );
