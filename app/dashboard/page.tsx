@@ -19,6 +19,18 @@ type ActionPlan = {
   dueDate?: string | null;
 };
 
+type Company = {
+  id: string;
+};
+
+type User = {
+  id: string;
+};
+
+type SiteProject = {
+  id: string;
+};
+
 function countByStatus<T extends { status?: string | null }>(
   items: T[],
   expected: string,
@@ -35,6 +47,22 @@ function isOverdue(dueDate?: string | null) {
   if (Number.isNaN(d.getTime())) return false;
 
   return d.getTime() < Date.now();
+}
+
+function parseArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { data?: unknown[] }).data)
+  ) {
+    return ((value as { data: unknown[] }).data ?? []) as T[];
+  }
+
+  return [];
 }
 
 export default async function DashboardPage() {
@@ -57,29 +85,36 @@ export default async function DashboardPage() {
     currentRole === "ADMIN" ||
     currentRole === "MANAGER";
   const canCreateUsers = currentRole === "OWNER" || currentRole === "ADMIN";
+  const canViewPlatformMetrics = currentRole === "OWNER";
 
+  let companies: Company[] = [];
+  let users: User[] = [];
+  let sites: SiteProject[] = [];
   let safetyReports: SafetyReport[] = [];
   let actionPlans: ActionPlan[] = [];
 
   try {
-    const [srJson, apJson] = await Promise.all([
+    const requests: Promise<unknown>[] = [
       serverAppFetch("/api/safety-reports?page=1&limit=100"),
       serverAppFetch("/api/action-plans"),
-    ]);
+      serverAppFetch("/api/sites-projects"),
+      serverAppFetch("/api/users"),
+    ];
 
-    safetyReports =
-      Array.isArray(srJson)
-        ? (srJson as SafetyReport[])
-        : Array.isArray((srJson as { data?: unknown[] })?.data)
-          ? (((srJson as { data: unknown[] }).data ?? []) as SafetyReport[])
-          : [];
+    if (canViewPlatformMetrics) {
+      requests.push(serverAppFetch("/api/companies"));
+    }
 
-    actionPlans =
-      Array.isArray(apJson)
-        ? (apJson as ActionPlan[])
-        : Array.isArray((apJson as { data?: unknown[] })?.data)
-          ? (((apJson as { data: unknown[] }).data ?? []) as ActionPlan[])
-          : [];
+    const results = await Promise.all(requests);
+
+    safetyReports = parseArray<SafetyReport>(results[0]);
+    actionPlans = parseArray<ActionPlan>(results[1]);
+    sites = parseArray<SiteProject>(results[2]);
+    users = parseArray<User>(results[3]);
+
+    if (canViewPlatformMetrics) {
+      companies = parseArray<Company>(results[4]);
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown dashboard fetch error";
@@ -88,6 +123,9 @@ export default async function DashboardPage() {
       redirect("/login");
     }
 
+    companies = [];
+    users = [];
+    sites = [];
     safetyReports = [];
     actionPlans = [];
   }
@@ -113,7 +151,7 @@ export default async function DashboardPage() {
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
       <PageHeader
         title="Dashboard"
-        subtitle="HSE operational overview"
+        subtitle="Platform and HSE operational overview"
         action={
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {canCreateSafetyReports ? (
@@ -143,6 +181,76 @@ export default async function DashboardPage() {
         }
       />
 
+      {canViewPlatformMetrics ? (
+        <>
+          <div
+            style={{
+              marginBottom: 12,
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#444",
+            }}
+          >
+            Platform Metrics
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 14,
+              marginBottom: 24,
+            }}
+          >
+            <StatsCard
+              label="Companies"
+              value={companies.length}
+              helper="Total tenant companies"
+              href="/dashboard/companies"
+            />
+
+            <StatsCard
+              label="Users"
+              value={users.length}
+              helper="Total company users"
+              href="/dashboard/users"
+            />
+
+            <StatsCard
+              label="Sites / Projects"
+              value={sites.length}
+              helper="Operational locations"
+              href="/dashboard/sites-projects"
+            />
+
+            <StatsCard
+              label="Safety Reports"
+              value={safetyReports.length}
+              helper="Total reports"
+              href="/dashboard/safety-reports"
+            />
+
+            <StatsCard
+              label="Action Plans"
+              value={actionPlans.length}
+              helper="Total plans"
+              href="/dashboard/action-plans"
+            />
+          </div>
+        </>
+      ) : null}
+
+      <div
+        style={{
+          marginBottom: 12,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        HSE Operations
+      </div>
+
       <div
         style={{
           display: "grid",
@@ -150,13 +258,6 @@ export default async function DashboardPage() {
           gap: 14,
         }}
       >
-        <StatsCard
-          label="Safety Reports"
-          value={safetyReports.length}
-          helper="Total reports"
-          href="/dashboard/safety-reports"
-        />
-
         <StatsCard
           label="Open Reports"
           value={openReports}
@@ -176,13 +277,6 @@ export default async function DashboardPage() {
           value={closedReports}
           helper="Resolved reports"
           href="/dashboard/safety-reports?status=CLOSED"
-        />
-
-        <StatsCard
-          label="Action Plans"
-          value={actionPlans.length}
-          helper="Total plans"
-          href="/dashboard/action-plans"
         />
 
         <StatsCard

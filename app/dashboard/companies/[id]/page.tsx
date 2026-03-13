@@ -3,6 +3,13 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
 
+type CompanyCounts = {
+  users: number;
+  sitesProjects: number;
+  safetyReports: number;
+  actionPlans: number;
+};
+
 type Company = {
   id: string;
   name: string;
@@ -10,12 +17,26 @@ type Company = {
   industry: string | null;
   createdAt: string;
   updatedAt: string;
+  _count: CompanyCounts;
 };
 
 type PageProps = {
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
+
+function isCompanyCounts(value: unknown): value is CompanyCounts {
+  if (typeof value !== "object" || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.users === "number" &&
+    typeof candidate.sitesProjects === "number" &&
+    typeof candidate.safetyReports === "number" &&
+    typeof candidate.actionPlans === "number"
+  );
+}
 
 function isCompany(value: unknown): value is Company {
   if (typeof value !== "object" || value === null) return false;
@@ -28,7 +49,8 @@ function isCompany(value: unknown): value is Company {
     (typeof candidate.country === "string" || candidate.country === null) &&
     (typeof candidate.industry === "string" || candidate.industry === null) &&
     typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string"
+    typeof candidate.updatedAt === "string" &&
+    isCompanyCounts(candidate._count)
   );
 }
 
@@ -43,6 +65,22 @@ function formatDate(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(d);
+}
+
+function metricCard(label: string, value: number) {
+  return (
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderRadius: 12,
+        background: "#fff",
+        padding: 16,
+      }}
+    >
+      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{value}</div>
+    </div>
+  );
 }
 
 export default async function EditCompanyPage({
@@ -143,10 +181,10 @@ export default async function EditCompanyPage({
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 960 }}>
       <PageHeader
-        title="Edit Company"
-        subtitle="Update company information and tenant record details"
+        title="Company Overview"
+        subtitle="View company operational summary and update tenant record details"
       />
 
       {error ? (
@@ -185,6 +223,20 @@ export default async function EditCompanyPage({
             <b>Updated At:</b> {formatDate(company.updatedAt)}
           </div>
         </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        {metricCard("Users", company._count.users)}
+        {metricCard("Sites / Projects", company._count.sitesProjects)}
+        {metricCard("Safety Reports", company._count.safetyReports)}
+        {metricCard("Action Plans", company._count.actionPlans)}
       </div>
 
       <form action={updateCompany} style={{ display: "grid", gap: 16 }}>
