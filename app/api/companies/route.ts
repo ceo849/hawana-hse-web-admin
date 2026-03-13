@@ -1,66 +1,66 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { api } from "@/lib/core-api";
 
-const CORE_API = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://hawana-core:3001'
-).replace(/\/$/, '');
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
-  const token = cookieStore.get('access_token')?.value ?? null;
+  const token = cookieStore.get("access_token")?.value ?? null;
 
   if (!token) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const r = await fetch(`${CORE_API}/api/v1/companies`, {
-    method: 'GET',
+  const url = new URL(req.url);
+  const qs = url.search ? url.search : "";
+
+  const upstream = await fetch(`${api("/companies")}${qs}`, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
-  const bodyText = await r.text();
+  const bodyText = await upstream.text();
 
   return new NextResponse(bodyText, {
-    status: r.status,
+    status: upstream.status,
     headers: {
-      'content-type':
-        r.headers.get('content-type') ??
-        'application/json; charset=utf-8',
+      "content-type":
+        upstream.headers.get("content-type") ??
+        "application/json; charset=utf-8",
     },
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
-  const token = cookieStore.get('access_token')?.value ?? null;
+  const token = cookieStore.get("access_token")?.value ?? null;
 
   if (!token) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const rawBody = await req.text();
 
-  const r = await fetch(`${CORE_API}/api/v1/companies`, {
-    method: 'POST',
+  const upstream = await fetch(api("/companies"), {
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
-    cache: 'no-store',
+    body: rawBody,
+    cache: "no-store",
   });
 
-  const bodyText = await r.text();
+  const bodyText = await upstream.text();
 
   return new NextResponse(bodyText, {
-    status: r.status,
+    status: upstream.status,
     headers: {
-      'content-type':
-        r.headers.get('content-type') ??
-        'application/json; charset=utf-8',
+      "content-type":
+        upstream.headers.get("content-type") ??
+        "application/json; charset=utf-8",
     },
   });
 }
