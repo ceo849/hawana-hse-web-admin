@@ -130,8 +130,8 @@ export default async function UsersPage() {
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
         <PageHeader
-          title="Users"
-          subtitle="Manage system users and access roles"
+          title="Users Administration"
+          subtitle="Control layer for tenant users and access roles"
         />
 
         <pre
@@ -152,8 +152,8 @@ ${message}`}</pre>
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
-        title="Users"
-        subtitle="Manage system users and access roles"
+        title="Users Administration"
+        subtitle="Control actions for tenant users and access roles. User insight remains inside each user detail page."
         action={
           canManageUsers ? (
             <Link
@@ -186,6 +186,26 @@ ${message}`}</pre>
         }}
       >
         Total users: <strong>{users.length}</strong>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
+          fontSize: 13,
+          color: "#444",
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
+          Scope of this page
+        </div>
+        <div>
+          This page is for user administration actions. User detail insight and
+          edit controls remain inside the individual user page.
+        </div>
       </div>
 
       <div
@@ -271,7 +291,7 @@ ${message}`}</pre>
                   padding: 14,
                   borderBottom: "1px solid #eee",
                   fontSize: 13,
-                  width: 120,
+                  width: 150,
                 }}
               >
                 Actions
@@ -415,7 +435,7 @@ ${message}`}</pre>
                           fontWeight: 600,
                         }}
                       >
-                        Open
+                        Open detail
                       </Link>
                     </td>
                   </tr>
