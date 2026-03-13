@@ -118,8 +118,8 @@ export default async function SitesProjectsPage() {
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
         <PageHeader
-          title="Sites / Projects"
-          subtitle="Manage sites and projects across tenant operations"
+          title="Sites / Projects Administration"
+          subtitle="Control layer for operational site and project records"
         />
 
         <pre
@@ -143,8 +143,8 @@ ${text}`}</pre>
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
-        title="Sites / Projects"
-        subtitle="Manage sites and projects across tenant operations"
+        title="Sites / Projects Administration"
+        subtitle="Control actions for operational site and project records. Detail insight remains inside each site / project overview."
         action={
           canManageSites ? (
             <Link
@@ -177,6 +177,26 @@ ${text}`}</pre>
         }}
       >
         Total sites / projects: <strong>{items.length}</strong>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
+          fontSize: 13,
+          color: "#444",
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
+          Scope of this page
+        </div>
+        <div>
+          This page is for site and project administration actions. Operational
+          insight remains inside the individual site / project detail page.
+        </div>
       </div>
 
       <div
@@ -252,7 +272,7 @@ ${text}`}</pre>
                   padding: 14,
                   borderBottom: "1px solid #eee",
                   fontSize: 13,
-                  width: 120,
+                  width: 160,
                 }}
               >
                 Actions
@@ -382,7 +402,7 @@ ${text}`}</pre>
                           fontWeight: 600,
                         }}
                       >
-                        Open
+                        Open overview
                       </Link>
                     </td>
                   </tr>
