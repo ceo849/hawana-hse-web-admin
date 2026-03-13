@@ -92,8 +92,8 @@ export default async function CompaniesPage() {
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
         <PageHeader
-          title="Companies"
-          subtitle="Manage tenant companies and organizational records"
+          title="Companies Administration"
+          subtitle="Platform control layer for tenant company records"
         />
 
         <pre
@@ -117,8 +117,8 @@ ${text}`}</pre>
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
-        title="Companies"
-        subtitle="Manage tenant companies and organizational records"
+        title="Companies Administration"
+        subtitle="Platform control actions for tenant companies. Insight metrics remain inside each company overview."
         action={
           canManageCompanies ? (
             <Link
@@ -151,6 +151,27 @@ ${text}`}</pre>
         }}
       >
         Total companies: <strong>{companies.length}</strong>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
+          fontSize: 13,
+          color: "#444",
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
+          Scope of this page
+        </div>
+        <div>
+          This page is for company administration actions. Company insight and
+          operational metrics are displayed inside the individual company
+          overview page.
+        </div>
       </div>
 
       <div
@@ -236,7 +257,7 @@ ${text}`}</pre>
                   padding: 14,
                   borderBottom: "1px solid #eee",
                   fontSize: 13,
-                  width: 120,
+                  width: 140,
                 }}
               >
                 Actions
@@ -356,7 +377,7 @@ ${text}`}</pre>
                         fontWeight: 600,
                       }}
                     >
-                      Open
+                      Open overview
                     </Link>
                   </td>
                 </tr>
