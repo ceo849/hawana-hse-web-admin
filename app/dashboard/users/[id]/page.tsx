@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -49,7 +50,7 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
-export default async function EditUserPage({
+export default async function UserOverviewPage({
   params,
   searchParams,
 }: PageProps) {
@@ -114,7 +115,7 @@ export default async function EditUserPage({
       );
     }
 
-    redirect("/dashboard/users");
+    redirect(`/dashboard/users/${id}`);
   }
 
   async function deleteUser() {
@@ -145,10 +146,10 @@ export default async function EditUserPage({
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 960 }}>
       <PageHeader
-        title="Edit User"
-        subtitle="Update user information and access role"
+        title="User Overview"
+        subtitle="User insight first, followed by user control actions"
       />
 
       {error ? (
@@ -169,7 +170,18 @@ export default async function EditUserPage({
 
       <div
         style={{
-          marginBottom: 16,
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        User Insight
+      </div>
+
+      <div
+        style={{
+          marginBottom: 24,
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -181,6 +193,15 @@ export default async function EditUserPage({
             <b>User ID:</b> {user.id}
           </div>
           <div>
+            <b>Full Name:</b> {user.fullName}
+          </div>
+          <div>
+            <b>Email:</b> {user.email}
+          </div>
+          <div>
+            <b>Role:</b> {user.role}
+          </div>
+          <div>
             <b>Company ID:</b> {user.companyId}
           </div>
           <div>
@@ -190,6 +211,17 @@ export default async function EditUserPage({
             <b>Updated At:</b> {formatDate(user.updatedAt)}
           </div>
         </div>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        User Control Actions
       </div>
 
       <form action={updateUser} style={{ display: "grid", gap: 16 }}>
@@ -290,7 +322,7 @@ export default async function EditUserPage({
             Update User
           </button>
 
-          <a
+          <Link
             href="/dashboard/users"
             style={{
               display: "inline-block",
@@ -303,8 +335,8 @@ export default async function EditUserPage({
               fontWeight: 600,
             }}
           >
-            Cancel
-          </a>
+            Back to Users
+          </Link>
         </div>
       </form>
 
@@ -321,7 +353,7 @@ export default async function EditUserPage({
             cursor: "pointer",
           }}
         >
-          Delete User
+          Deactivate User
         </button>
       </form>
     </div>
