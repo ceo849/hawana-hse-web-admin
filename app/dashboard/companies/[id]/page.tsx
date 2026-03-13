@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -83,7 +84,7 @@ function metricCard(label: string, value: number) {
   );
 }
 
-export default async function EditCompanyPage({
+export default async function CompanyOverviewPage({
   params,
   searchParams,
 }: PageProps) {
@@ -150,7 +151,7 @@ export default async function EditCompanyPage({
       );
     }
 
-    redirect("/dashboard/companies");
+    redirect(`/dashboard/companies/${id}`);
   }
 
   async function deleteCompany() {
@@ -184,7 +185,7 @@ export default async function EditCompanyPage({
     <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 960 }}>
       <PageHeader
         title="Company Overview"
-        subtitle="View company operational summary and update tenant record details"
+        subtitle="Tenant insight first, followed by company control actions"
       />
 
       {error ? (
@@ -205,6 +206,17 @@ export default async function EditCompanyPage({
 
       <div
         style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        Company Insight
+      </div>
+
+      <div
+        style={{
           marginBottom: 16,
           padding: 16,
           border: "1px solid #eee",
@@ -215,6 +227,15 @@ export default async function EditCompanyPage({
         <div style={{ display: "grid", gap: 8 }}>
           <div>
             <b>Company ID:</b> {company.id}
+          </div>
+          <div>
+            <b>Company Name:</b> {company.name}
+          </div>
+          <div>
+            <b>Country:</b> {company.country ?? "-"}
+          </div>
+          <div>
+            <b>Industry:</b> {company.industry ?? "-"}
           </div>
           <div>
             <b>Created At:</b> {formatDate(company.createdAt)}
@@ -230,13 +251,24 @@ export default async function EditCompanyPage({
           display: "grid",
           gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
           gap: 12,
-          marginBottom: 16,
+          marginBottom: 24,
         }}
       >
         {metricCard("Users", company._count.users)}
         {metricCard("Sites / Projects", company._count.sitesProjects)}
         {metricCard("Safety Reports", company._count.safetyReports)}
         {metricCard("Action Plans", company._count.actionPlans)}
+      </div>
+
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        Company Control Actions
       </div>
 
       <form action={updateCompany} style={{ display: "grid", gap: 16 }}>
@@ -330,7 +362,7 @@ export default async function EditCompanyPage({
             Update Company
           </button>
 
-          <a
+          <Link
             href="/dashboard/companies"
             style={{
               display: "inline-block",
@@ -343,8 +375,8 @@ export default async function EditCompanyPage({
               fontWeight: 600,
             }}
           >
-            Cancel
-          </a>
+            Back to Companies
+          </Link>
         </div>
       </form>
 
@@ -361,7 +393,7 @@ export default async function EditCompanyPage({
             cursor: "pointer",
           }}
         >
-          Delete Company
+          Deactivate Company
         </button>
       </form>
     </div>
