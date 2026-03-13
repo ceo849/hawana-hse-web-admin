@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { api } from "@/lib/core-api";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value ?? null;
 
@@ -10,7 +10,10 @@ export async function GET() {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const upstream = await fetch(api("/users"), {
+  const url = new URL(req.url);
+  const qs = url.search ? url.search : "";
+
+  const upstream = await fetch(`${api("/users")}${qs}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
