@@ -1,8 +1,9 @@
+
 # Hawana HSE — Operations Runbook
 
 Project: Hawana HSE Platform
 Phase: Phase 5 — Cloud Deployment
-Purpose: Document standard deployment and operational recovery steps.
+Purpose: Document standard deployment, rollback, and operational recovery steps.
 
 --------------------------------------------------
 
@@ -14,6 +15,8 @@ build
 → push
 → pull
 → restart containers
+→ verify health
+→ verify workflow
 
 This flow must be followed for every production-safe deployment.
 
@@ -39,10 +42,9 @@ docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse
 docker stop hawana-web
 docker rm hawana-web
 docker run -d \
---name hawana-web \
---restart always \
+--name haestart always \
 -p 3000:3000 \
--e N_API_BASE_URL=https://hawanaglobal.com \
+-e NEXT_PUBLIC_API_BASE_URL=https://hawanaglobal.com \
 -e NEXT_PUBLIC_API_PREFIX=/api/v1 \
 us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<tag>
 
@@ -50,9 +52,16 @@ us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<tag>
 
 ## 3. Core API Deployment
 
+### Build and push core image
+
+docker buildx build \
+--platform linux/amd64 \
+-t us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:latest \
+--push .
+
 ### Pull core image on server
 
-docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:<tag>
+docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:latest
 
 ### Restart core container
 
@@ -61,13 +70,66 @@ docker rm hawana-core
 docker run -d \
 --name hawana-core \
 --restart always \
+--network hawana-network \
 -p 3001:3001 \
---env-file .env.production \
-us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:<tag>
+-e NODE_ENV=production \
+-e PORT=3001 \
+-e DATABASE_URL="postgresql://postgres:Hawana%402026@34.44.9.217:5432/hawana_hse" \
+-e JWT_SECRET="hawana_super_secure_jwt_secret_key_2026" \
+-e JWT_EXPIRES_IN=15m \
+-e REFRESH_TOKEN_SECRET="hawana_super_secure_refresh_secret_key_2026" \
+-e REFRESH_TOKEN_EXPIRES_IN_DAYS=7 \
+-e CORS_ORIGIN="*" \
+us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:latest
 
 --------------------------------------------------
 
-## 4. Nginx Verification
+## 4. Rollback Procedure
+
+If a deployment fails:
+
+### Rollback Web Admin
+
+docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<previous-tag>
+docker stop hawana-web
+docker rm hawana-web
+docker run -d \
+--name hawana-web \
+--restart always \
+-p 3000:3000 \
+-e NEXT_PUBLIC_API_BASE_URL=https://hawanaglobal.com \
+-e NEXT_PUBLIC_API_PREFIX=/api/v1 \
+us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<previous-tag>
+
+### Rollback Core API
+
+docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:<previous-tag>
+docker stop hawana-core
+docker rm hawana-core
+docker run -d \
+--name hawana-core \
+--restart always \
+--network hawana-network \
+-p 3001:3001 \
+-e NODE_ENV=production \
+-e PORT=3001 \
+-e DATABASE_URL="postgresql://postgres:Hawana%402026@34.44.9.217:5432/hawana_hse" \
+-e JWT_SECRET="hawana_super_secure_jwt_secret_key_2026" \
+-e JWT_EXPIRES_IN=15m \
+-e REFRESH_TOKEN_SECRET="hawana_super_secure_refresh_secret_key_2026" \
+-e REFRESH_TOKEN_EXPIRES_IN_DAYS=7 \
+-e CORS_ORIGIN="*" \
+us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:<previous-tag>
+
+### Verify rollback
+
+docker ps
+curl https://hawanaglobal.com/api/v1/health
+curl https://hawanaglobal.com/api/v1/health/ready
+
+--------------------------------------------------
+
+## 5. Nginx Verification
 
 Configuration file:
 
@@ -83,7 +145,7 @@ sudo systemctl reload nginx
 
 --------------------------------------------------
 
-## 5. Container Verification
+## 6. Container Verification
 
 Check running containers:
 
@@ -106,7 +168,7 @@ Expected result:
 
 --------------------------------------------------
 
-## 6. Health Verification
+## 7. Health Verification
 
 Core API health endpoint:
 
@@ -116,9 +178,17 @@ Expected result:
 
 {"status":"ok"}
 
+Core API readiness endpoint:
+
+https://hawanaglobal.com/api/v1/health/ready
+
+Expected result:
+
+{"status":"ready","database":"connected"}
+
 --------------------------------------------------
 
-## 7. Functional Verification
+## 8. Functional Verification
 
 Minimum production verification after deployment:
 
@@ -133,7 +203,7 @@ Minimum production verification after deployment:
 
 --------------------------------------------------
 
-## 8. Automated Smoke Tests
+## 9. Automated Smoke Tests
 
 Available scripts:
 
@@ -151,7 +221,7 @@ WORKFLOW SMOKE CHECK PASSED
 
 --------------------------------------------------
 
-## 9. Production Incident Reference
+## 10. Production Incident Reference
 
 Nginx reverse proxy issue was previously resolved by ensuring correct forwarding headers:
 
@@ -167,6 +237,6 @@ Routing rule:
 
 --------------------------------------------------
 
-## 10. Rule
+## 11. Rule
 
 Do not modify Nginx routing or production environment structure unless a verified issue requires change.
