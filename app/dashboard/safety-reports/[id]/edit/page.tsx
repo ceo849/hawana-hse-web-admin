@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -141,8 +142,8 @@ export default async function EditSafetyReportPage({
   return (
     <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
       <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <a href="/dashboard">Dashboard</a> /
-        <a href="/dashboard/safety-reports"> Safety Reports</a> /
+        <Link href="/dashboard">Dashboard</Link> /
+        <Link href="/dashboard/safety-reports"> Safety Reports</Link> /
         <span> Edit Safety Report</span>
       </div>
 
@@ -248,7 +249,7 @@ export default async function EditSafetyReportPage({
             Update Safety Report
           </button>
 
-          <a
+          <Link
             href={`/dashboard/safety-reports/${report.id}`}
             style={{
               display: "inline-block",
@@ -260,7 +261,7 @@ export default async function EditSafetyReportPage({
             }}
           >
             Cancel
-          </a>
+          </Link>
         </div>
       </form>
     </div>

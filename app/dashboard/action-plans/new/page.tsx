@@ -1,4 +1,4 @@
-// app/dashboard/action-plans/new/page.tsx
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -55,6 +55,7 @@ function parseUsers(value: unknown): UserLite[] {
 function userLabel(u: UserLite) {
   const name = (u.fullName ?? "").trim();
   const email = (u.email ?? "").trim();
+
   if (name && email) return `${name} — ${email}`;
   if (name) return name;
   return email || u.id;
@@ -68,6 +69,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
   const err = String(sp?.err ?? "").trim();
 
   let users: UserLite[] = [];
+
   try {
     const r = await fetch(api("/users"), {
       method: "GET",
@@ -336,7 +338,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
             Create Action Plan
           </button>
 
-          <a
+          <Link
             href="/dashboard/action-plans"
             style={{
               display: "inline-block",
@@ -350,7 +352,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
             }}
           >
             Cancel
-          </a>
+          </Link>
         </div>
       </form>
     </div>

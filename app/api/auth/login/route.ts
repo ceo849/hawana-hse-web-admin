@@ -45,11 +45,15 @@ export async function POST(req: Request) {
     }
 
     const accessToken = String(
-      (data as any).access_token ?? (data as any).accessToken ?? "",
+      (data as Record<string, unknown>).access_token ??
+        (data as Record<string, unknown>).accessToken ??
+        "",
     );
 
     const refreshToken =
-      (data as any).refresh_token ?? (data as any).refreshToken ?? null;
+      (data as Record<string, unknown>).refresh_token ??
+      (data as Record<string, unknown>).refreshToken ??
+      null;
 
     if (!accessToken) {
       return NextResponse.json(
@@ -58,14 +62,21 @@ export async function POST(req: Request) {
       );
     }
 
+    const requestUrl = new URL(req.url);
+    const hostname = requestUrl.hostname;
+    const isLocalhost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1";
+
     const res = NextResponse.json({ ok: true });
 
     const cookieOptions = {
       httpOnly: true,
       sameSite: "lax" as const,
-      secure: true,
+      secure: !isLocalhost,
       path: "/",
-      domain: "hawanaglobal.com",
+      ...(isLocalhost ? {} : { domain: "hawanaglobal.com" }),
     };
 
     res.cookies.set("access_token", accessToken, cookieOptions);

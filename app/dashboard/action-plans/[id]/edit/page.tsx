@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -12,6 +13,7 @@ type ActionPlan = {
   id: string;
   title: string;
   description?: string | null;
+  status?: string | null;
 };
 
 function normalize(v: unknown) {
@@ -42,6 +44,11 @@ export default async function EditActionPlanPage({
 
   const ap = (await r.json()) as ActionPlan;
   const error = normalize(resolvedSearch?.error);
+  const status = normalize(ap.status).toUpperCase();
+
+  if (status === "VERIFIED") {
+    redirect(`/dashboard/action-plans/${id}`);
+  }
 
   async function updateActionPlan(formData: FormData) {
     "use server";
@@ -182,7 +189,7 @@ export default async function EditActionPlanPage({
             Update Action Plan
           </button>
 
-          <a
+          <Link
             href={`/dashboard/action-plans/${ap.id}`}
             style={{
               display: "inline-block",
@@ -196,7 +203,7 @@ export default async function EditActionPlanPage({
             }}
           >
             Cancel
-          </a>
+          </Link>
         </div>
       </form>
     </div>

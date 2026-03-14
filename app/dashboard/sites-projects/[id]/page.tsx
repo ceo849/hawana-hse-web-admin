@@ -4,14 +4,13 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
 
-type UserRole = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER";
+type SiteProjectStatus = "ACTIVE" | "INACTIVE" | string;
 
-type User = {
+type SiteProject = {
   id: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  companyId: string;
+  name: string;
+  location: string | null;
+  status: SiteProjectStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -21,17 +20,16 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
-function isUser(value: unknown): value is User {
+function isSiteProject(value: unknown): value is SiteProject {
   if (typeof value !== "object" || value === null) return false;
 
   const candidate = value as Record<string, unknown>;
 
   return (
     typeof candidate.id === "string" &&
-    typeof candidate.email === "string" &&
-    typeof candidate.fullName === "string" &&
-    typeof candidate.role === "string" &&
-    typeof candidate.companyId === "string" &&
+    typeof candidate.name === "string" &&
+    (typeof candidate.location === "string" || candidate.location === null) &&
+    typeof candidate.status === "string" &&
     typeof candidate.createdAt === "string" &&
     typeof candidate.updatedAt === "string"
   );
@@ -50,7 +48,33 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
-export default async function UserOverviewPage({
+function getStatusStyle(status?: string | null) {
+  const normalized = String(status ?? "").toUpperCase();
+
+  if (normalized === "ACTIVE") {
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+    };
+  }
+
+  if (normalized === "INACTIVE") {
+    return {
+      background: "#f3f4f6",
+      color: "#111827",
+      border: "1px solid #d1d5db",
+    };
+  }
+
+  return {
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+  };
+}
+
+export default async function SiteProjectOverviewPage({
   params,
   searchParams,
 }: PageProps) {
@@ -63,7 +87,7 @@ export default async function UserOverviewPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await fetch(api(`/users/${id}`), {
+  const r = await fetch(api(`/sites-projects/${id}`), {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -71,30 +95,33 @@ export default async function UserOverviewPage({
   });
 
   if (r.status === 401) redirect("/login");
-  if (!r.ok) redirect("/dashboard/users");
+  if (!r.ok) redirect("/dashboard/sites-projects");
 
   const json = (await r.json()) as unknown;
 
-  if (!isUser(json)) {
-    redirect("/dashboard/users");
+  if (!isSiteProject(json)) {
+    redirect("/dashboard/sites-projects");
   }
 
-  const user = json;
+  const site = json;
+  const statusStyle = getStatusStyle(site.status);
 
-  async function updateUser(formData: FormData) {
+  async function updateSiteProject(formData: FormData) {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
-    const fullName = String(formData.get("fullName") ?? "").trim();
-    const role = String(formData.get("role") ?? "").trim();
+    const name = String(formData.get("name") ?? "").trim();
+    const location = String(formData.get("location") ?? "").trim();
+    const status = String(formData.get("status") ?? "").trim();
 
     const payload: Record<string, string> = {};
 
-    if (fullName) payload.fullName = fullName;
-    if (role) payload.role = role;
+    if (name) payload.name = name;
+    payload.location = location;
+    if (status) payload.status = status;
 
-    const res = await fetch(api(`/users/${id}`), {
+    const res = await fetch(api(`/sites-projects/${id}`), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -109,21 +136,21 @@ export default async function UserOverviewPage({
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/users/${id}?error=${encodeURIComponent(
-          `Update user failed (${res.status}) ${text}`,
+        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
+          `Update site / project failed (${res.status}) ${text}`,
         )}`,
       );
     }
 
-    redirect(`/dashboard/users/${id}`);
+    redirect(`/dashboard/sites-projects/${id}`);
   }
 
-  async function deleteUser() {
+  async function deleteSiteProject() {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
-    const res = await fetch(api(`/users/${id}`), {
+    const res = await fetch(api(`/sites-projects/${id}`), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${tokenInner}`,
@@ -136,20 +163,20 @@ export default async function UserOverviewPage({
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/users/${id}?error=${encodeURIComponent(
-          `Delete user failed (${res.status}) ${text}`,
+        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
+          `Delete site / project failed (${res.status}) ${text}`,
         )}`,
       );
     }
 
-    redirect("/dashboard/users");
+    redirect("/dashboard/sites-projects");
   }
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 960 }}>
       <PageHeader
-        title="User Overview"
-        subtitle="User insight first, followed by user control actions"
+        title="Site / Project Overview"
+        subtitle="Site insight first, followed by site control actions"
       />
 
       {error ? (
@@ -176,7 +203,30 @@ export default async function UserOverviewPage({
           color: "#444",
         }}
       >
-        User Insight
+        Site / Project Insight
+      </div>
+
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-block",
+            padding: "6px 10px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 800,
+            ...statusStyle,
+          }}
+        >
+          {site.status}
+        </span>
       </div>
 
       <div
@@ -190,25 +240,22 @@ export default async function UserOverviewPage({
       >
         <div style={{ display: "grid", gap: 8 }}>
           <div>
-            <b>User ID:</b> {user.id}
+            <b>Site / Project ID:</b> {site.id}
           </div>
           <div>
-            <b>Full Name:</b> {user.fullName}
+            <b>Name:</b> {site.name}
           </div>
           <div>
-            <b>Email:</b> {user.email}
+            <b>Location:</b> {site.location ?? "-"}
           </div>
           <div>
-            <b>Role:</b> {user.role}
+            <b>Status:</b> {site.status}
           </div>
           <div>
-            <b>Company ID:</b> {user.companyId}
+            <b>Created At:</b> {formatDate(site.createdAt)}
           </div>
           <div>
-            <b>Created At:</b> {formatDate(user.createdAt)}
-          </div>
-          <div>
-            <b>Updated At:</b> {formatDate(user.updatedAt)}
+            <b>Updated At:</b> {formatDate(site.updatedAt)}
           </div>
         </div>
       </div>
@@ -221,10 +268,10 @@ export default async function UserOverviewPage({
           color: "#444",
         }}
       >
-        User Control Actions
+        Site / Project Control Actions
       </div>
 
-      <form action={updateUser} style={{ display: "grid", gap: 16 }}>
+      <form action={updateSiteProject} style={{ display: "grid", gap: 16 }}>
         <div
           style={{
             border: "1px solid #eee",
@@ -237,16 +284,16 @@ export default async function UserOverviewPage({
         >
           <div>
             <label
-              htmlFor="fullName"
+              htmlFor="name"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Full Name
+              Name
             </label>
             <input
-              id="fullName"
-              name="fullName"
-              defaultValue={user.fullName}
-              placeholder="Enter full name"
+              id="name"
+              name="name"
+              defaultValue={site.name}
+              placeholder="Enter site or project name"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -258,37 +305,36 @@ export default async function UserOverviewPage({
 
           <div>
             <label
-              htmlFor="email"
+              htmlFor="location"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Email
+              Location
             </label>
             <input
-              id="email"
-              value={user.email}
-              disabled
+              id="location"
+              name="location"
+              defaultValue={site.location ?? ""}
+              placeholder="Enter location"
               style={{
                 width: "100%",
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
-                background: "#f7f7f7",
-                color: "#555",
               }}
             />
           </div>
 
           <div>
             <label
-              htmlFor="role"
+              htmlFor="status"
               style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
             >
-              Role
+              Status
             </label>
             <select
-              id="role"
-              name="role"
-              defaultValue={user.role}
+              id="status"
+              name="status"
+              defaultValue={site.status}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -297,11 +343,8 @@ export default async function UserOverviewPage({
                 background: "#fff",
               }}
             >
-              <option value="OWNER">OWNER</option>
-              <option value="ADMIN">ADMIN</option>
-              <option value="MANAGER">MANAGER</option>
-              <option value="WORKER">WORKER</option>
-              <option value="VIEWER">VIEWER</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
             </select>
           </div>
         </div>
@@ -319,11 +362,11 @@ export default async function UserOverviewPage({
               cursor: "pointer",
             }}
           >
-            Update User
+            Update Site / Project
           </button>
 
           <Link
-            href="/dashboard/users"
+            href="/dashboard/sites-projects"
             style={{
               display: "inline-block",
               padding: "10px 16px",
@@ -335,12 +378,12 @@ export default async function UserOverviewPage({
               fontWeight: 600,
             }}
           >
-            Back to Users
+            Back to Sites / Projects
           </Link>
         </div>
       </form>
 
-      <form action={deleteUser} style={{ marginTop: 16 }}>
+      <form action={deleteSiteProject} style={{ marginTop: 16 }}>
         <button
           type="submit"
           style={{
@@ -353,7 +396,7 @@ export default async function UserOverviewPage({
             cursor: "pointer",
           }}
         >
-          Deactivate User
+          Deactivate Site / Project
         </button>
       </form>
     </div>

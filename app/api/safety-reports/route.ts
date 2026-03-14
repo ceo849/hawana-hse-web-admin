@@ -16,10 +16,15 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const page = url.searchParams.get("page") ?? "1";
     const limit = url.searchParams.get("limit") ?? "20";
+    const status = url.searchParams.get("status");
 
-    const upstream = new URL(`${CORE_API}/api/v1/safety-reports`);
+    const upstream = new URL(`${CORE_API}/v1/safety-reports`);
     upstream.searchParams.set("page", page);
     upstream.searchParams.set("limit", limit);
+
+    if (status) {
+      upstream.searchParams.set("status", status);
+    }
 
     const r = await fetch(upstream.toString(), {
       method: "GET",
@@ -51,7 +56,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const r = await fetch(`${CORE_API}/api/v1/safety-reports`, {
+    const r = await fetch(`${CORE_API}/v1/safety-reports`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -26,33 +26,54 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
-function isCompanyCounts(value: unknown): value is CompanyCounts {
-  if (typeof value !== "object" || value === null) return false;
+function parseCompanyCounts(value: unknown): CompanyCounts {
+  if (typeof value !== "object" || value === null) {
+    return {
+      users: 0,
+      sitesProjects: 0,
+      safetyReports: 0,
+      actionPlans: 0,
+    };
+  }
 
   const candidate = value as Record<string, unknown>;
 
-  return (
-    typeof candidate.users === "number" &&
-    typeof candidate.sitesProjects === "number" &&
-    typeof candidate.safetyReports === "number" &&
-    typeof candidate.actionPlans === "number"
-  );
+  return {
+    users: typeof candidate.users === "number" ? candidate.users : 0,
+    sitesProjects:
+      typeof candidate.sitesProjects === "number" ? candidate.sitesProjects : 0,
+    safetyReports:
+      typeof candidate.safetyReports === "number" ? candidate.safetyReports : 0,
+    actionPlans:
+      typeof candidate.actionPlans === "number" ? candidate.actionPlans : 0,
+  };
 }
 
-function isCompany(value: unknown): value is Company {
-  if (typeof value !== "object" || value === null) return false;
+function parseCompany(value: unknown): Company | null {
+  if (typeof value !== "object" || value === null) return null;
 
   const candidate = value as Record<string, unknown>;
 
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.country === "string" || candidate.country === null) &&
-    (typeof candidate.industry === "string" || candidate.industry === null) &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string" &&
-    isCompanyCounts(candidate._count)
-  );
+  if (
+    typeof candidate.id !== "string" ||
+    typeof candidate.name !== "string" ||
+    (typeof candidate.country !== "string" && candidate.country !== null) ||
+    (typeof candidate.industry !== "string" && candidate.industry !== null) ||
+    typeof candidate.createdAt !== "string" ||
+    typeof candidate.updatedAt !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    name: candidate.name,
+    country: candidate.country as string | null,
+    industry: candidate.industry as string | null,
+    createdAt: candidate.createdAt,
+    updatedAt: candidate.updatedAt,
+    _count: parseCompanyCounts(candidate._count),
+  };
 }
 
 function formatDate(value: string): string {
@@ -104,16 +125,83 @@ export default async function CompanyOverviewPage({
     cache: "no-store",
   });
 
-  if (r.status === 401) redirect("/login");
+  const [usersRes, sitesRes, reportsRes, plansRes] = await Promise.all([
+    fetch(api("/users?page=1&limit=100"), {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }),
+    fetch(api("/sites-projects"), {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }),
+    fetch(api("/safety-reports?page=1&limit=100"), {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }),
+    fetch(api("/action-plans"), {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }),
+  ]);
+
+  if (
+    r.status === 401 ||
+    usersRes.status === 401 ||
+    sitesRes.status === 401 ||
+    reportsRes.status === 401 ||
+    plansRes.status === 401
+  ) {
+    redirect("/login");
+  }
+
   if (!r.ok) redirect("/dashboard/companies");
 
   const json = (await r.json()) as unknown;
+  const company = parseCompany(json);
 
-  if (!isCompany(json)) {
+  if (!company) {
     redirect("/dashboard/companies");
   }
 
-  const company = json;
+  const usersJson = (await usersRes.json().catch(() => [])) as
+    | { data?: unknown[] }
+    | unknown[];
+  const sitesJson = (await sitesRes.json().catch(() => [])) as
+    | { data?: unknown[] }
+    | unknown[];
+  const reportsJson = (await reportsRes.json().catch(() => [])) as
+    | { data?: unknown[] }
+    | unknown[];
+  const plansJson = (await plansRes.json().catch(() => [])) as
+    | { data?: unknown[] }
+    | unknown[];
+
+  const counts = {
+    users:
+      !Array.isArray(usersJson) && Array.isArray(usersJson?.data)
+        ? usersJson.data.length
+        : Array.isArray(usersJson)
+        ? usersJson.length
+        : 0,
+    sitesProjects:
+      !Array.isArray(sitesJson) && Array.isArray(sitesJson?.data)
+        ? sitesJson.data.length
+        : Array.isArray(sitesJson)
+        ? sitesJson.length
+        : 0,
+    safetyReports:
+      !Array.isArray(reportsJson) && Array.isArray(reportsJson?.data)
+        ? reportsJson.data.length
+        : Array.isArray(reportsJson)
+        ? reportsJson.length
+        : 0,
+    actionPlans:
+      !Array.isArray(plansJson) && Array.isArray(plansJson?.data)
+        ? plansJson.data.length
+        : Array.isArray(plansJson)
+        ? plansJson.length
+        : 0,
+  };
 
   async function updateCompany(formData: FormData) {
     "use server";
@@ -254,10 +342,10 @@ export default async function CompanyOverviewPage({
           marginBottom: 24,
         }}
       >
-        {metricCard("Users", company._count.users)}
-        {metricCard("Sites / Projects", company._count.sitesProjects)}
-        {metricCard("Safety Reports", company._count.safetyReports)}
-        {metricCard("Action Plans", company._count.actionPlans)}
+        {metricCard("Users", counts.users)}
+        {metricCard("Sites / Projects", counts.sitesProjects)}
+        {metricCard("Safety Reports", counts.safetyReports)}
+        {metricCard("Action Plans", counts.actionPlans)}
       </div>
 
       <div
