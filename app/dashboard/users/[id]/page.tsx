@@ -50,6 +50,64 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
+function getRoleBadgeStyle(role: string) {
+  const normalized = role.toUpperCase();
+
+  if (normalized === "OWNER") {
+    return {
+      background: "#ede9fe",
+      color: "#5b21b6",
+      border: "1px solid #c4b5fd",
+    };
+  }
+
+  if (normalized === "ADMIN") {
+    return {
+      background: "#dbeafe",
+      color: "#1d4ed8",
+      border: "1px solid #93c5fd",
+    };
+  }
+
+  if (normalized === "MANAGER") {
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+    };
+  }
+
+  if (normalized === "WORKER") {
+    return {
+      background: "#fef3c7",
+      color: "#92400e",
+      border: "1px solid #fcd34d",
+    };
+  }
+
+  return {
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+  };
+}
+
+function metricCard(label: string, value: string) {
+  return (
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderRadius: 12,
+        background: "#fff",
+        padding: 16,
+      }}
+    >
+      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>{value}</div>
+    </div>
+  );
+}
+
 export default async function UserOverviewPage({
   params,
   searchParams,
@@ -80,6 +138,7 @@ export default async function UserOverviewPage({
   }
 
   const user = json;
+  const roleBadgeStyle = getRoleBadgeStyle(user.role);
 
   async function updateUser(formData: FormData) {
     "use server";
@@ -170,6 +229,20 @@ export default async function UserOverviewPage({
 
       <div
         style={{
+          marginBottom: 12,
+          display: "inline-block",
+          padding: "6px 10px",
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 800,
+          ...roleBadgeStyle,
+        }}
+      >
+        {user.role}
+      </div>
+
+      <div
+        style={{
           marginBottom: 8,
           fontSize: 13,
           fontWeight: 700,
@@ -181,7 +254,7 @@ export default async function UserOverviewPage({
 
       <div
         style={{
-          marginBottom: 24,
+          marginBottom: 16,
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -211,6 +284,19 @@ export default async function UserOverviewPage({
             <b>Updated At:</b> {formatDate(user.updatedAt)}
           </div>
         </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: 12,
+          marginBottom: 24,
+        }}
+      >
+        {metricCard("Role", user.role)}
+        {metricCard("Company ID", user.companyId)}
+        {metricCard("Email", user.email)}
       </div>
 
       <div

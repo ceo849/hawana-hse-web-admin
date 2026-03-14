@@ -17,7 +17,7 @@ export async function GET() {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const r = await fetch(`${CORE_API}/api/v1/sites-projects`, {
+  const r = await fetch(`${CORE_API}/v1/sites-projects`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
   const body = await req.text();
 
-  const r = await fetch(`${CORE_API}/api/v1/sites-projects`, {
+  const r = await fetch(`${CORE_API}/v1/sites-projects`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

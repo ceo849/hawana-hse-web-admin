@@ -15,15 +15,86 @@ type CompanyDto = {
   updatedAt: string;
 };
 
+type CompaniesMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
 type CompaniesResponse = {
   data: CompanyDto[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  meta?: CompaniesMeta;
 };
+
+function isCompanyDto(value: unknown): value is CompanyDto {
+  if (typeof value !== "object" || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    (typeof candidate.country === "string" || candidate.country === null) &&
+    (typeof candidate.industry === "string" || candidate.industry === null) &&
+    typeof candidate.createdAt === "string" &&
+    typeof candidate.updatedAt === "string"
+  );
+}
+
+function parseCompaniesResponse(
+  value: unknown,
+  fallbackPage: number,
+  fallbackLimit: number,
+): CompaniesResponse {
+  if (Array.isArray(value)) {
+    const data = value.filter(isCompanyDto);
+
+    return {
+      data,
+      meta: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: data.length,
+        totalPages: 1,
+      },
+    };
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return {
+      data: [],
+      meta: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: 0,
+        totalPages: 1,
+      },
+    };
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  const data = Array.isArray(candidate.data)
+    ? candidate.data.filter(isCompanyDto)
+    : [];
+
+  const metaRaw =
+    typeof candidate.meta === "object" && candidate.meta !== null
+      ? (candidate.meta as Record<string, unknown>)
+      : null;
+
+  return {
+    data,
+    meta: {
+      page: typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
+      limit: typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
+      total: typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
+      totalPages:
+        typeof metaRaw?.totalPages === "number" ? metaRaw.totalPages : 1,
+    },
+  };
+}
 
 function formatDate(value: string): string {
   const d = new Date(value);
@@ -38,11 +109,21 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
+function buildDashboardCompaniesUrl(page: number) {
+  return `/dashboard/companies?page=${page}`;
+}
+
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams:
+    | Promise<{ page?: string; search?: string }>
+    | { page?: string; search?: string };
 }) {
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
 
@@ -52,8 +133,8 @@ export default async function CompaniesPage({
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
   const canManageCompanies = currentRole === "OWNER";
 
-  const page = Number(searchParams.page ?? "1");
-  const search = searchParams.search ?? "";
+  const page = Math.max(1, Number(resolvedSearchParams.page ?? "1") || 1);
+  const search = resolvedSearchParams.search ?? "";
   const limit = 10;
 
   const h = await headers();
@@ -80,27 +161,50 @@ export default async function CompaniesPage({
 
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
-        <PageHeader title="Companies Administration" subtitle="Failed to load companies" />
-        <pre>{text}</pre>
+        <PageHeader
+          title="Companies Administration"
+          subtitle="Tenant company administration"
+        />
+        <pre
+          style={{
+            marginTop: 16,
+            padding: 12,
+            background: "#f7f7f7",
+            borderRadius: 12,
+            overflowX: "auto",
+            whiteSpace: "pre-wrap",
+          }}
+        >{`Failed to load companies
+${text}`}</pre>
       </div>
     );
   }
 
-  const json = (await r.json()) as CompaniesResponse;
+  const rawJson = (await r.json()) as unknown;
+  const json = parseCompaniesResponse(rawJson, page, limit);
 
   const companies = json.data;
-  const meta = json.meta;
+  const meta = json.meta ?? {
+    page,
+    limit,
+    total: companies.length,
+    totalPages: 1,
+  };
+
+  const prevPage = Math.max(1, meta.page - 1);
+  const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
         title="Companies Administration"
-        subtitle="Tenant company administration"
+        subtitle="Control actions for tenant companies. Detail insight remains inside each company page."
         action={
           canManageCompanies ? (
             <Link
               href="/dashboard/companies/new"
               style={{
+                display: "inline-block",
                 padding: "10px 16px",
                 background: "#111",
                 color: "#fff",
@@ -115,60 +219,284 @@ export default async function CompaniesPage({
         }
       />
 
-      <div style={{ marginBottom: 20 }}>
+      <div
+        style={{
+          marginBottom: 12,
+          padding: "12px 14px",
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fafafa",
+          fontSize: 14,
+          color: "#444",
+        }}
+      >
         Total companies: <strong>{meta.total}</strong>
       </div>
 
-      <table
+      <div
         style={{
-          width: "100%",
-          borderCollapse: "collapse",
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
+          fontSize: 13,
+          color: "#444",
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
+          Scope of this page
+        </div>
+        <div>
+          This page is for company administration actions. Company detail
+          insight and edit controls remain inside the individual company page.
+        </div>
+      </div>
+
+      <div
+        style={{
+          border: "1px solid #eee",
+          borderRadius: 12,
+          overflowX: "auto",
           background: "#fff",
         }}
       >
-        <thead>
-          <tr style={{ background: "#fafafa" }}>
-            <th style={{ padding: 12, textAlign: "left" }}>Company</th>
-            <th style={{ padding: 12, textAlign: "left" }}>Country</th>
-            <th style={{ padding: 12, textAlign: "left" }}>Industry</th>
-            <th style={{ padding: 12, textAlign: "left" }}>Created</th>
-            <th style={{ padding: 12, textAlign: "left" }}>Actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {companies.map((c) => (
-            <tr key={c.id}>
-              <td style={{ padding: 12 }}>
-                <Link href={`/dashboard/companies/${c.id}`} style={{ fontWeight: 700 }}>
-                  {c.name}
-                </Link>
-              </td>
-
-              <td style={{ padding: 12 }}>{c.country ?? "-"}</td>
-              <td style={{ padding: 12 }}>{c.industry ?? "-"}</td>
-              <td style={{ padding: 12 }}>{formatDate(c.createdAt)}</td>
-
-              <td style={{ padding: 12 }}>
-                <Link href={`/dashboard/companies/${c.id}`}>Open</Link>
-              </td>
+        <table
+          style={{
+            width: "100%",
+            minWidth: 980,
+            borderCollapse: "collapse",
+          }}
+        >
+          <thead>
+            <tr style={{ background: "#fafafa" }}>
+              <th
+                style={{
+                  padding: 14,
+                  textAlign: "left",
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
+                Company
+              </th>
+              <th
+                style={{
+                  padding: 14,
+                  textAlign: "left",
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
+                Country
+              </th>
+              <th
+                style={{
+                  padding: 14,
+                  textAlign: "left",
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
+                Industry
+              </th>
+              <th
+                style={{
+                  padding: 14,
+                  textAlign: "left",
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
+                Company ID
+              </th>
+              <th
+                style={{
+                  padding: 14,
+                  textAlign: "left",
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                }}
+              >
+                Created At
+              </th>
+              <th
+                style={{
+                  padding: 14,
+                  textAlign: "left",
+                  borderBottom: "1px solid #eee",
+                  fontSize: 13,
+                  width: 150,
+                }}
+              >
+                Actions
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
 
-      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-        {page > 1 && (
-          <Link href={`/dashboard/companies?page=${page - 1}`}>
-            ← Previous
-          </Link>
-        )}
+          <tbody>
+            {companies.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  style={{
+                    padding: 24,
+                    color: "#555",
+                  }}
+                >
+                  No companies found.
+                </td>
+              </tr>
+            ) : (
+              companies.map((c) => (
+                <tr key={c.id}>
+                  <td
+                    style={{
+                      padding: 14,
+                      borderBottom: "1px solid #eee",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <Link
+                      href={`/dashboard/companies/${c.id}`}
+                      style={{
+                        color: "#111",
+                        fontWeight: 800,
+                        textDecoration: "none",
+                      }}
+                    >
+                      {c.name}
+                    </Link>
+                  </td>
 
-        {page < meta.totalPages && (
-          <Link href={`/dashboard/companies?page=${page + 1}`}>
-            Next →
+                  <td
+                    style={{
+                      padding: 14,
+                      borderBottom: "1px solid #eee",
+                      verticalAlign: "top",
+                      fontSize: 13,
+                      color: "#444",
+                    }}
+                  >
+                    {c.country ?? "-"}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: 14,
+                      borderBottom: "1px solid #eee",
+                      verticalAlign: "top",
+                      fontSize: 13,
+                      color: "#444",
+                    }}
+                  >
+                    {c.industry ?? "-"}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: 14,
+                      borderBottom: "1px solid #eee",
+                      verticalAlign: "top",
+                      fontFamily: "monospace",
+                      fontSize: 12,
+                      color: "#444",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {c.id}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: 14,
+                      borderBottom: "1px solid #eee",
+                      verticalAlign: "top",
+                      fontSize: 13,
+                      color: "#444",
+                    }}
+                  >
+                    {formatDate(c.createdAt)}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: 14,
+                      borderBottom: "1px solid #eee",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <Link
+                      href={`/dashboard/companies/${c.id}`}
+                      style={{
+                        textDecoration: "underline",
+                        color: "#111",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Open detail
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        style={{
+          marginTop: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontSize: 13, color: "#555" }}>
+          Page <strong>{meta.page}</strong> of{" "}
+          <strong>{Math.max(meta.totalPages, 1)}</strong>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link
+            href={buildDashboardCompaniesUrl(prevPage)}
+            style={{
+              pointerEvents: meta.page <= 1 ? "none" : "auto",
+              opacity: meta.page <= 1 ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Previous
           </Link>
-        )}
+
+          <Link
+            href={buildDashboardCompaniesUrl(nextPage)}
+            style={{
+              pointerEvents:
+                meta.page >= Math.max(meta.totalPages, 1) ? "none" : "auto",
+              opacity: meta.page >= Math.max(meta.totalPages, 1) ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Next
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -5,6 +5,26 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 
+type CompanyDto = {
+  id: string;
+};
+
+type UserDto = {
+  id: string;
+};
+
+type SiteProjectDto = {
+  id: string;
+};
+
+type SafetyReportDto = {
+  id: string;
+};
+
+type ActionPlanDto = {
+  id: string;
+};
+
 type PlatformMetrics = {
   companies: number;
   users: number;
@@ -13,18 +33,51 @@ type PlatformMetrics = {
   actionPlans: number;
 };
 
-function isPlatformMetrics(value: unknown): value is PlatformMetrics {
-  if (typeof value !== "object" || value === null) return false;
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-  const candidate = value as Record<string, unknown>;
+function pickArray<T>(
+  value: unknown,
+  guard: (item: unknown) => item is T,
+): T[] {
+  if (Array.isArray(value)) {
+    return value.filter(guard);
+  }
 
-  return (
-    typeof candidate.companies === "number" &&
-    typeof candidate.users === "number" &&
-    typeof candidate.sites === "number" &&
-    typeof candidate.safetyReports === "number" &&
-    typeof candidate.actionPlans === "number"
-  );
+  if (isObject(value) && Array.isArray(value.data)) {
+    return value.data.filter(guard);
+  }
+
+  return [];
+}
+
+function isCompanyDto(value: unknown): value is CompanyDto {
+  return isObject(value) && typeof value.id === "string";
+}
+
+function isUserDto(value: unknown): value is UserDto {
+  return isObject(value) && typeof value.id === "string";
+}
+
+function isSiteProjectDto(value: unknown): value is SiteProjectDto {
+  return isObject(value) && typeof value.id === "string";
+}
+
+function isSafetyReportDto(value: unknown): value is SafetyReportDto {
+  return isObject(value) && typeof value.id === "string";
+}
+
+function isActionPlanDto(value: unknown): value is ActionPlanDto {
+  return isObject(value) && typeof value.id === "string";
+}
+
+async function safeJson(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 export default async function AdminPage() {
@@ -36,69 +89,106 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const r = await fetch(api("/platform/metrics"), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  let metrics: PlatformMetrics | null = null;
+  let fallbackMode = false;
 
-  if (r.status === 401) {
-    redirect("/login");
+  try {
+    const r = await fetch(api("/platform/metrics"), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    if (r.status === 401) {
+      redirect("/login");
+    }
+
+    if (r.ok) {
+      const json = (await r.json()) as unknown;
+
+      if (
+        isObject(json) &&
+        typeof json.companies === "number" &&
+        typeof json.users === "number" &&
+        typeof json.sites === "number" &&
+        typeof json.safetyReports === "number" &&
+        typeof json.actionPlans === "number"
+      ) {
+        metrics = {
+          companies: json.companies,
+          users: json.users,
+          sites: json.sites,
+          safetyReports: json.safetyReports,
+          actionPlans: json.actionPlans,
+        };
+      }
+    }
+  } catch {
+    // fallback below
   }
 
-  if (!r.ok) {
-    const text = await r.text().catch(() => "");
+  if (!metrics) {
+    fallbackMode = true;
 
-    return (
-      <div style={{ padding: 24, fontFamily: "system-ui" }}>
-        <PageHeader
-          title="Platform Admin"
-          subtitle="Platform-wide observability and administration"
-        />
+    const [companiesRes, usersRes, sitesRes, safetyReportsRes, actionPlansRes] =
+      await Promise.all([
+        fetch(api("/companies?page=1&limit=100"), {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+        fetch(api("/users?page=1&limit=100"), {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+        fetch(api("/sites-projects"), {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+        fetch(api("/safety-reports?page=1&limit=100"), {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+        fetch(api("/action-plans"), {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }),
+      ]);
 
-        <pre
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f7f7f7",
-            borderRadius: 12,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-          }}
-        >{`Failed to load platform metrics (${r.status})
-${text}`}</pre>
-      </div>
-    );
+    const statuses = [
+      companiesRes.status,
+      usersRes.status,
+      sitesRes.status,
+      safetyReportsRes.status,
+      actionPlansRes.status,
+    ];
+
+    if (statuses.includes(401)) {
+      redirect("/login");
+    }
+
+    const [
+      companiesJson,
+      usersJson,
+      sitesJson,
+      safetyReportsJson,
+      actionPlansJson,
+    ] = await Promise.all([
+      safeJson(companiesRes),
+      safeJson(usersRes),
+      safeJson(sitesRes),
+      safeJson(safetyReportsRes),
+      safeJson(actionPlansRes),
+    ]);
+
+    metrics = {
+      companies: pickArray(companiesJson, isCompanyDto).length,
+      users: pickArray(usersJson, isUserDto).length,
+      sites: pickArray(sitesJson, isSiteProjectDto).length,
+      safetyReports: pickArray(safetyReportsJson, isSafetyReportDto).length,
+      actionPlans: pickArray(actionPlansJson, isActionPlanDto).length,
+    };
   }
-
-  const json = (await r.json()) as unknown;
-
-  if (!isPlatformMetrics(json)) {
-    return (
-      <div style={{ padding: 24, fontFamily: "system-ui" }}>
-        <PageHeader
-          title="Platform Admin"
-          subtitle="Platform-wide observability and administration"
-        />
-
-        <pre
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f7f7f7",
-            borderRadius: 12,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          Unexpected platform metrics response
-        </pre>
-      </div>
-    );
-  }
-
-  const metrics = json;
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
@@ -126,6 +216,12 @@ ${text}`}</pre>
           operational volume across the platform without introducing platform
           control actions yet.
         </div>
+        {fallbackMode ? (
+          <div style={{ marginTop: 8, color: "#666" }}>
+            Fallback mode active: platform metrics endpoint is not available yet,
+            so counts are derived from existing modules.
+          </div>
+        ) : null}
       </div>
 
       <div

@@ -17,14 +17,16 @@ type UserDto = {
   updatedAt: string;
 };
 
+type UsersMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
 type UsersResponse = {
   data: UserDto[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  meta: UsersMeta;
 };
 
 type SearchParamsInput =
@@ -61,21 +63,57 @@ function isUserDto(value: unknown): value is UserDto {
   );
 }
 
-function isUsersResponse(value: unknown): value is UsersResponse {
-  if (typeof value !== "object" || value === null) return false;
+function parseUsersResponse(
+  value: unknown,
+  fallbackPage: number,
+  fallbackLimit: number,
+): UsersResponse {
+  if (Array.isArray(value)) {
+    const data = value.filter(isUserDto);
+
+    return {
+      data,
+      meta: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: data.length,
+        totalPages: 1,
+      },
+    };
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return {
+      data: [],
+      meta: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: 0,
+        totalPages: 1,
+      },
+    };
+  }
 
   const candidate = value as Record<string, unknown>;
-  const meta = candidate.meta as Record<string, unknown> | undefined;
+  const data = Array.isArray(candidate.data)
+    ? candidate.data.filter(isUserDto)
+    : [];
 
-  return (
-    Array.isArray(candidate.data) &&
-    candidate.data.every(isUserDto) &&
-    !!meta &&
-    typeof meta.page === "number" &&
-    typeof meta.limit === "number" &&
-    typeof meta.total === "number" &&
-    typeof meta.totalPages === "number"
-  );
+  const metaRaw =
+    typeof candidate.meta === "object" && candidate.meta !== null
+      ? (candidate.meta as Record<string, unknown>)
+      : null;
+
+  return {
+    data,
+    meta: {
+      page: typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
+      limit: typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
+      total: typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
+      totalPages:
+        typeof metaRaw?.totalPages === "number" ? metaRaw.totalPages : 1,
+    },
+  };
 }
 
 function formatDate(value: string): string {
@@ -182,19 +220,16 @@ export default async function UsersPage({ searchParams }: PageProps) {
   const canManageUsers = currentRole === "OWNER" || currentRole === "ADMIN";
 
   let users: UserDto[] = [];
-  let meta = {
-    page: 1,
-    limit: 20,
+  let meta: UsersMeta = {
+    page,
+    limit,
     total: 0,
     totalPages: 1,
   };
 
   try {
-    const json = await serverAppFetch(buildUsersUrl(page, limit, q, roleFilter));
-
-    if (!isUsersResponse(json)) {
-      throw new Error("Unexpected users response shape");
-    }
+    const raw = await serverAppFetch(buildUsersUrl(page, limit, q, roleFilter));
+    const json = parseUsersResponse(raw, page, limit);
 
     users = json.data;
     meta = json.meta;
@@ -210,7 +245,7 @@ export default async function UsersPage({ searchParams }: PageProps) {
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
         <PageHeader
           title="Users Administration"
-          subtitle="Control layer for tenant users and access roles"
+          subtitle="Control actions for tenant users and access roles"
         />
 
         <pre
@@ -229,13 +264,13 @@ ${message}`}</pre>
   }
 
   const prevPage = Math.max(1, meta.page - 1);
-  const nextPage = Math.min(meta.totalPages || 1, meta.page + 1);
+  const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
       <PageHeader
         title="Users Administration"
-        subtitle="Control actions for tenant users and access roles. User detail insight and edit controls remain inside the individual user page."
+        subtitle="Control actions for tenant users. Detail insight remains inside each user page."
         action={
           canManageUsers ? (
             <Link
@@ -260,10 +295,14 @@ ${message}`}</pre>
         method="GET"
         action="/dashboard/users"
         style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
           display: "grid",
           gridTemplateColumns: "2fr 1fr auto",
           gap: 12,
-          marginBottom: 16,
           alignItems: "end",
         }}
       >
@@ -319,6 +358,7 @@ ${message}`}</pre>
         <div style={{ display: "flex", gap: 8 }}>
           <input type="hidden" name="page" value="1" />
           <input type="hidden" name="limit" value={String(limit)} />
+
           <button
             type="submit"
             style={{
@@ -363,8 +403,7 @@ ${message}`}</pre>
           color: "#444",
         }}
       >
-        Showing <strong>{users.length}</strong> of <strong>{meta.total}</strong>{" "}
-        users
+        Total users: <strong>{meta.total}</strong>
       </div>
 
       <div

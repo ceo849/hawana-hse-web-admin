@@ -1,4 +1,4 @@
-// app/dashboard/safety-reports/page.tsx
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
@@ -15,14 +15,16 @@ type SafetyReport = {
   createdAt: string | null;
 };
 
+type SafetyReportsMeta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 type SafetyReportsResponse = {
   data: SafetyReport[];
-  meta?: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  meta?: SafetyReportsMeta;
 };
 
 type SearchParams = {
@@ -46,16 +48,35 @@ function isSafetyReport(value: unknown): value is SafetyReport {
   );
 }
 
-function parseSafetyReportsResponse(value: unknown): SafetyReportsResponse {
+function parseSafetyReportsResponse(
+  value: unknown,
+  fallbackPage: number,
+  fallbackLimit: number,
+): SafetyReportsResponse {
   if (Array.isArray(value)) {
+    const data = value.filter(isSafetyReport);
+
     return {
-      data: value.filter(isSafetyReport),
-      meta: undefined,
+      data,
+      meta: {
+        total: data.length,
+        page: fallbackPage,
+        limit: fallbackLimit,
+        totalPages: 1,
+      },
     };
   }
 
   if (typeof value !== "object" || value === null) {
-    return { data: [], meta: undefined };
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page: fallbackPage,
+        limit: fallbackLimit,
+        totalPages: 1,
+      },
+    };
   }
 
   const candidate = value as Record<string, unknown>;
@@ -68,18 +89,18 @@ function parseSafetyReportsResponse(value: unknown): SafetyReportsResponse {
       ? (candidate.meta as Record<string, unknown>)
       : null;
 
-  const meta = metaRaw
-    ? {
-        total:
-          typeof metaRaw.total === "number" ? metaRaw.total : data.length,
-        page: typeof metaRaw.page === "number" ? metaRaw.page : 1,
-        limit: typeof metaRaw.limit === "number" ? metaRaw.limit : 20,
-        totalPages:
-          typeof metaRaw.totalPages === "number" ? metaRaw.totalPages : 1,
-      }
-    : undefined;
-
-  return { data, meta };
+  return {
+    data,
+    meta: {
+      total:
+        typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
+      page: typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
+      limit:
+        typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
+      totalPages:
+        typeof metaRaw?.totalPages === "number" ? metaRaw.totalPages : 1,
+    },
+  };
 }
 
 function toInt(v: unknown, fallback: number) {
@@ -146,6 +167,20 @@ function formatDate(value?: string | null) {
   }).format(d);
 }
 
+function buildDashboardSafetyReportsUrl(
+  page: number,
+  limit: number,
+  status: string,
+) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+  if (status) params.set("status", status);
+
+  return `/dashboard/safety-reports?${params.toString()}`;
+}
+
 export default async function SafetyReportsPage(props: {
   searchParams?: Promise<SearchParams> | SearchParams;
 }) {
@@ -167,12 +202,13 @@ export default async function SafetyReportsPage(props: {
   const limit = Math.min(Math.max(toInt(sp.limit ?? "20", 20), 1), 100);
   const selectedStatus = normalizeStatus(sp.status);
 
-  let json: SafetyReportsResponse;
+  let parsed: SafetyReportsResponse;
 
   try {
-    json = parseSafetyReportsResponse(
-      await serverAppFetch(`/api/safety-reports?page=${page}&limit=${limit}`),
+    const raw = await serverAppFetch(
+      `/api/safety-reports?page=${page}&limit=${limit}`,
     );
+    parsed = parseSafetyReportsResponse(raw, page, limit);
   } catch (error) {
     const message =
       error instanceof Error
@@ -205,7 +241,7 @@ ${message}`}</pre>
     );
   }
 
-  const items = json.data;
+  const items = parsed.data;
 
   const filteredItems = selectedStatus
     ? items.filter(
@@ -213,12 +249,15 @@ ${message}`}</pre>
       )
     : items;
 
-  const meta = json.meta ?? {
+  const meta = parsed.meta ?? {
     total: filteredItems.length,
     page,
     limit,
     totalPages: 1,
   };
+
+  const prevPage = Math.max(1, meta.page - 1);
+  const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
@@ -227,7 +266,7 @@ ${message}`}</pre>
         subtitle="Review, filter, and manage operational safety reports"
         action={
           canCreateSafetyReports ? (
-            <a
+            <Link
               href="/dashboard/safety-reports/new"
               style={{
                 display: "inline-block",
@@ -240,23 +279,24 @@ ${message}`}</pre>
               }}
             >
               + New Safety Report
-            </a>
+            </Link>
           ) : undefined
         }
       />
 
       <form
         method="GET"
+        action="/dashboard/safety-reports"
         style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
           display: "flex",
           gap: 10,
           alignItems: "center",
           flexWrap: "wrap",
-          marginBottom: 12,
-          padding: 14,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fafafa",
         }}
       >
         <label style={{ fontWeight: 700 }}>Status</label>
@@ -296,7 +336,7 @@ ${message}`}</pre>
           Apply
         </button>
 
-        <a
+        <Link
           href="/dashboard/safety-reports"
           style={{
             padding: "10px 16px",
@@ -310,7 +350,7 @@ ${message}`}</pre>
           }}
         >
           Reset
-        </a>
+        </Link>
       </form>
 
       <div
@@ -326,8 +366,29 @@ ${message}`}</pre>
       >
         Total safety reports: <strong>{filteredItems.length}</strong>
         <span style={{ marginLeft: 12 }}>
-          Page <strong>{meta.page}</strong> / <strong>{meta.totalPages}</strong>
+          Page <strong>{meta.page}</strong> /{" "}
+          <strong>{Math.max(meta.totalPages, 1)}</strong>
         </span>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
+          fontSize: 13,
+          color: "#444",
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
+          Scope of this page
+        </div>
+        <div>
+          This page is for safety report administration actions. Detailed report
+          insight and edit controls remain inside the individual report page.
+        </div>
       </div>
 
       <div
@@ -431,7 +492,7 @@ ${message}`}</pre>
                         verticalAlign: "top",
                       }}
                     >
-                      <a
+                      <Link
                         href={`/dashboard/safety-reports/${r.id}`}
                         style={{
                           color: "#111",
@@ -440,7 +501,7 @@ ${message}`}</pre>
                         }}
                       >
                         {r.title ?? "Untitled"}
-                      </a>
+                      </Link>
 
                       <div
                         style={{
@@ -507,7 +568,7 @@ ${message}`}</pre>
                         verticalAlign: "top",
                       }}
                     >
-                      <a
+                      <Link
                         href={`/dashboard/safety-reports/${r.id}`}
                         style={{
                           textDecoration: "underline",
@@ -515,8 +576,8 @@ ${message}`}</pre>
                           fontWeight: 600,
                         }}
                       >
-                        Open
-                      </a>
+                        Open detail
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -524,6 +585,61 @@ ${message}`}</pre>
             )}
           </tbody>
         </table>
+      </div>
+
+      <div
+        style={{
+          marginTop: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontSize: 13, color: "#555" }}>
+          Page <strong>{meta.page}</strong> of{" "}
+          <strong>{Math.max(meta.totalPages, 1)}</strong>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link
+            href={buildDashboardSafetyReportsUrl(prevPage, limit, selectedStatus)}
+            style={{
+              pointerEvents: meta.page <= 1 ? "none" : "auto",
+              opacity: meta.page <= 1 ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Previous
+          </Link>
+
+          <Link
+            href={buildDashboardSafetyReportsUrl(nextPage, limit, selectedStatus)}
+            style={{
+              pointerEvents:
+                meta.page >= Math.max(meta.totalPages, 1) ? "none" : "auto",
+              opacity: meta.page >= Math.max(meta.totalPages, 1) ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Next
+          </Link>
+        </div>
       </div>
     </div>
   );

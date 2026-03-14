@@ -119,7 +119,7 @@ export default async function SitesProjectsPage() {
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
         <PageHeader
           title="Sites / Projects Administration"
-          subtitle="Control layer for operational site and project records"
+          subtitle="Control actions for operational site and project records"
         />
 
         <pre
@@ -402,7 +402,7 @@ ${text}`}</pre>
                           fontWeight: 600,
                         }}
                       >
-                        Open overview
+                        Open detail
                       </Link>
                     </td>
                   </tr>

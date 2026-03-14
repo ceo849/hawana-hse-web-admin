@@ -1,13 +1,17 @@
-// app/api/action-plans/route.ts
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-const CORE_API = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://hawana-core:3001").replace(/\/$/, "");
+const CORE_API =
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://hawana-core:3001").replace(/\/$/, "");
+
+async function getToken() {
+  const cookieStore = await cookies();
+  return cookieStore.get("access_token")?.value ?? null;
+}
 
 export async function GET(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("access_token")?.value;
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -16,7 +20,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ? url.search : "";
 
-    const r = await fetch(`${CORE_API}/api/v1/action-plans${qs}`, {
+    const r = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -24,11 +28,14 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
 
-    const text = await r.text();
+    const bodyText = await r.text();
 
-    return new NextResponse(text, {
+    return new NextResponse(bodyText, {
       status: r.status,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "content-type":
+          r.headers.get("content-type") ?? "application/json; charset=utf-8",
+      },
     });
   } catch {
     return NextResponse.json({ message: "Proxy error" }, { status: 500 });
@@ -37,30 +44,31 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("access_token")?.value;
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.text();
 
-    const r = await fetch(`${CORE_API}/api/v1/action-plans`, {
+    const r = await fetch(`${CORE_API}/v1/action-plans`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
       },
-      body: JSON.stringify(body),
-      cache: "no-store",
+      body,
     });
 
-    const text = await r.text();
+    const bodyText = await r.text();
 
-    return new NextResponse(text, {
+    return new NextResponse(bodyText, {
       status: r.status,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "content-type":
+          r.headers.get("content-type") ?? "application/json; charset=utf-8",
+      },
     });
   } catch {
     return NextResponse.json({ message: "Proxy error" }, { status: 500 });

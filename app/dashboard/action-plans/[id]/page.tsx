@@ -1,4 +1,4 @@
-// app/dashboard/action-plans/[id]/page.tsx
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -39,6 +39,10 @@ function normalizeId(raw: unknown): string {
 
 function actionPlanPath(id: string) {
   return `/dashboard/action-plans/${encodeURIComponent(id)}`;
+}
+
+function actionPlanEditPath(id: string) {
+  return `/dashboard/action-plans/${encodeURIComponent(id)}/edit`;
 }
 
 function safetyReportPath(id: string) {
@@ -137,6 +141,22 @@ function formatAssignedUser(
   return "—";
 }
 
+function metricCard(label: string, value: string | number) {
+  return (
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderRadius: 12,
+        background: "#fff",
+        padding: 16,
+      }}
+    >
+      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{value}</div>
+    </div>
+  );
+}
+
 async function readApiErrorText(r: Response): Promise<string> {
   try {
     const j = await r.json();
@@ -187,7 +207,10 @@ export default async function ActionPlanPage({
 
     const tokenInner = await requireAccessToken();
     const nextStatus = normalizeId(formData.get("nextStatus"));
-    if (!nextStatus) redirect(actionPlanPath(id));
+
+    if (!nextStatus) {
+      redirect(actionPlanPath(id));
+    }
 
     const allowed: ActionPlanStatus[] = [
       "OPEN",
@@ -262,11 +285,12 @@ export default async function ActionPlanPage({
 
   if (!res.ok) {
     const detail = await readApiErrorText(res);
+
     return (
       <div style={{ padding: 24, fontFamily: "system-ui" }}>
         <PageHeader
-          title="Action Plan"
-          subtitle="View details, update workflow status, and manage due date"
+          title="Action Plan Overview"
+          subtitle="Plan insight first, followed by plan control actions"
         />
 
         <pre
@@ -281,9 +305,9 @@ export default async function ActionPlanPage({
         >{`Failed to load action plan (${res.status})\n${detail}`}</pre>
 
         <div style={{ marginTop: 14 }}>
-          <a href="/dashboard/action-plans" style={{ textDecoration: "underline" }}>
+          <Link href="/dashboard/action-plans" style={{ textDecoration: "underline" }}>
             Back to Action Plans
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -293,32 +317,14 @@ export default async function ActionPlanPage({
   const nextStatuses = allowedNextStatuses(ap.status);
   const err = normalizeId(resolvedSearchParams?.err);
   const dueDateLocked = ap.status === "VERIFIED" || !canOperateWorkflow;
+  const editLocked = ap.status === "VERIFIED" || !canOperateWorkflow;
   const statusStyle = getActionPlanStatusStyle(ap.status);
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 860 }}>
       <PageHeader
-        title={ap.title}
-        subtitle="View details, update workflow status, and manage due date"
-        action={
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a
-              href="/dashboard/action-plans"
-              style={{
-                display: "inline-block",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              Back
-            </a>
-          </div>
-        }
+        title="Action Plan Overview"
+        subtitle="Plan insight first, followed by plan control actions"
       />
 
       {err ? (
@@ -337,6 +343,17 @@ export default async function ActionPlanPage({
           {err}
         </div>
       ) : null}
+
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        Plan Insight
+      </div>
 
       <div
         style={{
@@ -388,167 +405,61 @@ export default async function ActionPlanPage({
       >
         <div style={{ display: "grid", gap: 8 }}>
           <div>
-            <b>Assigned To:</b>{" "}
-            {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}
+            <b>Action Plan ID:</b> {ap.id}
+          </div>
+
+          <div>
+            <b>Title:</b> {ap.title}
+          </div>
+
+          <div>
+            <b>Assigned To:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}
           </div>
 
           <div>
             <b>Safety Report:</b>{" "}
             {ap.safetyReportId ? (
-              <a
+              <Link
                 href={safetyReportPath(ap.safetyReportId)}
                 style={{ textDecoration: "underline" }}
               >
                 {ap.safetyReportId}
-              </a>
+              </Link>
             ) : (
               "—"
             )}
           </div>
 
           <div>
-            <b>Action Plan ID:</b> {ap.id}
+            <b>Due Date:</b> {formatDateDisplay(ap.dueDate)}
           </div>
 
           <div>
-            <b>Created:</b> {formatDateDisplay(ap.createdAt)}
+            <b>Created At:</b> {formatDateDisplay(ap.createdAt)}
           </div>
 
           <div>
-            <b>Updated:</b> {formatDateDisplay(ap.updatedAt)}
+            <b>Updated At:</b> {formatDateDisplay(ap.updatedAt)}
           </div>
         </div>
       </div>
 
       <div
         style={{
-          marginBottom: 16,
-          padding: 16,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fff",
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: 12,
+          marginBottom: 24,
         }}
       >
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>Change Status</div>
-
-        {!canOperateWorkflow ? (
-          <div style={{ fontSize: 13, color: "#555" }}>
-            Status transitions are hidden for read-only roles.
-          </div>
-        ) : nextStatuses.length === 0 ? (
-          <div style={{ fontSize: 13, color: "#555" }}>No allowed transitions</div>
-        ) : (
-          <form
-            action={changeStatus}
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <select
-              name="nextStatus"
-              defaultValue={nextStatuses[0]}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                minWidth: 180,
-                background: "#fff",
-              }}
-            >
-              {nextStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="submit"
-              style={{
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Update Status
-            </button>
-          </form>
-        )}
+        {metricCard("Current Status", ap.status)}
+        {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
+        {metricCard("Workflow Options", nextStatuses.length)}
       </div>
 
       <div
         style={{
           marginBottom: 16,
-          padding: 16,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fff",
-        }}
-      >
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          Due Date: {formatDateDisplay(ap.dueDate)}
-        </div>
-
-        <form
-          action={updateDueDate}
-          style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <input
-            type="date"
-            name="dueDate"
-            defaultValue={toDateInputValue(ap.dueDate)}
-            disabled={dueDateLocked}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              minWidth: 220,
-              opacity: dueDateLocked ? 0.6 : 1,
-              background: "#fff",
-            }}
-          />
-
-          <button
-            type="submit"
-            disabled={dueDateLocked}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #111",
-              background: dueDateLocked ? "#777" : "#111",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: dueDateLocked ? "not-allowed" : "pointer",
-              opacity: dueDateLocked ? 0.7 : 1,
-            }}
-          >
-            Save Due Date
-          </button>
-
-          <span style={{ fontSize: 12, color: "#666" }}>
-            {ap.status === "VERIFIED"
-              ? "(Locked: VERIFIED plan)"
-              : !canOperateWorkflow
-                ? "(Locked: read-only role)"
-                : "(Leave empty to clear the due date)"}
-          </span>
-        </form>
-      </div>
-
-      <div
-        style={{
           padding: 16,
           border: "1px solid #eee",
           borderRadius: 12,
@@ -559,6 +470,191 @@ export default async function ActionPlanPage({
         <p style={{ margin: 0, lineHeight: 1.6 }}>
           {ap.description?.trim() ? ap.description : "No description"}
         </p>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        Plan Control Actions
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            padding: 16,
+            border: "1px solid #eee",
+            borderRadius: 12,
+            background: "#fff",
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 10 }}>Change Status</div>
+
+          {!canOperateWorkflow ? (
+            <div style={{ fontSize: 13, color: "#555" }}>
+              Status transitions are hidden for read-only roles.
+            </div>
+          ) : nextStatuses.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#555" }}>No allowed transitions</div>
+          ) : (
+            <form
+              action={changeStatus}
+              style={{
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <select
+                name="nextStatus"
+                defaultValue={nextStatuses[0]}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #ddd",
+                  minWidth: 180,
+                  background: "#fff",
+                }}
+              >
+                {nextStatuses.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="submit"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: "1px solid #111",
+                  background: "#111",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Update Status
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div
+          style={{
+            padding: 16,
+            border: "1px solid #eee",
+            borderRadius: 12,
+            background: "#fff",
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 10 }}>
+            Manage Due Date
+          </div>
+
+          <form
+            action={updateDueDate}
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <input
+              type="date"
+              name="dueDate"
+              defaultValue={toDateInputValue(ap.dueDate)}
+              disabled={dueDateLocked}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+                minWidth: 220,
+                opacity: dueDateLocked ? 0.6 : 1,
+                background: "#fff",
+              }}
+            />
+
+            <button
+              type="submit"
+              disabled={dueDateLocked}
+              style={{
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: "1px solid #111",
+                background: dueDateLocked ? "#777" : "#111",
+                color: "#fff",
+                fontWeight: 700,
+                cursor: dueDateLocked ? "not-allowed" : "pointer",
+                opacity: dueDateLocked ? 0.7 : 1,
+              }}
+            >
+              Save Due Date
+            </button>
+
+            <span style={{ fontSize: 12, color: "#666" }}>
+              {ap.status === "VERIFIED"
+                ? "(Locked: VERIFIED plan)"
+                : !canOperateWorkflow
+                  ? "(Locked: read-only role)"
+                  : "(Leave empty to clear the due date)"}
+            </span>
+          </form>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          {!editLocked ? (
+            <Link
+              href={actionPlanEditPath(ap.id)}
+              style={{
+                display: "inline-block",
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: "1px solid #111",
+                background: "#111",
+                color: "#fff",
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              Edit Action Plan
+            </Link>
+          ) : null}
+
+          <Link
+            href="/dashboard/action-plans"
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              background: "#fff",
+              color: "#111",
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            Back to Action Plans
+          </Link>
+        </div>
       </div>
     </div>
   );

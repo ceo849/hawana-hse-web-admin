@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
@@ -182,6 +183,35 @@ function formatAssignedTo(
   return "—";
 }
 
+function metricCard(label: string, value: string | number) {
+  return (
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderRadius: 12,
+        background: "#fff",
+        padding: 16,
+      }}
+    >
+      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
+      <div style={{ fontWeight: 800, color: "#333" }}>{label}</div>
+      <div style={{ color: "#111", wordBreak: "break-word" }}>{value}</div>
+    </div>
+  );
+}
+
 export default async function SafetyReportDetailPage({ params }: PageProps) {
   const token = await requireAccessToken();
   const { id } = await params;
@@ -205,8 +235,8 @@ export default async function SafetyReportDetailPage({ params }: PageProps) {
     return (
       <div style={{ fontFamily: "system-ui", padding: 24 }}>
         <PageHeader
-          title="Safety Report"
-          subtitle="View report details and linked corrective actions"
+          title="Safety Report Overview"
+          subtitle="Report insight first, followed by report control actions"
         />
 
         <pre
@@ -222,15 +252,20 @@ export default async function SafetyReportDetailPage({ params }: PageProps) {
 ${text}`}</pre>
 
         <div style={{ marginTop: 14 }}>
-          <a href="/dashboard/safety-reports" style={{ textDecoration: "underline" }}>
+          <Link
+            href="/dashboard/safety-reports"
+            style={{ textDecoration: "underline" }}
+          >
             Back to Safety Reports
-          </a>
+          </Link>
         </div>
       </div>
     );
   }
 
   const sr = (await srRes.json()) as SafetyReport;
+  const reportStatus = String(sr.status ?? "").toUpperCase();
+  const reportClosed = reportStatus === "CLOSED";
   const statusStyle = getSafetyReportStatusStyle(sr.status);
 
   let actionPlans: ActionPlan[] = [];
@@ -267,60 +302,20 @@ ${text}`}</pre>
   return (
     <div style={{ fontFamily: "system-ui", padding: 24, maxWidth: 960 }}>
       <PageHeader
-        title="Safety Report"
-        subtitle="View report details and linked corrective actions"
-        action={
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a
-              href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(sr.id)}`}
-              style={{
-                display: "inline-block",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
-                fontWeight: 800,
-                textDecoration: "none",
-              }}
-            >
-              + Create Action Plan
-            </a>
-
-            <a
-              href={`/dashboard/safety-reports/${encodeURIComponent(sr.id)}/edit`}
-              style={{
-                display: "inline-block",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
-                fontWeight: 700,
-                textDecoration: "none",
-              }}
-            >
-              Edit Report
-            </a>
-
-            <a
-              href="/dashboard/safety-reports"
-              style={{
-                display: "inline-block",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              Back
-            </a>
-          </div>
-        }
+        title="Safety Report Overview"
+        subtitle="Report insight first, followed by report control actions"
       />
+
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        Report Insight
+      </div>
 
       <div
         style={{
@@ -351,20 +346,33 @@ ${text}`}</pre>
           borderRadius: 12,
           padding: 16,
           background: "#fff",
+          marginBottom: 16,
         }}
       >
         <div style={{ display: "grid", gap: 10 }}>
-          <Row label="ID" value={sr.id} />
+          <Row label="Report ID" value={sr.id} />
           <Row label="Title" value={sr.title ?? "-"} />
           <Row label="Site / Project" value={formatSiteProject(sr.siteProject)} />
           <Row label="Status" value={sr.status ?? "-"} />
           <Row label="Description" value={sr.description ?? "-"} />
-          <Row label="Created" value={formatDate(sr.createdAt)} />
-          <Row label="Updated" value={formatDate(sr.updatedAt)} />
+          <Row label="Created At" value={formatDate(sr.createdAt)} />
+          <Row label="Updated At" value={formatDate(sr.updatedAt)} />
         </div>
       </div>
 
-      <div style={{ marginTop: 20 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 12,
+          marginBottom: 24,
+        }}
+      >
+        {metricCard("Related Action Plans", actionPlans.length)}
+        {metricCard("Current Status", sr.status ?? "-")}
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
         <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>
           Related Action Plans
         </div>
@@ -381,29 +389,16 @@ ${text}`}</pre>
             <div style={{ fontWeight: 800, marginBottom: 6 }}>
               No action plans linked yet
             </div>
-            <div style={{ fontSize: 13, color: "#555", marginBottom: 12 }}>
-              Create the first action plan for this safety report.
+            <div style={{ fontSize: 13, color: "#555" }}>
+              No corrective actions are currently linked to this safety report.
             </div>
-            <a
-              href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(sr.id)}`}
-              style={{
-                display: "inline-block",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
-                fontWeight: 800,
-                textDecoration: "none",
-              }}
-            >
-              + Create Action Plan
-            </a>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {actionPlans.map((ap) => {
               const actionPlanStatusStyle = getActionPlanStatusStyle(ap.status);
+              const actionPlanVerified =
+                String(ap.status ?? "").toUpperCase() === "VERIFIED";
 
               return (
                 <div
@@ -445,20 +440,29 @@ ${text}`}</pre>
                     <b>Created:</b> {formatDate(ap.createdAt)}
                   </div>
 
-                  <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <a
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "flex",
+                      gap: 10,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Link
                       href={`/dashboard/action-plans/${encodeURIComponent(ap.id)}`}
                       style={{ textDecoration: "underline", color: "#111" }}
                     >
                       View
-                    </a>
+                    </Link>
 
-                    <a
-                      href={`/dashboard/action-plans/${encodeURIComponent(ap.id)}/edit`}
-                      style={{ textDecoration: "underline", color: "#111" }}
-                    >
-                      Edit
-                    </a>
+                    {!actionPlanVerified ? (
+                      <Link
+                        href={`/dashboard/action-plans/${encodeURIComponent(ap.id)}/edit`}
+                        style={{ textDecoration: "underline", color: "#111" }}
+                      >
+                        Edit
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -466,15 +470,77 @@ ${text}`}</pre>
           </div>
         )}
       </div>
-    </div>
-  );
-}
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
-      <div style={{ fontWeight: 800, color: "#333" }}>{label}</div>
-      <div style={{ color: "#111", wordBreak: "break-word" }}>{value}</div>
+      <div
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#444",
+        }}
+      >
+        Report Control Actions
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        {!reportClosed ? (
+          <Link
+            href={`/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(sr.id)}`}
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #111",
+              background: "#111",
+              color: "#fff",
+              fontWeight: 800,
+              textDecoration: "none",
+            }}
+          >
+            + Create Action Plan
+          </Link>
+        ) : null}
+
+        {!reportClosed ? (
+          <Link
+            href={`/dashboard/safety-reports/${encodeURIComponent(sr.id)}/edit`}
+            style={{
+              display: "inline-block",
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              background: "#fff",
+              color: "#111",
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            Edit Report
+          </Link>
+        ) : null}
+
+        <Link
+          href="/dashboard/safety-reports"
+          style={{
+            display: "inline-block",
+            padding: "10px 16px",
+            borderRadius: 10,
+            border: "1px solid #ddd",
+            background: "#fff",
+            color: "#111",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          Back to Safety Reports
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// app/dashboard/action-plans/page.tsx
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
@@ -25,7 +25,21 @@ type ActionPlan = {
   createdAt?: string | null;
 };
 
+type ActionPlansMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+type ActionPlansResponse = {
+  data: ActionPlan[];
+  meta: ActionPlansMeta;
+};
+
 type SearchParams = {
+  page?: string;
+  limit?: string;
   status?: string;
 };
 
@@ -81,20 +95,58 @@ function isActionPlan(value: unknown): value is ActionPlan {
   );
 }
 
-function parseActionPlans(value: unknown): ActionPlan[] {
+function parseActionPlansResponse(
+  value: unknown,
+  fallbackPage: number,
+  fallbackLimit: number,
+): ActionPlansResponse {
   if (Array.isArray(value)) {
-    return value.filter(isActionPlan);
+    const data = value.filter(isActionPlan);
+
+    return {
+      data,
+      meta: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: data.length,
+        totalPages: 1,
+      },
+    };
   }
 
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as { data?: unknown }).data)
-  ) {
-    return ((value as { data: unknown[] }).data).filter(isActionPlan);
+  if (typeof value !== "object" || value === null) {
+    return {
+      data: [],
+      meta: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: 0,
+        totalPages: 1,
+      },
+    };
   }
 
-  return [];
+  const candidate = value as Record<string, unknown>;
+
+  const data = Array.isArray(candidate.data)
+    ? candidate.data.filter(isActionPlan)
+    : [];
+
+  const metaRaw =
+    typeof candidate.meta === "object" && candidate.meta !== null
+      ? (candidate.meta as Record<string, unknown>)
+      : null;
+
+  return {
+    data,
+    meta: {
+      page: typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
+      limit: typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
+      total: typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
+      totalPages:
+        typeof metaRaw?.totalPages === "number" ? metaRaw.totalPages : 1,
+    },
+  };
 }
 
 function normalizeStatus(value?: string) {
@@ -110,6 +162,11 @@ function normalizeStatus(value?: string) {
   }
 
   return "";
+}
+
+function toInt(value: unknown, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
 }
 
 function getStatusStyle(status?: string | null) {
@@ -192,11 +249,30 @@ function formatAssignedTo(
   return "—";
 }
 
+function buildDashboardActionPlansUrl(
+  page: number,
+  limit: number,
+  status: string,
+) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  if (status) {
+    params.set("status", status);
+  }
+
+  return `/dashboard/action-plans?${params.toString()}`;
+}
+
 export default async function ActionPlansPage({ searchParams }: PageProps) {
   const resolvedSearchParams: SearchParams = searchParams
     ? await Promise.resolve(searchParams)
     : {};
 
+  const page = toInt(resolvedSearchParams.page ?? "1", 1);
+  const limit = Math.min(Math.max(toInt(resolvedSearchParams.limit ?? "20", 20), 1), 100);
   const selectedStatus = normalizeStatus(resolvedSearchParams.status);
 
   const cookieStore = await cookies();
@@ -209,17 +285,19 @@ export default async function ActionPlansPage({ searchParams }: PageProps) {
   const canCreateActionPlans =
     currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
 
-  let actionPlans: ActionPlan[] = [];
+  let parsed: ActionPlansResponse;
 
   try {
-    const json = await serverAppFetch("/api/action-plans");
-    actionPlans = parseActionPlans(json);
+    const raw = await serverAppFetch(
+      `/api/action-plans?page=${page}&limit=${limit}`,
+    );
+    parsed = parseActionPlansResponse(raw, page, limit);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown action plans fetch error";
 
     if (message.includes("401")) {
-      redirect("/login?next=/dashboard/action-plans");
+      redirect("/login");
     }
 
     return (
@@ -245,10 +323,20 @@ ${message}`}</pre>
   }
 
   const filteredActionPlans = selectedStatus
-    ? actionPlans.filter(
+    ? parsed.data.filter(
         (ap) => String(ap.status ?? "").toUpperCase() === selectedStatus,
       )
-    : actionPlans;
+    : parsed.data;
+
+  const meta: ActionPlansMeta = {
+    page: parsed.meta.page,
+    limit: parsed.meta.limit,
+    total: selectedStatus ? filteredActionPlans.length : parsed.meta.total,
+    totalPages: selectedStatus ? 1 : Math.max(parsed.meta.totalPages, 1),
+  };
+
+  const prevPage = Math.max(1, meta.page - 1);
+  const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
@@ -257,7 +345,7 @@ ${message}`}</pre>
         subtitle="Track execution, ownership, due dates, and workflow progress"
         action={
           canCreateActionPlans ? (
-            <a
+            <Link
               href="/dashboard/action-plans/new"
               style={{
                 display: "inline-block",
@@ -270,23 +358,24 @@ ${message}`}</pre>
               }}
             >
               + New Action Plan
-            </a>
+            </Link>
           ) : undefined
         }
       />
 
       <form
         method="GET"
+        action="/dashboard/action-plans"
         style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
           display: "flex",
           gap: 10,
           alignItems: "center",
           flexWrap: "wrap",
-          marginBottom: 12,
-          padding: 14,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fafafa",
         }}
       >
         <label style={{ fontWeight: 700 }}>Status</label>
@@ -309,6 +398,9 @@ ${message}`}</pre>
           <option value="VERIFIED">VERIFIED</option>
         </select>
 
+        <input type="hidden" name="page" value="1" />
+        <input type="hidden" name="limit" value={String(limit)} />
+
         <button
           type="submit"
           style={{
@@ -324,8 +416,8 @@ ${message}`}</pre>
           Apply
         </button>
 
-        <a
-          href="/dashboard/action-plans"
+        <Link
+          href={`/dashboard/action-plans?page=1&limit=${limit}`}
           style={{
             padding: "10px 16px",
             borderRadius: 10,
@@ -338,7 +430,7 @@ ${message}`}</pre>
           }}
         >
           Reset
-        </a>
+        </Link>
       </form>
 
       <div
@@ -352,7 +444,27 @@ ${message}`}</pre>
           color: "#444",
         }}
       >
-        Total action plans: <strong>{filteredActionPlans.length}</strong>
+        Total action plans: <strong>{meta.total}</strong>
+      </div>
+
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 14,
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          background: "#fff",
+          fontSize: 13,
+          color: "#444",
+        }}
+      >
+        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
+          Scope of this page
+        </div>
+        <div>
+          This page is for action plan administration actions. Detailed workflow
+          insight and edit controls remain inside the individual action plan page.
+        </div>
       </div>
 
       <div
@@ -484,7 +596,7 @@ ${message}`}</pre>
                         verticalAlign: "top",
                       }}
                     >
-                      <a
+                      <Link
                         href={`/dashboard/action-plans/${encodeURIComponent(ap.id)}`}
                         style={{
                           color: "#111",
@@ -493,7 +605,7 @@ ${message}`}</pre>
                         }}
                       >
                         {ap.title}
-                      </a>
+                      </Link>
 
                       <div
                         style={{
@@ -598,7 +710,7 @@ ${message}`}</pre>
                         verticalAlign: "top",
                       }}
                     >
-                      <a
+                      <Link
                         href={`/dashboard/action-plans/${encodeURIComponent(ap.id)}`}
                         style={{
                           textDecoration: "underline",
@@ -606,8 +718,8 @@ ${message}`}</pre>
                           fontWeight: 600,
                         }}
                       >
-                        Open
-                      </a>
+                        Open detail
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -615,6 +727,61 @@ ${message}`}</pre>
             )}
           </tbody>
         </table>
+      </div>
+
+      <div
+        style={{
+          marginTop: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontSize: 13, color: "#555" }}>
+          Page <strong>{meta.page}</strong> of{" "}
+          <strong>{Math.max(meta.totalPages, 1)}</strong>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link
+            href={buildDashboardActionPlansUrl(prevPage, limit, selectedStatus)}
+            style={{
+              pointerEvents: meta.page <= 1 ? "none" : "auto",
+              opacity: meta.page <= 1 ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Previous
+          </Link>
+
+          <Link
+            href={buildDashboardActionPlansUrl(nextPage, limit, selectedStatus)}
+            style={{
+              pointerEvents:
+                meta.page >= Math.max(meta.totalPages, 1) ? "none" : "auto",
+              opacity: meta.page >= Math.max(meta.totalPages, 1) ? 0.5 : 1,
+              display: "inline-block",
+              padding: "10px 16px",
+              border: "1px solid #ddd",
+              borderRadius: 10,
+              textDecoration: "none",
+              color: "#111",
+              background: "#fff",
+              fontWeight: 600,
+            }}
+          >
+            Next
+          </Link>
+        </div>
       </div>
     </div>
   );
