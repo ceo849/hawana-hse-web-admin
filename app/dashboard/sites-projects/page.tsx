@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { api } from "@/lib/core-api";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -98,15 +99,10 @@ export default async function SitesProjectsPage() {
     currentRole === "ADMIN" ||
     currentRole === "MANAGER";
 
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
-
-  const r = await fetch(`${origin}/api/sites-projects`, {
+  const r = await fetch(api("/sites-projects"), {
     cache: "no-store",
     headers: {
-      cookie: cookieStore.toString(),
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -272,7 +268,7 @@ ${text}`}</pre>
                   padding: 14,
                   borderBottom: "1px solid #eee",
                   fontSize: 13,
-                  width: 160,
+                  width: 150,
                 }}
               >
                 Actions
@@ -294,11 +290,11 @@ ${text}`}</pre>
                 </td>
               </tr>
             ) : (
-              items.map((s) => {
-                const statusStyle = getStatusStyle(s.status);
+              items.map((item) => {
+                const statusStyle = getStatusStyle(item.status);
 
                 return (
-                  <tr key={s.id}>
+                  <tr key={item.id}>
                     <td
                       style={{
                         padding: 14,
@@ -307,14 +303,14 @@ ${text}`}</pre>
                       }}
                     >
                       <Link
-                        href={`/dashboard/sites-projects/${s.id}`}
+                        href={`/dashboard/sites-projects/${item.id}`}
                         style={{
                           color: "#111",
                           fontWeight: 800,
                           textDecoration: "none",
                         }}
                       >
-                        {s.name}
+                        {item.name}
                       </Link>
 
                       <div
@@ -324,7 +320,7 @@ ${text}`}</pre>
                           color: "#666",
                         }}
                       >
-                        {s.location ?? "-"}
+                        {item.location ?? "-"}
                       </div>
                     </td>
 
@@ -345,7 +341,7 @@ ${text}`}</pre>
                           ...statusStyle,
                         }}
                       >
-                        {s.status}
+                        {item.status}
                       </span>
                     </td>
 
@@ -360,7 +356,7 @@ ${text}`}</pre>
                         wordBreak: "break-all",
                       }}
                     >
-                      {s.id}
+                      {item.id}
                     </td>
 
                     <td
@@ -372,7 +368,7 @@ ${text}`}</pre>
                         color: "#444",
                       }}
                     >
-                      {formatDate(s.createdAt)}
+                      {formatDate(item.createdAt)}
                     </td>
 
                     <td
@@ -384,7 +380,7 @@ ${text}`}</pre>
                         color: "#444",
                       }}
                     >
-                      {formatDate(s.updatedAt)}
+                      {formatDate(item.updatedAt)}
                     </td>
 
                     <td
@@ -395,7 +391,7 @@ ${text}`}</pre>
                       }}
                     >
                       <Link
-                        href={`/dashboard/sites-projects/${s.id}`}
+                        href={`/dashboard/sites-projects/${item.id}`}
                         style={{
                           textDecoration: "underline",
                           color: "#111",

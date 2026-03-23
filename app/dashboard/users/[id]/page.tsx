@@ -102,8 +102,12 @@ function metricCard(label: string, value: string) {
         padding: 16,
       }}
     >
-      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>
+        {value}
+      </div>
     </div>
   );
 }

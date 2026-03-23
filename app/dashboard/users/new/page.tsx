@@ -1,12 +1,7 @@
 import { redirect } from "next/navigation";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
-
-function getOriginFromHeaders(h: Headers): string {
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
-}
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -36,9 +31,6 @@ export default async function NewUserPage({ searchParams }: PageProps) {
       redirect("/login");
     }
 
-    const h = await headers();
-    const origin = getOriginFromHeaders(h);
-
     const payload = {
       fullName: String(formData.get("fullName") ?? "").trim(),
       email: String(formData.get("email") ?? "").trim(),
@@ -46,27 +38,23 @@ export default async function NewUserPage({ searchParams }: PageProps) {
       role: String(formData.get("role") ?? "").trim(),
     };
 
-    const response = await fetch(`${origin}/api/users`, {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-        cookie: cookieStoreInner.toString(),
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      await serverAppFetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Create user failed";
 
-    if (response.status === 401) {
-      redirect("/login");
-    }
+      if (message.includes("401")) {
+        redirect("/login");
+      }
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      redirect(
-        `/dashboard/users/new?error=${encodeURIComponent(
-          `Create user failed (${response.status}) ${text}`,
-        )}`,
-      );
+      redirect(`/dashboard/users/new?error=${encodeURIComponent(message)}`);
     }
 
     redirect("/dashboard/users");
