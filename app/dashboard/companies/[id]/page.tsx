@@ -99,8 +99,12 @@ function metricCard(label: string, value: number) {
         padding: 16,
       }}
     >
-      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -181,26 +185,26 @@ export default async function CompanyOverviewPage({
       !Array.isArray(usersJson) && Array.isArray(usersJson?.data)
         ? usersJson.data.length
         : Array.isArray(usersJson)
-        ? usersJson.length
-        : 0,
+          ? usersJson.length
+          : 0,
     sitesProjects:
       !Array.isArray(sitesJson) && Array.isArray(sitesJson?.data)
         ? sitesJson.data.length
         : Array.isArray(sitesJson)
-        ? sitesJson.length
-        : 0,
+          ? sitesJson.length
+          : 0,
     safetyReports:
       !Array.isArray(reportsJson) && Array.isArray(reportsJson?.data)
         ? reportsJson.data.length
         : Array.isArray(reportsJson)
-        ? reportsJson.length
-        : 0,
+          ? reportsJson.length
+          : 0,
     actionPlans:
       !Array.isArray(plansJson) && Array.isArray(plansJson?.data)
         ? plansJson.data.length
         : Array.isArray(plansJson)
-        ? plansJson.length
-        : 0,
+          ? plansJson.length
+          : 0,
   };
 
   async function updateCompany(formData: FormData) {

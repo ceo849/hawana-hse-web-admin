@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { api } from "@/lib/core-api";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -137,20 +138,15 @@ export default async function CompaniesPage({
   const search = resolvedSearchParams.search ?? "";
   const limit = 10;
 
-  const h = await headers();
-  const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const origin = `${proto}://${host}`;
-
   const url =
-    `${origin}/api/companies?page=${page}&limit=${limit}` +
+    `${api("/companies")}?page=${page}&limit=${limit}` +
     (search ? `&search=${encodeURIComponent(search)}` : "");
 
   const r = await fetch(url, {
     method: "GET",
     cache: "no-store",
     headers: {
-      cookie: cookieStore.toString(),
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -270,65 +266,22 @@ ${text}`}</pre>
         >
           <thead>
             <tr style={{ background: "#fafafa" }}>
-              <th
-                style={{
-                  padding: 14,
-                  textAlign: "left",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
+              <th style={{ padding: 14, textAlign: "left", borderBottom: "1px solid #eee", fontSize: 13 }}>
                 Company
               </th>
-              <th
-                style={{
-                  padding: 14,
-                  textAlign: "left",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
+              <th style={{ padding: 14, textAlign: "left", borderBottom: "1px solid #eee", fontSize: 13 }}>
                 Country
               </th>
-              <th
-                style={{
-                  padding: 14,
-                  textAlign: "left",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
+              <th style={{ padding: 14, textAlign: "left", borderBottom: "1px solid #eee", fontSize: 13 }}>
                 Industry
               </th>
-              <th
-                style={{
-                  padding: 14,
-                  textAlign: "left",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
+              <th style={{ padding: 14, textAlign: "left", borderBottom: "1px solid #eee", fontSize: 13 }}>
                 Company ID
               </th>
-              <th
-                style={{
-                  padding: 14,
-                  textAlign: "left",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
+              <th style={{ padding: 14, textAlign: "left", borderBottom: "1px solid #eee", fontSize: 13 }}>
                 Created At
               </th>
-              <th
-                style={{
-                  padding: 14,
-                  textAlign: "left",
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                  width: 150,
-                }}
-              >
+              <th style={{ padding: 14, textAlign: "left", borderBottom: "1px solid #eee", fontSize: 13, width: 150 }}>
                 Actions
               </th>
             </tr>
@@ -337,102 +290,42 @@ ${text}`}</pre>
           <tbody>
             {companies.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  style={{
-                    padding: 24,
-                    color: "#555",
-                  }}
-                >
+                <td colSpan={6} style={{ padding: 24, color: "#555" }}>
                   No companies found.
                 </td>
               </tr>
             ) : (
               companies.map((c) => (
                 <tr key={c.id}>
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                    }}
-                  >
+                  <td style={{ padding: 14, borderBottom: "1px solid #eee", verticalAlign: "top" }}>
                     <Link
                       href={`/dashboard/companies/${c.id}`}
-                      style={{
-                        color: "#111",
-                        fontWeight: 800,
-                        textDecoration: "none",
-                      }}
+                      style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
                     >
                       {c.name}
                     </Link>
                   </td>
 
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 13,
-                      color: "#444",
-                    }}
-                  >
+                  <td style={{ padding: 14, borderBottom: "1px solid #eee", verticalAlign: "top", fontSize: 13, color: "#444" }}>
                     {c.country ?? "-"}
                   </td>
 
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 13,
-                      color: "#444",
-                    }}
-                  >
+                  <td style={{ padding: 14, borderBottom: "1px solid #eee", verticalAlign: "top", fontSize: 13, color: "#444" }}>
                     {c.industry ?? "-"}
                   </td>
 
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontFamily: "monospace",
-                      fontSize: 12,
-                      color: "#444",
-                      wordBreak: "break-all",
-                    }}
-                  >
+                  <td style={{ padding: 14, borderBottom: "1px solid #eee", verticalAlign: "top", fontFamily: "monospace", fontSize: 12, color: "#444", wordBreak: "break-all" }}>
                     {c.id}
                   </td>
 
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                      fontSize: 13,
-                      color: "#444",
-                    }}
-                  >
+                  <td style={{ padding: 14, borderBottom: "1px solid #eee", verticalAlign: "top", fontSize: 13, color: "#444" }}>
                     {formatDate(c.createdAt)}
                   </td>
 
-                  <td
-                    style={{
-                      padding: 14,
-                      borderBottom: "1px solid #eee",
-                      verticalAlign: "top",
-                    }}
-                  >
+                  <td style={{ padding: 14, borderBottom: "1px solid #eee", verticalAlign: "top" }}>
                     <Link
                       href={`/dashboard/companies/${c.id}`}
-                      style={{
-                        textDecoration: "underline",
-                        color: "#111",
-                        fontWeight: 600,
-                      }}
+                      style={{ textDecoration: "underline", color: "#111", fontWeight: 600 }}
                     >
                       Open detail
                     </Link>

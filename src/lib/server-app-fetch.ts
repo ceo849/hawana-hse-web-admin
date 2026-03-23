@@ -1,21 +1,7 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
 async function getBaseUrl() {
-  const h = await headers();
-
-  const host =
-    h.get("x-forwarded-host") ||
-    h.get("host");
-
-  const proto =
-    h.get("x-forwarded-proto") ||
-    (process.env.NODE_ENV === "production" ? "https" : "http");
-
-  if (!host) {
-    throw new Error("Host header missing");
-  }
-
-  return `${proto}://${host}`;
+  return "http://127.0.0.1:3000";
 }
 
 export async function serverAppFetch(path: string, init?: RequestInit) {

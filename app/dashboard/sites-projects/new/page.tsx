@@ -1,12 +1,11 @@
+
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
 import PageHeader from "@/components/ui/page-header";
 
 type PageProps = {
-  searchParams?:
-    | { err?: string }
-    | Promise<{ err?: string }>;
+  searchParams?: { err?: string } | Promise<{ err?: string }>;
 };
 
 export default async function NewSiteProjectPage({ searchParams }: PageProps) {
