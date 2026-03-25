@@ -29,6 +29,11 @@ const NAV: NavItem[] = [
     roles: ["OWNER"],
   },
   {
+    href: "/dashboard/billing",
+    label: "Billing",
+    roles: ["OWNER", "ADMIN"],
+  },
+  {
     href: "/dashboard/sites-projects",
     label: "Sites / Projects",
     roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
