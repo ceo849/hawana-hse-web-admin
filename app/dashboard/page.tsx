@@ -118,19 +118,31 @@ export default async function DashboardPage() {
       requests.push(serverAppFetch("/api/platform/metrics"));
     }
 
-    const results = await Promise.all(requests);
+    const results = await Promise.allSettled(requests);
 
-    safetyReports = parseArray<SafetyReport>(results[0]);
-    actionPlans = parseArray<ActionPlan>(results[1]);
+    const safeResults = results.map((r) =>
+      r.status === "fulfilled" ? r.value : null,
+    );
 
-    if (canViewPlatformMetrics && isPlatformMetrics(results[2])) {
-      platformMetrics = results[2];
+    safetyReports = parseArray<SafetyReport>(safeResults[0]);
+    actionPlans = parseArray<ActionPlan>(safeResults[1]);
+
+    if (canViewPlatformMetrics && isPlatformMetrics(safeResults[2])) {
+      platformMetrics = safeResults[2];
     }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown dashboard fetch error";
 
-    if (message.includes("401")) {
+    console.error("Dashboard Fetch Error:", {
+      message,
+      role: currentRole,
+    });
+
+    if (
+      message.includes("401") ||
+      message.toLowerCase().includes("unauthorized")
+    ) {
       redirect("/login");
     }
 
@@ -212,7 +224,8 @@ export default async function DashboardPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(220px, 1fr))",
               gap: 14,
               marginBottom: 24,
             }}
@@ -269,7 +282,8 @@ export default async function DashboardPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(220px, 1fr))",
           gap: 14,
         }}
       >

@@ -1,7 +1,16 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 async function getBaseUrl() {
-  return "http://127.0.0.1:3000";
+  const h = await headers();
+
+  const protocol = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("host");
+
+  if (!host) {
+    throw new Error("Missing host header");
+  }
+
+  return `${protocol}://${host}`;
 }
 
 export async function serverAppFetch(path: string, init?: RequestInit) {
@@ -16,7 +25,16 @@ export async function serverAppFetch(path: string, init?: RequestInit) {
     requestHeaders.set("cookie", cookieHeader);
   }
 
-  const res = await fetch(`${baseUrl}${path}`, {
+  // ✅ إضافة Authorization header
+  const token = cookieStore.get("access_token")?.value;
+
+  if (token) {
+    requestHeaders.set("Authorization", `Bearer ${token}`);
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  const res = await fetch(`${baseUrl}${normalizedPath}`, {
     ...init,
     headers: requestHeaders,
     cache: "no-store",

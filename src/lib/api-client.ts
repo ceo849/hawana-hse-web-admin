@@ -11,6 +11,11 @@ export type ApiError = {
   error?: string;
 };
 
+// ✅ NEW — Request ID generator
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function buildUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
@@ -55,6 +60,10 @@ async function request<T>(
 
   const headers: Record<string, string> = {};
 
+  // ✅ NEW — attach request id
+  const requestId = generateRequestId();
+  headers['x-request-id'] = requestId;
+
   if (method !== 'GET' && method !== 'DELETE') {
     headers['Content-Type'] = 'application/json';
   }
@@ -84,6 +93,16 @@ async function request<T>(
       const payload = isJson ? await response.json().catch(() => ({})) : {};
       const err: ApiError = { status: response.status, ...(payload ?? {}) };
       (err as any).message = normalizeErrorMessage(err);
+
+      // ✅ optional debug trace
+      console.error('API ERROR', {
+        requestId,
+        url,
+        method,
+        status: response.status,
+        payload,
+      });
+
       throw err;
     }
 
@@ -96,8 +115,22 @@ async function request<T>(
     if (e?.name === 'AbortError') {
       const err = makeTimeoutError(timeoutMs);
       (err as any).message = normalizeErrorMessage(err);
+
+      console.error('API TIMEOUT', {
+        requestId,
+        url,
+        method,
+      });
+
       throw err;
     }
+
+    console.error('API UNKNOWN ERROR', {
+      requestId,
+      url,
+      method,
+      error: e,
+    });
 
     throw e;
   } finally {

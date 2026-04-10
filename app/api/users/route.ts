@@ -13,24 +13,35 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const qs = url.search ? url.search : "";
 
-  const upstream = await fetch(`${api("/users")}${qs}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  try {
+    console.log("API PROXY → GET /users", { qs });
 
-  const bodyText = await upstream.text();
+    const upstream = await fetch(`${api("/users")}${qs}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
 
-  return new NextResponse(bodyText, {
-    status: upstream.status,
-    headers: {
-      "content-type":
-        upstream.headers.get("content-type") ??
-        "application/json; charset=utf-8",
-    },
-  });
+    const bodyText = await upstream.text();
+
+    return new NextResponse(bodyText, {
+      status: upstream.status,
+      headers: {
+        "content-type":
+          upstream.headers.get("content-type") ??
+          "application/json; charset=utf-8",
+      },
+    });
+  } catch (error) {
+    console.error("API PROXY ERROR (GET /users):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -43,24 +54,35 @@ export async function POST(req: NextRequest) {
 
   const rawBody = await req.text();
 
-  const upstream = await fetch(api("/users"), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: rawBody,
-    cache: "no-store",
-  });
+  try {
+    console.log("API PROXY → POST /users");
 
-  const bodyText = await upstream.text();
+    const upstream = await fetch(api("/users"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: rawBody,
+      cache: "no-store",
+    });
 
-  return new NextResponse(bodyText, {
-    status: upstream.status,
-    headers: {
-      "content-type":
-        upstream.headers.get("content-type") ??
-        "application/json; charset=utf-8",
-    },
-  });
+    const bodyText = await upstream.text();
+
+    return new NextResponse(bodyText, {
+      status: upstream.status,
+      headers: {
+        "content-type":
+          upstream.headers.get("content-type") ??
+          "application/json; charset=utf-8",
+      },
+    });
+  } catch (error) {
+    console.error("API PROXY ERROR (POST /users):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 },
+    );
+  }
 }

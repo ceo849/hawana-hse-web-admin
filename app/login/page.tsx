@@ -23,8 +23,9 @@ function LoginPageInner() {
   const nextParam = searchParams.get('next');
   const nextPath = useMemo(() => normalizeNextPath(nextParam), [nextParam]);
 
-  const [email, setEmail] = useState('viewer@hawana.com');
-  const [password, setPassword] = useState('Hawana@2026');
+  // ✅ FIX: no forced default user
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [result, setResult] = useState('');
   const [healthStatus, setHealthStatus] = useState('checking...');
   const [loading, setLoading] = useState(false);
