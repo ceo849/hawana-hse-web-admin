@@ -61,20 +61,6 @@ function parseArray<T>(value: unknown): T[] {
   return [];
 }
 
-function isPlatformMetrics(value: unknown): value is PlatformMetrics {
-  if (typeof value !== "object" || value === null) return false;
-
-  const candidate = value as Record<string, unknown>;
-
-  return (
-    typeof candidate.companies === "number" &&
-    typeof candidate.users === "number" &&
-    typeof candidate.sites === "number" &&
-    typeof candidate.safetyReports === "number" &&
-    typeof candidate.actionPlans === "number"
-  );
-}
-
 export default async function DashboardPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
@@ -112,11 +98,10 @@ export default async function DashboardPage() {
     const requests: Promise<unknown>[] = [
       serverAppFetch("/api/safety-reports?page=1&limit=100"),
       serverAppFetch("/api/action-plans"),
+      serverAppFetch("/api/users"),
+      serverAppFetch("/api/companies"),
+      serverAppFetch("/api/sites-projects"),
     ];
-
-    if (canViewPlatformMetrics) {
-      requests.push(serverAppFetch("/api/platform/metrics"));
-    }
 
     const results = await Promise.allSettled(requests);
 
@@ -127,9 +112,17 @@ export default async function DashboardPage() {
     safetyReports = parseArray<SafetyReport>(safeResults[0]);
     actionPlans = parseArray<ActionPlan>(safeResults[1]);
 
-    if (canViewPlatformMetrics && isPlatformMetrics(safeResults[2])) {
-      platformMetrics = safeResults[2];
-    }
+    const users = parseArray(safeResults[2]);
+    const companies = parseArray(safeResults[3]);
+    const sites = parseArray(safeResults[4]);
+
+    platformMetrics = {
+      companies: companies.length,
+      users: users.length,
+      sites: sites.length,
+      safetyReports: safetyReports.length,
+      actionPlans: actionPlans.length,
+    };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown dashboard fetch error";
@@ -181,167 +174,75 @@ export default async function DashboardPage() {
         subtitle="Platform and HSE operational overview"
         action={
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {canCreateSafetyReports ? (
+            {canCreateSafetyReports && (
               <ActionButton href="/dashboard/safety-reports/new">
                 + Safety Report
               </ActionButton>
-            ) : null}
+            )}
 
-            {canCreateActionPlans ? (
+            {canCreateActionPlans && (
               <ActionButton href="/dashboard/action-plans/new">
                 + Action Plan
               </ActionButton>
-            ) : null}
+            )}
 
-            {canCreateSites ? (
+            {canCreateSites && (
               <ActionButton href="/dashboard/sites-projects/new">
                 + Site / Project
               </ActionButton>
-            ) : null}
+            )}
 
-            {canCreateUsers ? (
+            {canCreateUsers && (
               <ActionButton href="/dashboard/users/new">
                 + User
               </ActionButton>
-            ) : null}
+            )}
           </div>
         }
       />
 
-      {canViewPlatformMetrics ? (
+      {canViewPlatformMetrics && (
         <>
-          <div
-            style={{
-              marginBottom: 12,
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#444",
-            }}
-          >
+          <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 700 }}>
             Platform Metrics
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: 14,
               marginBottom: 24,
             }}
           >
-            <StatsCard
-              label="Companies"
-              value={platformMetrics.companies}
-              helper="Total tenant companies"
-              href="/dashboard/companies"
-            />
-
-            <StatsCard
-              label="Users"
-              value={platformMetrics.users}
-              helper="Total company users"
-              href="/dashboard/users"
-            />
-
-            <StatsCard
-              label="Sites / Projects"
-              value={platformMetrics.sites}
-              helper="Operational locations"
-              href="/dashboard/sites-projects"
-            />
-
-            <StatsCard
-              label="Safety Reports"
-              value={platformMetrics.safetyReports}
-              helper="Total reports"
-              href="/dashboard/safety-reports"
-            />
-
-            <StatsCard
-              label="Action Plans"
-              value={platformMetrics.actionPlans}
-              helper="Total plans"
-              href="/dashboard/action-plans"
-            />
+            <StatsCard label="Companies" value={platformMetrics.companies} />
+            <StatsCard label="Users" value={platformMetrics.users} />
+            <StatsCard label="Sites / Projects" value={platformMetrics.sites} />
+            <StatsCard label="Safety Reports" value={platformMetrics.safetyReports} />
+            <StatsCard label="Action Plans" value={platformMetrics.actionPlans} />
           </div>
         </>
-      ) : null}
+      )}
 
-      <div
-        style={{
-          marginBottom: 12,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#444",
-        }}
-      >
+      <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 700 }}>
         HSE Operations
       </div>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: 14,
         }}
       >
-        <StatsCard
-          label="Open Reports"
-          value={openReports}
-          helper="Waiting for action"
-          href="/dashboard/safety-reports?status=OPEN"
-        />
-
-        <StatsCard
-          label="Reports In Progress"
-          value={inProgressReports}
-          helper="Under treatment"
-          href="/dashboard/safety-reports?status=IN_PROGRESS"
-        />
-
-        <StatsCard
-          label="Closed Reports"
-          value={closedReports}
-          helper="Resolved reports"
-          href="/dashboard/safety-reports?status=CLOSED"
-        />
-
-        <StatsCard
-          label="Open Action Plans"
-          value={openPlans}
-          helper="Not started yet"
-          href="/dashboard/action-plans?status=OPEN"
-        />
-
-        <StatsCard
-          label="In Progress Plans"
-          value={inProgressPlans}
-          helper="Execution active"
-          href="/dashboard/action-plans?status=IN_PROGRESS"
-        />
-
-        <StatsCard
-          label="Completed Plans"
-          value={completedPlans}
-          helper="Waiting for verification"
-          href="/dashboard/action-plans?status=COMPLETED"
-        />
-
-        <StatsCard
-          label="Verified Plans"
-          value={verifiedPlans}
-          helper="Fully closed"
-          href="/dashboard/action-plans?status=VERIFIED"
-        />
-
-        <StatsCard
-          label="Overdue Plans"
-          value={overduePlans}
-          helper="Past due date"
-          href="/dashboard/action-plans"
-        />
+        <StatsCard label="Open Reports" value={openReports} />
+        <StatsCard label="Reports In Progress" value={inProgressReports} />
+        <StatsCard label="Closed Reports" value={closedReports} />
+        <StatsCard label="Open Action Plans" value={openPlans} />
+        <StatsCard label="In Progress Plans" value={inProgressPlans} />
+        <StatsCard label="Completed Plans" value={completedPlans} />
+        <StatsCard label="Verified Plans" value={verifiedPlans} />
+        <StatsCard label="Overdue Plans" value={overduePlans} />
       </div>
     </div>
   );
