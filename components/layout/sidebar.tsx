@@ -40,20 +40,21 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
+      {/* Toggle Button */}
       <button
         onClick={() => setOpen(true)}
         style={{
           position: 'fixed',
-          top: 16,
-          left: 16,
-          zIndex: 1000,
-          background: '#111',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 8,
-          padding: '8px 10px',
+          top: 12,
+          left: 12,
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          border: '1px solid #eee',
+          background: '#fff',
+          fontSize: 18,
           cursor: 'pointer',
+          zIndex: 1100,
         }}
       >
         ☰
@@ -66,61 +67,61 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.4)',
-            zIndex: 999,
+            background: 'rgba(0,0,0,0.35)',
+            zIndex: 1099,
           }}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Drawer */}
       <aside
         style={{
+          position: 'fixed',
+          top: 0,
+          left: open ? 0 : -280,
           width: 260,
+          height: '100vh',
+          background: '#fff',
           padding: 20,
-          borderRight: '1px solid #e5e7eb',
-          background: '#ffffff',
+          zIndex: 1101,
           display: 'flex',
           flexDirection: 'column',
-          height: '100vh',
-          position: 'fixed',
-          left: open ? 0 : -260,
-          top: 0,
-          zIndex: 1000,
           transition: 'left 0.25s ease',
+          boxShadow: open ? '2px 0 12px rgba(0,0,0,0.08)' : 'none',
         }}
       >
-        {/* Close Button */}
-        <button
-          onClick={() => setOpen(false)}
-          style={{
-            alignSelf: 'flex-end',
-            marginBottom: 10,
-            background: 'none',
-            border: 'none',
-            fontSize: 18,
-            cursor: 'pointer',
-          }}
-        >
-          ✕
-        </button>
+        {/* Top */}
+        <div style={{ marginBottom: 20 }}>
+          {/* Close */}
+          <button
+            onClick={() => setOpen(false)}
+            style={{
+              alignSelf: 'flex-end',
+              marginBottom: 10,
+              background: 'none',
+              border: 'none',
+              fontSize: 18,
+              cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
 
-        {/* Logo */}
-        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 4 }}>
-          Hawana
-        </div>
-
-        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 20 }}>
-          HSE Administration
+          {/* Logo */}
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Hawana</div>
+          <div style={{ fontSize: 12, color: '#777' }}>
+            HSE Platform
+          </div>
         </div>
 
         {/* User */}
         <div
           style={{
-            padding: 12,
+            padding: 10,
             borderRadius: 10,
             background: '#f9fafb',
             border: '1px solid #eee',
-            fontSize: 13,
+            fontSize: 12,
             marginBottom: 20,
           }}
         >
@@ -128,18 +129,18 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
             Role: <strong>{role}</strong>
           </div>
           {email && (
-            <div style={{ marginTop: 4, color: '#555', fontSize: 12 }}>
+            <div style={{ marginTop: 4, color: '#555' }}>
               {email}
             </div>
           )}
         </div>
 
-        {/* Nav */}
+        {/* Navigation */}
         <nav style={{ display: 'grid', gap: 6 }}>
           {uniqueItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== '/' && pathname.startsWith(item.href + '/'));
+              pathname.startsWith(item.href + '/');
 
             return (
               <Link
@@ -150,13 +151,14 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  textDecoration: 'none',
                   padding: '10px 12px',
                   borderRadius: 10,
+                  textDecoration: 'none',
+                  fontWeight: 600,
                   border: isActive ? '1px solid #111' : '1px solid #eee',
                   background: isActive ? '#111' : '#fff',
                   color: isActive ? '#fff' : '#111',
-                  fontWeight: 600,
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <span style={{ fontSize: 16 }}>
@@ -174,7 +176,6 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
             marginTop: 'auto',
             fontSize: 11,
             color: '#999',
-            paddingTop: 20,
           }}
         >
           Hawana HSE Platform

@@ -1,64 +1,88 @@
 import React from "react";
 
-type PageHeaderProps = {
-  title: string;
-  subtitle?: string;
-  action?: React.ReactNode;
+type StatsCardProps = {
+  label: string;
+  value: number;
+  helper?: string;
+  href?: string;
 };
 
-export default function PageHeader({
-  title,
-  subtitle,
-  action,
-}: PageHeaderProps) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        marginBottom: 28,
-        gap: 20,
-        flexWrap: "wrap",
-      }}
-    >
-      <div style={{ minWidth: 240 }}>
-        <h1
-          style={{
-            fontSize: 30,
-            fontWeight: 800,
-            margin: 0,
-            letterSpacing: "-0.3px",
-          }}
-        >
-          {title}
-        </h1>
+function cardStyle() {
+  return {
+    display: "flex",
+    flexDirection: "column",
 
-        {subtitle ? (
-          <p
-            style={{
-              marginTop: 6,
-              color: "#6b7280",
-              fontSize: 14,
-            }}
-          >
-            {subtitle}
-          </p>
-        ) : null}
-      </div>
+    justifyContent: "space-between", // ✔ توزيع طبيعي زي SaaS
+    alignItems: "flex-start",
 
-      {action ? (
+    border: "1px solid #e5e7eb",
+    borderRadius: 16, // ✔ أنعم
+
+    padding: "16px", // ✔ spacing أفضل
+    background: "#fff",
+
+    textDecoration: "none",
+    color: "#111",
+
+    minHeight: 96, // ✔ ارتفاع مريح
+  } as const;
+}
+
+export default function StatsCard({
+  label,
+  value,
+  helper,
+  href,
+}: StatsCardProps) {
+  const content = (
+    <>
+      {/* Top Section */}
+      <div>
+        {/* Label */}
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
+            fontSize: 12,
+            color: "#6b7280",
+            fontWeight: 500,
           }}
         >
-          {action}
+          {label}
         </div>
-      ) : null}
-    </div>
+
+        {/* Value */}
+        <div
+          style={{
+            fontSize: 28, // ✔ أكبر وواضح زي الأنظمة العالمية
+            fontWeight: 800,
+            marginTop: 6,
+          }}
+        >
+          {value}
+        </div>
+      </div>
+
+      {/* Bottom Helper */}
+      {helper && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 12,
+            color: "#9ca3af",
+          }}
+        >
+          {helper}
+        </div>
+      )}
+    </>
   );
+
+  if (href) {
+    return (
+      <a href={href} style={cardStyle()}>
+        {content}
+      </a>
+    );
+  }
+
+  return <div style={cardStyle()}>{content}</div>;
 }

@@ -9,13 +9,25 @@ type StatsCardProps = {
 
 function cardStyle() {
   return {
-    display: "block",
+    display: "flex",
+    flexDirection: "column",
+
     border: "1px solid #e5e7eb",
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 12, // ↓ أقل من 16 (أكثر احترافية SaaS)
+
+    padding: "16px",
     background: "#fff",
+
     textDecoration: "none",
     color: "#111",
+
+    minHeight: 88,
+
+    // subtle shadow زي الأنظمة العالمية
+    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+
+    // spacing داخلي أفضل
+    gap: 4,
   } as const;
 }
 
@@ -27,16 +39,39 @@ export default function StatsCard({
 }: StatsCardProps) {
   const content = (
     <>
-      <div style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
+      {/* Label */}
+      <div
+        style={{
+          fontSize: 12,
+          color: "#6b7280",
+          fontWeight: 500,
+          lineHeight: 1.2,
+        }}
+      >
         {label}
       </div>
 
-      <div style={{ fontSize: 34, fontWeight: 900 }}>
+      {/* Value */}
+      <div
+        style={{
+          fontSize: 28, // ↑ أهم تعديل (hierarchy)
+          fontWeight: 700,
+          lineHeight: 1.1,
+        }}
+      >
         {value}
       </div>
 
+      {/* Helper */}
       {helper && (
-        <div style={{ marginTop: 10, fontSize: 14, color: "#333" }}>
+        <div
+          style={{
+            marginTop: 2,
+            fontSize: 12,
+            color: "#9ca3af",
+            lineHeight: 1.2,
+          }}
+        >
           {helper}
         </div>
       )}
@@ -51,9 +86,5 @@ export default function StatsCard({
     );
   }
 
-  return (
-    <div style={cardStyle()}>
-      {content}
-    </div>
-  );
+  return <div style={cardStyle()}>{content}</div>;
 }

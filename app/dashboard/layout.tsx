@@ -75,16 +75,32 @@ export default async function DashboardLayout({
   }));
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "system-ui" }}>
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        fontFamily: "system-ui",
+        background: "#f9fafb", // ✔ خلفية خفيفة احترافية
+      }}
+    >
+      {/* Sidebar */}
       <Sidebar role={role} email={email} navItems={navItems} />
 
+      {/* Main Area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Top Header */}
         <DashboardHeader title="Dashboard" />
 
-        <main style={{ padding: 24 }}>
-          <Suspense fallback={null}>
-            {children}
-          </Suspense>
+        {/* Content */}
+        <main
+          style={{
+            padding: 16, // ✔ كان 24 → أصبح Mobile مناسب
+            maxWidth: 720, // ✔ يثبت العرض
+            width: "100%",
+            margin: "0 auto", // ✔ Center
+          }}
+        >
+          <Suspense fallback={null}>{children}</Suspense>
         </main>
       </div>
     </div>

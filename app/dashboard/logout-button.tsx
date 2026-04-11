@@ -18,14 +18,12 @@ export default function LogoutButton() {
         credentials: 'include',
       });
 
-      // حتى لو السيرفر رجع خطأ، نمنع بقاء المستخدم في dashboard
       if (!res.ok) {
         console.error('Logout failed:', res.status);
       }
     } catch (err) {
       console.error('Network logout error:', err);
     } finally {
-      // نخرج المستخدم مهما حدث
       router.replace('/login');
       router.refresh();
       setLoading(false);
@@ -38,16 +36,29 @@ export default function LogoutButton() {
       onClick={handleLogout}
       disabled={loading}
       style={{
-        padding: '8px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+
+        height: 40,                // ✔ نفس نظام الهيدر
+        padding: '0 14px',
+
         borderRadius: 10,
-        border: '1px solid #ddd',
+        border: '1px solid #e5e7eb',
+
         backgroundColor: '#111',
         color: '#fff',
+
         fontSize: 14,
-        fontWeight: 500,
+        fontWeight: 600,          // ✔ أقوى بصريًا
+        letterSpacing: '-0.2px',
+
         cursor: loading ? 'not-allowed' : 'pointer',
         opacity: loading ? 0.7 : 1,
-        transition: 'opacity 0.2s ease',
+
+        transition: 'all 0.15s ease',
+
+        boxShadow: '0 1px 2px rgba(0,0,0,0.08)', // ✔ depth خفيف
       }}
     >
       {loading ? 'Logging out...' : 'Logout'}
