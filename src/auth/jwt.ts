@@ -13,7 +13,8 @@ function base64UrlToString(input: string): string {
     .replace(/-/g, '+')
     .replace(/_/g, '/');
 
-  return atob(base64);
+  // ✅ FIX: use Buffer instead of atob (server-safe)
+  return Buffer.from(base64, 'base64').toString('utf-8');
 }
 
 export function decodeJwtPayload(token?: string | null): JwtPayload | null {

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { api } from "@/lib/core-api";
 
 type LoginBody = {
   email?: string;
@@ -29,7 +28,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const upstream = await fetch(api("/auth/login"), {
+    // ✅ FIX: استخدام env بدل localhost
+    const baseUrl = process.env.CORE_API_BASE_URL;
+
+    if (!baseUrl) {
+      throw new Error("Missing CORE_API_BASE_URL");
+    }
+
+    const upstream = await fetch(`${baseUrl}/auth/login`, {
       method: "POST",
       headers: {
         "content-type": "application/json",

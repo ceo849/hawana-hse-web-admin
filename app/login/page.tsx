@@ -23,7 +23,6 @@ function LoginPageInner() {
   const nextParam = searchParams.get('next');
   const nextPath = useMemo(() => normalizeNextPath(nextParam), [nextParam]);
 
-  // ✅ FIX: no forced default user
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [result, setResult] = useState('');
@@ -64,7 +63,7 @@ function LoginPageInner() {
     setResult('');
 
     try {
-      const r = await fetch('/api/auth/login', {
+      const r = await fetch(`${window.location.origin}/api/auth/login`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',

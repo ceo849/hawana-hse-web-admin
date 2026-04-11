@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -79,7 +80,12 @@ export default async function DashboardLayout({
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <DashboardHeader title="Dashboard" />
-        <main style={{ padding: 24 }}>{children}</main>
+
+        <main style={{ padding: 24 }}>
+          <Suspense fallback={null}>
+            {children}
+          </Suspense>
+        </main>
       </div>
     </div>
   );

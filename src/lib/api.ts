@@ -5,10 +5,22 @@ type ApiFetchOptions = Omit<RequestInit, "headers"> & {
 };
 
 function getApiBaseUrl(): string {
+  // Server-side (Next API routes)
+  if (typeof window === "undefined") {
+    const core = process.env.CORE_API_BASE_URL;
+
+    if (!core) {
+      throw new Error("Missing CORE_API_BASE_URL in environment");
+    }
+
+    return core.replace(/\/$/, "");
+  }
+
+  // Browser (frontend)
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   if (!base) {
-    throw new Error("Missing NEXT_PUBLIC_API_BASE_URL in .env.local");
+    throw new Error("Missing NEXT_PUBLIC_API_BASE_URL in environment");
   }
 
   return base.replace(/\/$/, "");
