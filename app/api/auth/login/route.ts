@@ -1,3 +1,5 @@
+// app/api/auth/login/route.ts
+
 import { NextResponse } from "next/server";
 
 type LoginBody = {
@@ -14,7 +16,7 @@ export async function POST(req: Request) {
     } catch {
       return NextResponse.json(
         { ok: false, message: "Invalid or empty request body" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -24,11 +26,11 @@ export async function POST(req: Request) {
     if (!email || !password) {
       return NextResponse.json(
         { ok: false, message: "Email and password are required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // ✅ FIX: استخدام env بدل localhost
+    // Backend URL
     const baseUrl = process.env.CORE_API_BASE_URL;
 
     if (!baseUrl) {
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
     const accessToken = String(
       (data as Record<string, unknown>).access_token ??
         (data as Record<string, unknown>).accessToken ??
-        "",
+        ""
     );
 
     const refreshToken =
@@ -64,25 +66,18 @@ export async function POST(req: Request) {
     if (!accessToken) {
       return NextResponse.json(
         { ok: false, message: "Missing access token from backend" },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
-    const requestUrl = new URL(req.url);
-    const hostname = requestUrl.hostname;
-    const isLocalhost =
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "::1";
-
     const res = NextResponse.json({ ok: true });
 
+    // ✅ FIX: Cookie for local + mobile dev
     const cookieOptions = {
       httpOnly: true,
       sameSite: "lax" as const,
-      secure: !isLocalhost,
+      secure: false, // مهم في dev
       path: "/",
-      ...(isLocalhost ? {} : { domain: "hawanaglobal.com" }),
     };
 
     res.cookies.set("access_token", accessToken, cookieOptions);
@@ -97,7 +92,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { ok: false, message: "Login route error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -57,7 +57,6 @@ function allowedNextStatuses(current: ActionPlanStatus): ActionPlanStatus[] {
       return ["COMPLETED"];
     case "COMPLETED":
       return ["VERIFIED"];
-    case "VERIFIED":
     default:
       return [];
   }
@@ -67,66 +66,25 @@ function toDateInputValue(iso?: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  return d.toISOString().slice(0, 10);
 }
 
 function formatDateDisplay(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
+  return new Intl.DateTimeFormat("en-GB").format(d);
 }
 
-function getActionPlanStatusStyle(status?: string | null) {
-  const normalized = String(status ?? "").toUpperCase();
+function getStatusStyle(status?: string | null) {
+  const s = String(status ?? "").toUpperCase();
 
-  if (normalized === "OPEN") {
-    return {
-      background: "#f3f4f6",
-      color: "#111827",
-      border: "1px solid #d1d5db",
-    };
-  }
+  if (s === "OPEN") return { background: "#f3f4f6", color: "#111" };
+  if (s === "IN_PROGRESS") return { background: "#dbeafe", color: "#1d4ed8" };
+  if (s === "COMPLETED") return { background: "#dcfce7", color: "#166534" };
+  if (s === "VERIFIED") return { background: "#bbf7d0", color: "#14532d" };
 
-  if (normalized === "IN_PROGRESS") {
-    return {
-      background: "#dbeafe",
-      color: "#1d4ed8",
-      border: "1px solid #93c5fd",
-    };
-  }
-
-  if (normalized === "COMPLETED") {
-    return {
-      background: "#dcfce7",
-      color: "#166534",
-      border: "1px solid #86efac",
-    };
-  }
-
-  if (normalized === "VERIFIED") {
-    return {
-      background: "#dcfce7",
-      color: "#14532d",
-      border: "1px solid #4ade80",
-    };
-  }
-
-  return {
-    background: "#f3f4f6",
-    color: "#111827",
-    border: "1px solid #d1d5db",
-  };
+  return { background: "#f3f4f6", color: "#111" };
 }
 
 function formatAssignedUser(
@@ -136,55 +94,23 @@ function formatAssignedUser(
   if (user?.fullName || user?.email) {
     return `${user.fullName ?? "—"} — ${user.email ?? "—"}`;
   }
-
-  if (fallbackId) return fallbackId;
-  return "—";
+  return fallbackId ?? "—";
 }
 
 function metricCard(label: string, value: string | number) {
   return (
     <div
       style={{
-        border: "1px solid #eee",
-        borderRadius: 12,
+        border: "1px solid #e5e7eb",
+        borderRadius: 14,
         background: "#fff",
         padding: 16,
       }}
     >
-      <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
     </div>
   );
-}
-
-async function readApiErrorText(r: Response): Promise<string> {
-  try {
-    const j = await r.json();
-    if (j && typeof j === "object") {
-      const msg =
-        (j.message && String(j.message)) ||
-        (j.error && String(j.error)) ||
-        (j.statusCode && `statusCode=${j.statusCode}`) ||
-        "";
-      const path = (j as { path?: unknown }).path
-        ? ` path=${String((j as { path?: unknown }).path)}`
-        : "";
-      return `${msg}${path}`.trim() || JSON.stringify(j);
-    }
-  } catch {
-    // ignore
-  }
-
-  try {
-    return (await r.text()).trim();
-  } catch {
-    return "";
-  }
-}
-
-function errRedirect(id: string, label: string, status: number, detail: string) {
-  const clean = `${label} (${status}) ${detail}`.trim();
-  redirect(`${actionPlanPath(id)}?err=${encodeURIComponent(clean)}`);
 }
 
 export default async function ActionPlanPage({
@@ -200,134 +126,37 @@ export default async function ActionPlanPage({
   const token = await requireAccessToken();
   const payload = decodeJwtPayload(token);
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const canOperateWorkflow = currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
 
-  async function changeStatus(formData: FormData) {
-    "use server";
-
-    const tokenInner = await requireAccessToken();
-    const nextStatus = normalizeId(formData.get("nextStatus"));
-
-    if (!nextStatus) {
-      redirect(actionPlanPath(id));
-    }
-
-    const allowed: ActionPlanStatus[] = [
-      "OPEN",
-      "IN_PROGRESS",
-      "COMPLETED",
-      "VERIFIED",
-    ];
-
-    if (!allowed.includes(nextStatus as ActionPlanStatus)) {
-      errRedirect(id, "Invalid status value", 400, `status=${nextStatus}`);
-    }
-
-    const r = await fetch(api(`/action-plans/${id}/status`), {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${tokenInner}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ status: nextStatus }),
-      cache: "no-store",
-    });
-
-    if (r.status === 401) redirect("/login");
-
-    if (!r.ok) {
-      const detail = await readApiErrorText(r);
-      errRedirect(id, "Status update failed", r.status, detail);
-    }
-
-    redirect(actionPlanPath(id));
-  }
-
-  async function updateDueDate(formData: FormData) {
-    "use server";
-
-    const tokenInner = await requireAccessToken();
-    const dueDateRaw = normalizeId(formData.get("dueDate"));
-
-    const payload = {
-      dueDate: dueDateRaw
-        ? new Date(`${dueDateRaw}T00:00:00.000Z`).toISOString()
-        : null,
-    };
-
-    const r = await fetch(api(`/action-plans/${id}/due-date`), {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${tokenInner}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
-
-    if (r.status === 401) redirect("/login");
-
-    if (!r.ok) {
-      const detail = await readApiErrorText(r);
-      errRedirect(id, "Due date update failed", r.status, detail);
-    }
-
-    redirect(actionPlanPath(id));
-  }
+  const canOperateWorkflow =
+    currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
 
   const res = await fetch(api(`/action-plans/${id}`), {
-    method: "GET",
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
 
-  if (res.status === 401) redirect("/login");
-
-  if (!res.ok) {
-    const detail = await readApiErrorText(res);
-
-    return (
-      <div style={{ padding: 24, fontFamily: "system-ui" }}>
-        <PageHeader
-          title="Action Plan Overview"
-          subtitle="Plan insight first, followed by plan control actions"
-        />
-
-        <pre
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f7f7f7",
-            borderRadius: 12,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-          }}
-        >{`Failed to load action plan (${res.status})\n${detail}`}</pre>
-
-        <div style={{ marginTop: 14 }}>
-          <Link href="/dashboard/action-plans" style={{ textDecoration: "underline" }}>
-            Back to Action Plans
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!res.ok) redirect("/dashboard/action-plans");
 
   const ap = (await res.json()) as ActionPlan;
   const nextStatuses = allowedNextStatuses(ap.status);
   const err = normalizeId(resolvedSearchParams?.err);
-  const dueDateLocked = ap.status === "VERIFIED" || !canOperateWorkflow;
-  const editLocked = ap.status === "VERIFIED" || !canOperateWorkflow;
-  const statusStyle = getActionPlanStatusStyle(ap.status);
+  const statusStyle = getStatusStyle(ap.status);
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 860 }}>
+    <div
+      style={{
+        padding: 16,
+        maxWidth: 720,
+        margin: "0 auto",
+        fontFamily: "system-ui",
+      }}
+    >
       <PageHeader
         title="Action Plan Overview"
-        subtitle="Plan insight first, followed by plan control actions"
+        subtitle="Plan insight and control"
       />
 
-      {err ? (
+      {err && (
         <div
           style={{
             marginBottom: 16,
@@ -337,324 +166,87 @@ export default async function ActionPlanPage({
             background: "#fef2f2",
             color: "#991b1b",
             fontSize: 13,
-            whiteSpace: "pre-wrap",
           }}
         >
           {err}
         </div>
-      ) : null}
+      )}
 
-      <div
-        style={{
-          marginBottom: 8,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#444",
-        }}
-      >
-        Plan Insight
-      </div>
-
-      <div
-        style={{
-          marginBottom: 16,
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+      {/* Status */}
+      <div style={{ marginBottom: 16 }}>
         <span
           style={{
-            display: "inline-block",
             padding: "6px 10px",
             borderRadius: 999,
             fontSize: 12,
-            fontWeight: 800,
+            fontWeight: 700,
             ...statusStyle,
           }}
         >
           {ap.status}
         </span>
-
-        {!canOperateWorkflow ? (
-          <span
-            style={{
-              fontSize: 12,
-              color: "#6b7280",
-              padding: "6px 10px",
-              borderRadius: 999,
-              border: "1px solid #e5e7eb",
-              background: "#f9fafb",
-              fontWeight: 700,
-            }}
-          >
-            Read only
-          </span>
-        ) : null}
       </div>
 
+      {/* Info */}
       <div
         style={{
-          marginBottom: 16,
+          border: "1px solid #e5e7eb",
+          borderRadius: 14,
           padding: 16,
-          border: "1px solid #eee",
-          borderRadius: 12,
           background: "#fff",
+          marginBottom: 16,
         }}
       >
-        <div style={{ display: "grid", gap: 8 }}>
-          <div>
-            <b>Action Plan ID:</b> {ap.id}
-          </div>
-
-          <div>
-            <b>Title:</b> {ap.title}
-          </div>
-
-          <div>
-            <b>Assigned To:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}
-          </div>
-
-          <div>
-            <b>Safety Report:</b>{" "}
-            {ap.safetyReportId ? (
-              <Link
-                href={safetyReportPath(ap.safetyReportId)}
-                style={{ textDecoration: "underline" }}
-              >
-                {ap.safetyReportId}
-              </Link>
-            ) : (
-              "—"
-            )}
-          </div>
-
-          <div>
-            <b>Due Date:</b> {formatDateDisplay(ap.dueDate)}
-          </div>
-
-          <div>
-            <b>Created At:</b> {formatDateDisplay(ap.createdAt)}
-          </div>
-
-          <div>
-            <b>Updated At:</b> {formatDateDisplay(ap.updatedAt)}
-          </div>
-        </div>
+        <div><b>ID:</b> {ap.id}</div>
+        <div><b>Title:</b> {ap.title}</div>
+        <div><b>Assigned:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}</div>
+        <div><b>Due:</b> {formatDateDisplay(ap.dueDate)}</div>
       </div>
 
+      {/* Metrics */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: 12,
           marginBottom: 24,
         }}
       >
-        {metricCard("Current Status", ap.status)}
+        {metricCard("Status", ap.status)}
         {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
-        {metricCard("Workflow Options", nextStatuses.length)}
+        {metricCard("Next Steps", nextStatuses.length)}
       </div>
 
-      <div
-        style={{
-          marginBottom: 16,
-          padding: 16,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fff",
-        }}
-      >
-        <div style={{ fontWeight: 800, marginBottom: 8 }}>Description</div>
-        <p style={{ margin: 0, lineHeight: 1.6 }}>
-          {ap.description?.trim() ? ap.description : "No description"}
-        </p>
-      </div>
-
-      <div
-        style={{
-          marginBottom: 8,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#444",
-        }}
-      >
-        Plan Control Actions
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gap: 16,
-        }}
-      >
-        <div
+      {/* Actions */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <Link
+          href={actionPlanEditPath(ap.id)}
           style={{
-            padding: 16,
-            border: "1px solid #eee",
-            borderRadius: 12,
+            padding: "10px 16px",
+            borderRadius: 10,
+            background: "#111",
+            color: "#fff",
+            textDecoration: "none",
+            fontWeight: 600,
+          }}
+        >
+          Edit
+        </Link>
+
+        <Link
+          href="/dashboard/action-plans"
+          style={{
+            padding: "10px 16px",
+            borderRadius: 10,
+            border: "1px solid #ddd",
             background: "#fff",
+            color: "#111",
+            textDecoration: "none",
+            fontWeight: 500,
           }}
         >
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>Change Status</div>
-
-          {!canOperateWorkflow ? (
-            <div style={{ fontSize: 13, color: "#555" }}>
-              Status transitions are hidden for read-only roles.
-            </div>
-          ) : nextStatuses.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#555" }}>No allowed transitions</div>
-          ) : (
-            <form
-              action={changeStatus}
-              style={{
-                display: "flex",
-                gap: 10,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <select
-                name="nextStatus"
-                defaultValue={nextStatuses[0]}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                  minWidth: 180,
-                  background: "#fff",
-                }}
-              >
-                {nextStatuses.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="submit"
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  border: "1px solid #111",
-                  background: "#111",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Update Status
-              </button>
-            </form>
-          )}
-        </div>
-
-        <div
-          style={{
-            padding: 16,
-            border: "1px solid #eee",
-            borderRadius: 12,
-            background: "#fff",
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            Manage Due Date
-          </div>
-
-          <form
-            action={updateDueDate}
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <input
-              type="date"
-              name="dueDate"
-              defaultValue={toDateInputValue(ap.dueDate)}
-              disabled={dueDateLocked}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                minWidth: 220,
-                opacity: dueDateLocked ? 0.6 : 1,
-                background: "#fff",
-              }}
-            />
-
-            <button
-              type="submit"
-              disabled={dueDateLocked}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #111",
-                background: dueDateLocked ? "#777" : "#111",
-                color: "#fff",
-                fontWeight: 700,
-                cursor: dueDateLocked ? "not-allowed" : "pointer",
-                opacity: dueDateLocked ? 0.7 : 1,
-              }}
-            >
-              Save Due Date
-            </button>
-
-            <span style={{ fontSize: 12, color: "#666" }}>
-              {ap.status === "VERIFIED"
-                ? "(Locked: VERIFIED plan)"
-                : !canOperateWorkflow
-                  ? "(Locked: read-only role)"
-                  : "(Leave empty to clear the due date)"}
-            </span>
-          </form>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          {!editLocked ? (
-            <Link
-              href={actionPlanEditPath(ap.id)}
-              style={{
-                display: "inline-block",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
-                fontWeight: 700,
-                textDecoration: "none",
-              }}
-            >
-              Edit Action Plan
-            </Link>
-          ) : null}
-
-          <Link
-            href="/dashboard/action-plans"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              background: "#fff",
-              color: "#111",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            Back to Action Plans
-          </Link>
-        </div>
+          Back
+        </Link>
       </div>
     </div>
   );

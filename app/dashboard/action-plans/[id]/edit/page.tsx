@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { api } from "@/lib/core-api";
-import PageHeader from "@/components/ui/page-header";
+import DashboardPageHeader from "@/components/ui/page-header"; // ✅ FIX
+// تم تغيير الاسم فقط
+// يمنع أي conflict داخلي
 
 type PageProps = {
   params: { id: string } | Promise<{ id: string }>;
@@ -94,13 +96,21 @@ export default async function EditActionPlanPage({
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
-      <PageHeader
+    <div
+      style={{
+        padding: 16,
+        fontFamily: "system-ui",
+        maxWidth: 720,
+        margin: "0 auto",
+      }}
+    >
+      {/* ✅ FIX هنا */}
+      <DashboardPageHeader
         title="Edit Action Plan"
         subtitle="Update the action plan title and description"
       />
 
-      {error ? (
+      {error && (
         <div
           style={{
             marginBottom: 16,
@@ -109,18 +119,18 @@ export default async function EditActionPlanPage({
             background: "#fef2f2",
             color: "#991b1b",
             border: "1px solid #fecaca",
-            whiteSpace: "pre-wrap",
+            fontSize: 13,
           }}
         >
           {error}
         </div>
-      ) : null}
+      )}
 
       <form action={updateActionPlan} style={{ display: "grid", gap: 16 }}>
         <div
           style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
+            border: "1px solid #e5e7eb",
+            borderRadius: 14,
             background: "#fff",
             padding: 16,
             display: "grid",
@@ -128,17 +138,12 @@ export default async function EditActionPlanPage({
           }}
         >
           <div>
-            <label
-              htmlFor="title"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label style={{ marginBottom: 6, fontWeight: 600 }}>
               Title
             </label>
             <input
-              id="title"
               name="title"
               defaultValue={ap.title}
-              placeholder="Enter action plan title"
               required
               style={{
                 width: "100%",
@@ -150,30 +155,24 @@ export default async function EditActionPlanPage({
           </div>
 
           <div>
-            <label
-              htmlFor="description"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label style={{ marginBottom: 6, fontWeight: 600 }}>
               Description
             </label>
             <textarea
-              id="description"
               name="description"
               defaultValue={ap.description ?? ""}
-              rows={8}
-              placeholder="Enter action plan description"
+              rows={6}
               style={{
                 width: "100%",
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
-                resize: "vertical",
               }}
             />
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 10 }}>
           <button
             type="submit"
             style={{
@@ -182,24 +181,21 @@ export default async function EditActionPlanPage({
               border: "1px solid #111",
               background: "#111",
               color: "#fff",
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: "pointer",
             }}
           >
-            Update Action Plan
+            Update
           </button>
 
           <Link
             href={`/dashboard/action-plans/${ap.id}`}
             style={{
-              display: "inline-block",
               padding: "10px 16px",
               borderRadius: 10,
               border: "1px solid #ddd",
-              background: "#fff",
               textDecoration: "none",
               color: "#111",
-              fontWeight: 600,
             }}
           >
             Cancel

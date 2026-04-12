@@ -1,88 +1,48 @@
 import React from "react";
 
-type StatsCardProps = {
-  label: string;
-  value: number;
-  helper?: string;
-  href?: string;
+type PageHeaderProps = {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
 };
 
-function cardStyle() {
-  return {
-    display: "flex",
-    flexDirection: "column",
+export default function PageHeader({
+  title,
+  subtitle,
+  action,
+}: PageHeaderProps) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {/* Title */}
+      <h1
+        style={{
+          fontSize: 22,
+          fontWeight: 700,
+          margin: 0,
+        }}
+      >
+        {title}
+      </h1>
 
-    justifyContent: "space-between", // ✔ توزيع طبيعي زي SaaS
-    alignItems: "flex-start",
-
-    border: "1px solid #e5e7eb",
-    borderRadius: 16, // ✔ أنعم
-
-    padding: "16px", // ✔ spacing أفضل
-    background: "#fff",
-
-    textDecoration: "none",
-    color: "#111",
-
-    minHeight: 96, // ✔ ارتفاع مريح
-  } as const;
-}
-
-export default function StatsCard({
-  label,
-  value,
-  helper,
-  href,
-}: StatsCardProps) {
-  const content = (
-    <>
-      {/* Top Section */}
-      <div>
-        {/* Label */}
-        <div
+      {/* Subtitle */}
+      {subtitle && (
+        <p
           style={{
-            fontSize: 12,
+            marginTop: 4,
+            fontSize: 13,
             color: "#6b7280",
-            fontWeight: 500,
           }}
         >
-          {label}
-        </div>
+          {subtitle}
+        </p>
+      )}
 
-        {/* Value */}
-        <div
-          style={{
-            fontSize: 28, // ✔ أكبر وواضح زي الأنظمة العالمية
-            fontWeight: 800,
-            marginTop: 6,
-          }}
-        >
-          {value}
-        </div>
-      </div>
-
-      {/* Bottom Helper */}
-      {helper && (
-        <div
-          style={{
-            marginTop: 8,
-            fontSize: 12,
-            color: "#9ca3af",
-          }}
-        >
-          {helper}
+      {/* Actions */}
+      {action && (
+        <div style={{ marginTop: 12 }}>
+          {action}
         </div>
       )}
-    </>
+    </div>
   );
-
-  if (href) {
-    return (
-      <a href={href} style={cardStyle()}>
-        {content}
-      </a>
-    );
-  }
-
-  return <div style={cardStyle()}>{content}</div>;
 }
