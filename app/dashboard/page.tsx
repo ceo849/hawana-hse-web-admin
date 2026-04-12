@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
@@ -11,12 +12,57 @@ export default async function DashboardPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
 
-  if (!token) {
-    redirect("/login");
-  }
+  if (!token) redirect("/login");
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  // Users
+  let usersCount = 0;
+  try {
+    const res = await fetch(`${baseUrl}/v1/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = await res.json();
+    usersCount = Array.isArray(data?.data) ? data.data.length : 0;
+  } catch {}
+
+  // Reports
+  let reports: any[] = [];
+  let reportsCount = 0;
+
+  try {
+    const res = await fetch(`${baseUrl}/v1/safety-reports`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+    reports = Array.isArray(data?.data) ? data.data : [];
+    reportsCount = reports.length;
+  } catch {}
+
+  // Plans
+  let plansCount = 0;
+  try {
+    const res = await fetch(`${baseUrl}/v1/action-plans`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+    plansCount = Array.isArray(data) ? data.length : 0;
+  } catch {}
+
+  // HSE (Reports Based)
+  const openCount = reports.filter((r) => r.status === "OPEN").length;
+  const inProgressCount = reports.filter(
+    (r) => r.status === "IN_PROGRESS"
+  ).length;
+  const closedCount = reports.filter((r) => r.status === "CLOSED").length;
 
   return (
     <div
@@ -27,111 +73,88 @@ export default async function DashboardPage() {
         margin: "0 auto",
       }}
     >
-      {/* Header */}
       <PageHeader
         title="Dashboard"
         subtitle="Platform and HSE operational overview"
       />
 
       {/* Quick Actions */}
-      <div
-        style={{
-          marginTop: 16,
-          marginBottom: 8,
-          fontWeight: 600,
-          fontSize: 13,
-          color: "#6b7280",
-        }}
-      >
-        Quick Actions
+      <div style={sectionTitle}>Quick Actions</div>
+
+      <div style={gridStyle}>
+        <ActionButton href="/dashboard/safety-reports/new">+ Safety Report</ActionButton>
+        <ActionButton href="/dashboard/action-plans/new">+ Action Plan</ActionButton>
+        <ActionButton href="/dashboard/sites-projects/new">+ Site / Project</ActionButton>
+        <ActionButton href="/dashboard/users/new">+ User</ActionButton>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-        }}
-      >
-        <ActionButton href="/dashboard/safety-reports/new">
-          + Safety Report
-        </ActionButton>
+      {/* Metrics */}
+      <div style={sectionTitle}>Platform Metrics</div>
 
-        <ActionButton href="/dashboard/action-plans/new">
-          + Action Plan
-        </ActionButton>
+      <div style={gridStyle}>
+        <Link href="/dashboard/companies" style={cardStyle}>
+          <StatsCard label="Companies" value={1} />
+        </Link>
 
-        <ActionButton href="/dashboard/sites-projects/new">
-          + Site / Project
-        </ActionButton>
+        <Link href="/dashboard/users" style={cardStyle}>
+          <StatsCard label="Users" value={usersCount} />
+        </Link>
 
-        <ActionButton href="/dashboard/users/new">
-          + User
-        </ActionButton>
+        <Link href="/dashboard/sites-projects" style={cardStyle}>
+          <StatsCard label="Sites / Projects" value={3} />
+        </Link>
+
+        <Link href="/dashboard/safety-reports" style={cardStyle}>
+          <StatsCard label="Reports" value={reportsCount} />
+        </Link>
+
+        <Link href="/dashboard/action-plans" style={cardStyle}>
+          <StatsCard label="Action Plans" value={plansCount} />
+        </Link>
       </div>
 
-      {/* Platform Metrics */}
-      <div
-        style={{
-          marginTop: 24,
-          marginBottom: 8,
-          fontWeight: 600,
-          fontSize: 13,
-          color: "#6b7280",
-        }}
-      >
-        Platform Metrics
+      {/* HSE */}
+      <div style={sectionTitle}>
+        HSE Operations (Reports Based)
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-        }}
-      >
-        <StatsCard label="Companies" value={1} />
-        <StatsCard label="Users" value={7} />
-        <StatsCard label="Sites" value={3} />
-        <StatsCard label="Reports" value={3} />
+      <div style={gridStyle}>
+        <Link href="/dashboard/safety-reports?status=OPEN" style={cardStyle}>
+          <StatsCard label="Open" value={openCount} />
+        </Link>
 
-        <div style={{ gridColumn: "span 2" }}>
-          <StatsCard label="Plans" value={3} />
-        </div>
-      </div>
+        <Link href="/dashboard/safety-reports?status=IN_PROGRESS" style={cardStyle}>
+          <StatsCard label="In Progress" value={inProgressCount} />
+        </Link>
 
-      {/* HSE Operations */}
-      <div
-        style={{
-          marginTop: 24,
-          marginBottom: 8,
-          fontWeight: 600,
-          fontSize: 13,
-          color: "#6b7280",
-        }}
-      >
-        HSE Operations
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 2fr",
-          gap: 12,
-        }}
-      >
-        <StatsCard label="Open" value={0} />
-
-        <div style={{ gridColumn: "span 1" }}>
-          <StatsCard label="In Progress" value={1} />
-        </div>
-
-        <StatsCard label="Closed" value={2} />
-        <StatsCard label="Completed" value={1} />
-
-        <StatsCard label="Verified" value={2} />
-        <StatsCard label="Overdue" value={0} />
+        <Link href="/dashboard/safety-reports?status=CLOSED" style={cardStyle}>
+          <StatsCard label="Closed" value={closedCount} />
+        </Link>
       </div>
     </div>
   );
 }
+
+// ✅ Responsive Grid (احترافي)
+const gridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: 10,
+};
+
+// ✅ Section Title موحد
+const sectionTitle: React.CSSProperties = {
+  marginTop: 20,
+  marginBottom: 6,
+  fontWeight: 600,
+  fontSize: 13,
+  color: "#6b7280",
+};
+
+// ✅ Card wrapper
+const cardStyle: React.CSSProperties = {
+  textDecoration: "none",
+  display: "block",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+};

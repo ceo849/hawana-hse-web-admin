@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 
 export type SidebarNavItem = {
   href: string;
@@ -13,6 +12,8 @@ type SidebarProps = {
   role: string;
   email?: string;
   navItems?: SidebarNavItem[];
+  isOpen: boolean;
+  onClose: () => void;
 };
 
 function getIcon(label: string) {
@@ -30,9 +31,14 @@ function getIcon(label: string) {
   return icons[label] ?? '•';
 }
 
-export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
+export default function Sidebar({
+  role,
+  email,
+  navItems = [],
+  isOpen,
+  onClose,
+}: SidebarProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
 
   const uniqueItems = Array.from(
     new Map(navItems.map((i) => [i.href, i])).values()
@@ -40,61 +46,42 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
 
   return (
     <>
-      {/* Toggle Button */}
-      <button
-        onClick={() => setOpen(true)}
-        style={{
-          position: 'fixed',
-          top: 12,
-          left: 12,
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          border: '1px solid #eee',
-          background: '#fff',
-          fontSize: 18,
-          cursor: 'pointer',
-          zIndex: 1100,
-        }}
-      >
-        ☰
-      </button>
-
       {/* Overlay */}
-      {open && (
+      {isOpen && (
         <div
-          onClick={() => setOpen(false)}
+          onClick={onClose}
           style={{
             position: 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.35)',
-            zIndex: 1099,
+            zIndex: 1000,
           }}
         />
       )}
 
-      {/* Drawer */}
+      {/* Sidebar */}
       <aside
         style={{
           position: 'fixed',
           top: 0,
-          left: open ? 0 : -280,
+          left: 0, // ثابت
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)', // ✔ الحل الحقيقي
           width: 260,
           height: '100vh',
           background: '#fff',
           padding: 20,
-          zIndex: 1101,
+          zIndex: 2000, // ✔ أعلى من overlay
           display: 'flex',
           flexDirection: 'column',
-          transition: 'left 0.25s ease',
-          boxShadow: open ? '2px 0 12px rgba(0,0,0,0.08)' : 'none',
+          transition: 'transform 0.25s ease',
+          boxShadow: isOpen ? '2px 0 12px rgba(0,0,0,0.15)' : 'none',
         }}
       >
         {/* Top */}
         <div style={{ marginBottom: 20 }}>
           {/* Close */}
           <button
-            onClick={() => setOpen(false)}
+            onClick={onClose}
             style={{
               alignSelf: 'flex-end',
               marginBottom: 10,
@@ -146,7 +133,7 @@ export default function Sidebar({ role, email, navItems = [] }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setOpen(false)}
+                onClick={onClose}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

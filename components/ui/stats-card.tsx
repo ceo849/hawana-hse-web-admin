@@ -12,22 +12,27 @@ function cardStyle() {
     display: "flex",
     flexDirection: "column",
 
-    border: "1px solid #e5e7eb",
-    borderRadius: 12, // ↓ أقل من 16 (أكثر احترافية SaaS)
+    justifyContent: "center",
+    alignItems: "center",
+    textAlign: "center",
 
-    padding: "16px",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+
+    padding: "12px 14px",
     background: "#fff",
 
     textDecoration: "none",
     color: "#111",
 
-    minHeight: 88,
+    minHeight: 72, // ✅ مستطيل مش مربع
 
-    // subtle shadow زي الأنظمة العالمية
     boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 
-    // spacing داخلي أفضل
     gap: 4,
+
+    cursor: "pointer",
+    transition: "all 0.2s ease",
   } as const;
 }
 
@@ -39,13 +44,20 @@ export default function StatsCard({
 }: StatsCardProps) {
   const content = (
     <>
+      {/* Hover مرة واحدة */}
+      <style>{`
+        .stats-card:hover {
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+        }
+      `}</style>
+
       {/* Label */}
       <div
         style={{
-          fontSize: 12,
+          fontSize: 11,
           color: "#6b7280",
           fontWeight: 500,
-          lineHeight: 1.2,
         }}
       >
         {label}
@@ -54,22 +66,20 @@ export default function StatsCard({
       {/* Value */}
       <div
         style={{
-          fontSize: 28, // ↑ أهم تعديل (hierarchy)
+          fontSize: 22,
           fontWeight: 700,
-          lineHeight: 1.1,
+          color: "#111827",
         }}
       >
         {value}
       </div>
 
-      {/* Helper */}
+      {/* Helper (اختياري) */}
       {helper && (
         <div
           style={{
-            marginTop: 2,
-            fontSize: 12,
+            fontSize: 11,
             color: "#9ca3af",
-            lineHeight: 1.2,
           }}
         >
           {helper}
@@ -80,11 +90,15 @@ export default function StatsCard({
 
   if (href) {
     return (
-      <a href={href} style={cardStyle()}>
+      <a href={href} style={cardStyle()} className="stats-card">
         {content}
       </a>
     );
   }
 
-  return <div style={cardStyle()}>{content}</div>;
+  return (
+    <div style={cardStyle()} className="stats-card">
+      {content}
+    </div>
+  );
 }
