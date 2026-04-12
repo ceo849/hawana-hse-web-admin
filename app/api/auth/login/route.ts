@@ -1,5 +1,3 @@
-// app/api/auth/login/route.ts
-
 import { NextResponse } from "next/server";
 
 type LoginBody = {
@@ -11,6 +9,7 @@ export async function POST(req: Request) {
   try {
     let body: LoginBody = {};
 
+    // Parse body safely
     try {
       body = (await req.json()) as LoginBody;
     } catch {
@@ -30,14 +29,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Backend URL
-    const baseUrl = process.env.CORE_API_BASE_URL;
+    // ✅ Unified Core API base (Gateway Rule)
+    const coreBase =
+      process.env.CORE_API_BASE_URL || "http://localhost:3001/v1";
 
-    if (!baseUrl) {
-      throw new Error("Missing CORE_API_BASE_URL");
-    }
+    // ✅ Build final URL safely (no double /v1 bugs)
+    const loginUrl = coreBase.endsWith("/v1")
+      ? `${coreBase}/auth/login`
+      : `${coreBase}/v1/auth/login`;
 
-    const upstream = await fetch(`${baseUrl}/auth/login`, {
+    // 🔍 Debug (important for Runbook)
+    console.log("[LOGIN_PROXY] →", loginUrl);
+
+    const upstream = await fetch(loginUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -46,22 +50,23 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    const data = await upstream.json().catch(() => ({}));
+    let data: any = {};
+    try {
+      data = await upstream.json();
+    } catch {
+      data = {};
+    }
 
     if (!upstream.ok) {
+      console.error("[LOGIN_PROXY_ERROR]", data);
       return NextResponse.json(data, { status: upstream.status });
     }
 
-    const accessToken = String(
-      (data as Record<string, unknown>).access_token ??
-        (data as Record<string, unknown>).accessToken ??
-        ""
-    );
+    const accessToken =
+      data?.access_token || data?.accessToken || null;
 
     const refreshToken =
-      (data as Record<string, unknown>).refresh_token ??
-      (data as Record<string, unknown>).refreshToken ??
-      null;
+      data?.refresh_token || data?.refreshToken || null;
 
     if (!accessToken) {
       return NextResponse.json(
@@ -72,11 +77,13 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({ ok: true });
 
-    // ✅ FIX: Cookie for local + mobile dev
+    // ✅ Production-safe cookies
+    const isProd = process.env.NODE_ENV === "production";
+
     const cookieOptions = {
       httpOnly: true,
       sameSite: "lax" as const,
-      secure: false, // مهم في dev
+      secure: isProd, // ✔ Production HTTPS only
       path: "/",
     };
 
@@ -88,7 +95,7 @@ export async function POST(req: Request) {
 
     return res;
   } catch (error) {
-    console.error("Login route error:", error);
+    console.error("[LOGIN_ROUTE_FATAL]", error);
 
     return NextResponse.json(
       { ok: false, message: "Login route error" },
