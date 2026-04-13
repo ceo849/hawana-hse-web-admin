@@ -23,7 +23,11 @@ export default async function EditSafetyReportPage({ params }: PageProps) {
   // =========================
   // LOAD REPORT
   // =========================
-  const res = await serverAppFetch(`/safety-reports/${reportId}`, token);
+  const res = await serverAppFetch(
+    `/safety-reports/${encodeURIComponent(reportId)}`,
+    token,
+    { cache: "no-store" } // تثبيت SSR
+  );
 
   if (res.status === 401) redirect("/login");
 
@@ -49,7 +53,7 @@ export default async function EditSafetyReportPage({ params }: PageProps) {
     }
 
     const updateRes = await serverAppFetch(
-      `/safety-reports/${reportId}`,
+      `/safety-reports/${encodeURIComponent(reportId)}`,
       tokenInner,
       {
         method: "PATCH",

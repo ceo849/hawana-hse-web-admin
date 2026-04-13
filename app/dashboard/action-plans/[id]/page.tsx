@@ -99,10 +99,12 @@ export default async function ActionPlanPage({
 
   const token = await requireAccessToken();
 
-  // ✅ FIX: تأمين fetch + no-store واضح
-  const res = await serverAppFetch(`/action-plans/${id}`, token, {
-    cache: "no-store",
-  });
+  // ✅ FIX النهائي
+  const res = await serverAppFetch(
+    `/action-plans/${encodeURIComponent(id)}`,
+    token,
+    { cache: "no-store" }
+  );
 
   if (res.status === 401) redirect("/login");
   if (!res.ok) redirect("/dashboard/action-plans");
