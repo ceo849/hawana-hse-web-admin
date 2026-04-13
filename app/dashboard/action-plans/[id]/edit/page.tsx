@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
-import DashboardPageHeader from "@/components/ui/page-header"; // ✅ FIX
-// تم تغيير الاسم فقط
-// يمنع أي conflict داخلي
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import DashboardPageHeader from "@/components/ui/page-header";
 
 type PageProps = {
   params: { id: string } | Promise<{ id: string }>;
@@ -34,20 +32,18 @@ export default async function EditActionPlanPage({
 
   const token = await requireAccessToken();
 
-  const r = await fetch(api(`/action-plans/${id}`), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  // ✅ FIX: serverAppFetch بدل fetch(api)
+  const r = await serverAppFetch(`/action-plans/${encodeURIComponent(id)}`, token);
 
   if (r.status === 401) redirect("/login");
   if (!r.ok) redirect(`/dashboard/action-plans/${id}`);
 
   const ap = (await r.json()) as ActionPlan;
+
   const error = normalize(resolvedSearch?.error);
   const status = normalize(ap.status).toUpperCase();
 
+  // منع تعديل VERIFIED
   if (status === "VERIFIED") {
     redirect(`/dashboard/action-plans/${id}`);
   }
@@ -68,18 +64,21 @@ export default async function EditActionPlanPage({
       );
     }
 
-    const res = await fetch(api(`/action-plans/${id}`), {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${tokenInner}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        description: description || null,
-      }),
-      cache: "no-store",
-    });
+    // ✅ FIX: serverAppFetch بدل fetch(api)
+    const res = await serverAppFetch(
+      `/action-plans/${encodeURIComponent(id)}`,
+      tokenInner,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+        }),
+      }
+    );
 
     if (res.status === 401) redirect("/login");
 
@@ -104,7 +103,6 @@ export default async function EditActionPlanPage({
         margin: "0 auto",
       }}
     >
-      {/* ✅ FIX هنا */}
       <DashboardPageHeader
         title="Edit Action Plan"
         subtitle="Update the action plan title and description"

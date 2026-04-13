@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 
 type SiteProjectStatus = "ACTIVE" | "INACTIVE" | string;
@@ -20,18 +20,18 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
-function isSiteProject(value: unknown): value is SiteProject {
-  if (typeof value !== "object" || value === null) return false;
+function isSiteProject(v: unknown): v is SiteProject {
+  if (typeof v !== "object" || v === null) return false;
 
-  const candidate = value as Record<string, unknown>;
+  const c = v as Record<string, unknown>;
 
   return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.location === "string" || candidate.location === null) &&
-    typeof candidate.status === "string" &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string"
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    (typeof c.location === "string" || c.location === null) &&
+    typeof c.status === "string" &&
+    typeof c.createdAt === "string" &&
+    typeof c.updatedAt === "string"
   );
 }
 
@@ -49,29 +49,17 @@ function formatDate(value: string): string {
 }
 
 function getStatusStyle(status?: string | null) {
-  const normalized = String(status ?? "").toUpperCase();
+  const s = String(status ?? "").toUpperCase();
 
-  if (normalized === "ACTIVE") {
-    return {
-      background: "#dcfce7",
-      color: "#166534",
-      border: "1px solid #86efac",
-    };
+  if (s === "ACTIVE") {
+    return { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" };
   }
 
-  if (normalized === "INACTIVE") {
-    return {
-      background: "#f3f4f6",
-      color: "#111827",
-      border: "1px solid #d1d5db",
-    };
+  if (s === "INACTIVE") {
+    return { background: "#f3f4f6", color: "#111827", border: "1px solid #d1d5db" };
   }
 
-  return {
-    background: "#f3f4f6",
-    color: "#111827",
-    border: "1px solid #d1d5db",
-  };
+  return { background: "#f3f4f6", color: "#111827", border: "1px solid #d1d5db" };
 }
 
 export default async function SiteProjectOverviewPage({
@@ -87,17 +75,17 @@ export default async function SiteProjectOverviewPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await fetch(api(`/sites-projects/${id}`), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  // ✅ FIX
+  const r = await serverAppFetch(
+    `/sites-projects/${encodeURIComponent(id)}`,
+    token,
+    { cache: "no-store" }
+  );
 
   if (r.status === 401) redirect("/login");
   if (!r.ok) redirect("/dashboard/sites-projects");
 
-  const json = (await r.json()) as unknown;
+  const json = await r.json();
 
   if (!isSiteProject(json)) {
     redirect("/dashboard/sites-projects");
@@ -106,6 +94,9 @@ export default async function SiteProjectOverviewPage({
   const site = json;
   const statusStyle = getStatusStyle(site.status);
 
+  // =========================
+  // UPDATE
+  // =========================
   async function updateSiteProject(formData: FormData) {
     "use server";
 
@@ -121,284 +112,93 @@ export default async function SiteProjectOverviewPage({
     payload.location = location;
     if (status) payload.status = status;
 
-    const res = await fetch(api(`/sites-projects/${id}`), {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${tokenInner}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    const res = await serverAppFetch(
+      `/sites-projects/${encodeURIComponent(id)}`,
+      tokenInner,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (res.status === 401) redirect("/login");
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      redirect(
-        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
-          `Update site / project failed (${res.status}) ${text}`,
-        )}`,
-      );
+      redirect(`/dashboard/sites-projects/${id}?error=${encodeURIComponent(`Update failed (${res.status}) ${text}`)}`);
     }
 
     redirect(`/dashboard/sites-projects/${id}`);
   }
 
+  // =========================
+  // DELETE
+  // =========================
   async function deleteSiteProject() {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
-    const res = await fetch(api(`/sites-projects/${id}`), {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${tokenInner}`,
-      },
-      cache: "no-store",
-    });
+    const res = await serverAppFetch(
+      `/sites-projects/${encodeURIComponent(id)}`,
+      tokenInner,
+      { method: "DELETE" }
+    );
 
     if (res.status === 401) redirect("/login");
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      redirect(
-        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
-          `Delete site / project failed (${res.status}) ${text}`,
-        )}`,
-      );
+      redirect(`/dashboard/sites-projects/${id}?error=${encodeURIComponent(`Delete failed (${res.status}) ${text}`)}`);
     }
 
     redirect("/dashboard/sites-projects");
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 960 }}>
+    <div style={{ padding: 24, maxWidth: 960 }}>
       <PageHeader
         title="Site / Project Overview"
-        subtitle="Site insight first, followed by site control actions"
+        subtitle="Site insight & control"
       />
 
-      {error ? (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #fecaca",
-            whiteSpace: "pre-wrap",
-          }}
-        >
+      {error && (
+        <div style={{ marginBottom: 16, padding: 12, background: "#fef2f2" }}>
           {error}
         </div>
-      ) : null}
+      )}
 
-      <div
-        style={{
-          marginBottom: 8,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#444",
-        }}
-      >
-        Site / Project Insight
-      </div>
-
-      <div
-        style={{
-          marginBottom: 16,
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            display: "inline-block",
-            padding: "6px 10px",
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 800,
-            ...statusStyle,
-          }}
-        >
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
           {site.status}
         </span>
       </div>
 
-      <div
-        style={{
-          marginBottom: 24,
-          padding: 16,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fff",
-        }}
-      >
-        <div style={{ display: "grid", gap: 8 }}>
-          <div>
-            <b>Site / Project ID:</b> {site.id}
-          </div>
-          <div>
-            <b>Name:</b> {site.name}
-          </div>
-          <div>
-            <b>Location:</b> {site.location ?? "-"}
-          </div>
-          <div>
-            <b>Status:</b> {site.status}
-          </div>
-          <div>
-            <b>Created At:</b> {formatDate(site.createdAt)}
-          </div>
-          <div>
-            <b>Updated At:</b> {formatDate(site.updatedAt)}
-          </div>
-        </div>
+      <div style={{ border: "1px solid #eee", padding: 16, marginBottom: 16 }}>
+        <div><b>ID:</b> {site.id}</div>
+        <div><b>Name:</b> {site.name}</div>
+        <div><b>Location:</b> {site.location ?? "-"}</div>
+        <div><b>Created:</b> {formatDate(site.createdAt)}</div>
       </div>
 
-      <div
-        style={{
-          marginBottom: 8,
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#444",
-        }}
-      >
-        Site / Project Control Actions
-      </div>
+      <form action={updateSiteProject}>
+        <input name="name" defaultValue={site.name} />
+        <input name="location" defaultValue={site.location ?? ""} />
 
-      <form action={updateSiteProject} style={{ display: "grid", gap: 16 }}>
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            background: "#fff",
-            padding: 16,
-            display: "grid",
-            gap: 14,
-          }}
-        >
-          <div>
-            <label
-              htmlFor="name"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              defaultValue={site.name}
-              placeholder="Enter site or project name"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-            />
-          </div>
+        <select name="status" defaultValue={site.status}>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="INACTIVE">INACTIVE</option>
+        </select>
 
-          <div>
-            <label
-              htmlFor="location"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Location
-            </label>
-            <input
-              id="location"
-              name="location"
-              defaultValue={site.location ?? ""}
-              placeholder="Enter location"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="status"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Status
-            </label>
-            <select
-              id="status"
-              name="status"
-              defaultValue={site.status}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                background: "#fff",
-              }}
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #111",
-              background: "#111",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Update Site / Project
-          </button>
-
-          <Link
-            href="/dashboard/sites-projects"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              background: "#fff",
-              textDecoration: "none",
-              color: "#111",
-              fontWeight: 600,
-            }}
-          >
-            Back to Sites / Projects
-          </Link>
-        </div>
+        <button type="submit">Update</button>
       </form>
 
-      <form action={deleteSiteProject} style={{ marginTop: 16 }}>
-        <button
-          type="submit"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: "1px solid #dc2626",
-            background: "#fff",
-            color: "#dc2626",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Deactivate Site / Project
-        </button>
+      <form action={deleteSiteProject} style={{ marginTop: 10 }}>
+        <button type="submit">Delete</button>
       </form>
+
+      <Link href="/dashboard/sites-projects">Back</Link>
     </div>
   );
 }

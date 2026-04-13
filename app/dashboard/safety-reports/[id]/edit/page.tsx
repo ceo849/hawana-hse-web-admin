@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -23,38 +23,33 @@ type SiteProject = {
   status: string;
 };
 
-function isSafetyReport(value: unknown): value is SafetyReport {
-  if (typeof value !== "object" || value === null) return false;
-
-  const candidate = value as Record<string, unknown>;
+function isSafetyReport(v: unknown): v is SafetyReport {
+  if (typeof v !== "object" || v === null) return false;
+  const c = v as Record<string, unknown>;
 
   return (
-    typeof candidate.id === "string" &&
-    (typeof candidate.title === "string" || candidate.title === null) &&
-    (typeof candidate.description === "string" ||
-      candidate.description === null) &&
-    (typeof candidate.status === "string" || candidate.status === null) &&
-    (typeof candidate.siteProjectId === "string" ||
-      candidate.siteProjectId === null)
+    typeof c.id === "string" &&
+    (typeof c.title === "string" || c.title === null) &&
+    (typeof c.description === "string" || c.description === null) &&
+    (typeof c.status === "string" || c.status === null) &&
+    (typeof c.siteProjectId === "string" || c.siteProjectId === null)
   );
 }
 
-function isSiteProject(value: unknown): value is SiteProject {
-  if (typeof value !== "object" || value === null) return false;
-
-  const candidate = value as Record<string, unknown>;
+function isSiteProject(v: unknown): v is SiteProject {
+  if (typeof v !== "object" || v === null) return false;
+  const c = v as Record<string, unknown>;
 
   return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.location === "string" || candidate.location === null) &&
-    typeof candidate.status === "string"
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    (typeof c.location === "string" || c.location === null) &&
+    typeof c.status === "string"
   );
 }
 
 function formatSiteProjectLabel(site: SiteProject): string {
-  if (site.location) return `${site.name} (${site.location})`;
-  return site.name;
+  return site.location ? `${site.name} (${site.location})` : site.name;
 }
 
 export default async function EditSafetyReportPage({
@@ -67,33 +62,28 @@ export default async function EditSafetyReportPage({
   const sp = searchParams ? await searchParams : undefined;
   const error = String(sp?.error ?? "").trim();
 
-  const reportRes = await fetch(api(`/safety-reports/${id}`), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  // ✅ FIX: serverAppFetch
+  const reportRes = await serverAppFetch(
+    `/safety-reports/${encodeURIComponent(id)}`,
+    token
+  );
 
   if (reportRes.status === 401) redirect("/login");
   if (!reportRes.ok) redirect("/dashboard/safety-reports");
 
-  const reportJson = (await reportRes.json()) as unknown;
+  const reportJson = await reportRes.json();
   if (!isSafetyReport(reportJson)) {
     redirect("/dashboard/safety-reports");
   }
 
   const report = reportJson;
 
-  const sitesRes = await fetch(api("/sites-projects"), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  // ✅ FIX: serverAppFetch
+  const sitesRes = await serverAppFetch("/sites-projects", token);
 
   if (sitesRes.status === 401) redirect("/login");
 
-  const sitesJson = sitesRes.ok ? ((await sitesRes.json()) as unknown) : [];
+  const sitesJson = sitesRes.ok ? await sitesRes.json() : [];
   const siteProjects = Array.isArray(sitesJson)
     ? sitesJson.filter(isSiteProject)
     : [];
@@ -115,15 +105,18 @@ export default async function EditSafetyReportPage({
     if (status) payload.status = status;
     payload.siteProjectId = siteProjectId || null;
 
-    const res = await fetch(api(`/safety-reports/${id}`), {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${tokenInner}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    // ✅ FIX: serverAppFetch
+    const res = await serverAppFetch(
+      `/safety-reports/${encodeURIComponent(id)}`,
+      tokenInner,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (res.status === 401) redirect("/login");
 
@@ -151,7 +144,7 @@ export default async function EditSafetyReportPage({
         Edit Safety Report
       </h1>
 
-      {error ? (
+      {error && (
         <div
           style={{
             marginBottom: 16,
@@ -160,43 +153,28 @@ export default async function EditSafetyReportPage({
             background: "#fef2f2",
             color: "#991b1b",
             border: "1px solid #fecaca",
-            whiteSpace: "pre-wrap",
           }}
         >
           {error}
         </div>
-      ) : null}
+      )}
 
       <form action={updateSafetyReport}>
         <input
           name="title"
           defaultValue={report.title ?? ""}
-          placeholder="Title"
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
+          style={{ width: "100%", padding: 16, marginBottom: 12 }}
         />
 
         <select
           name="siteProjectId"
           defaultValue={report.siteProjectId ?? ""}
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "#fff",
-          }}
+          style={{ width: "100%", padding: 16, marginBottom: 12 }}
         >
           <option value="">No Site / Project</option>
-          {siteProjects.map((site) => (
-            <option key={site.id} value={site.id}>
-              {formatSiteProjectLabel(site)}
+          {siteProjects.map((s) => (
+            <option key={s.id} value={s.id}>
+              {formatSiteProjectLabel(s)}
             </option>
           ))}
         </select>
@@ -205,64 +183,20 @@ export default async function EditSafetyReportPage({
           name="description"
           defaultValue={report.description ?? ""}
           rows={8}
-          placeholder="Description"
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            resize: "vertical",
-          }}
+          style={{ width: "100%", padding: 16, marginBottom: 12 }}
         />
 
         <select
           name="status"
           defaultValue={report.status ?? "OPEN"}
-          style={{
-            width: "100%",
-            padding: 16,
-            marginBottom: 16,
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "#fff",
-          }}
+          style={{ width: "100%", padding: 16, marginBottom: 16 }}
         >
           <option value="OPEN">OPEN</option>
           <option value="IN_PROGRESS">IN_PROGRESS</option>
           <option value="CLOSED">CLOSED</option>
         </select>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "16px 20px",
-              borderRadius: 10,
-              border: "none",
-              background: "#111",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Update Safety Report
-          </button>
-
-          <Link
-            href={`/dashboard/safety-reports/${report.id}`}
-            style={{
-              display: "inline-block",
-              padding: "16px 20px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              textDecoration: "none",
-              color: "#111",
-            }}
-          >
-            Cancel
-          </Link>
-        </div>
+        <button type="submit">Update</button>
       </form>
     </div>
   );
