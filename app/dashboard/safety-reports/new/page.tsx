@@ -3,7 +3,6 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 
-export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };

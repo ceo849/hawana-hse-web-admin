@@ -1,6 +1,5 @@
 // app/dashboard/companies/page.tsx
 
-export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { cookies } from "next/headers";

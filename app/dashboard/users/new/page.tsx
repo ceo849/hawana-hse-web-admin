@@ -1,6 +1,5 @@
 // app/dashboard/users/new/page.tsx
 
-export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";

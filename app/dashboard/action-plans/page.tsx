@@ -1,8 +1,6 @@
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
@@ -74,6 +72,17 @@ function getStatusStyle(status: string) {
     };
   }
 
+  if (s === "IN_PROGRESS") {
+    return {
+      background: "#dbeafe",
+      color: "#1d4ed8",
+      border: "1px solid #93c5fd",
+      padding: "4px 8px",
+      borderRadius: 8,
+      fontSize: 12,
+    };
+  }
+
   return {
     background: "#f3f4f6",
     color: "#111827",
@@ -85,10 +94,8 @@ function getStatusStyle(status: string) {
 }
 
 export default async function ActionPlansPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) redirect("/login");
+  // ✅ FIX: بدل cookies()
+  const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
@@ -98,7 +105,8 @@ export default async function ActionPlansPage() {
 
   const res = await serverAppFetch(
     "/action-plans?page=1&limit=20",
-    token
+    token,
+    { cache: "no-store" } // تثبيت إضافي
   );
 
   if (res.status === 401) redirect("/login");
@@ -117,7 +125,7 @@ export default async function ActionPlansPage() {
         subtitle="Track execution and workflow"
         action={
           canManage ? (
-            <Link href="/dashboard/action-plans/new">
+            <Link href="/dashboard/action-plans/new" prefetch={false}>
               + New Action Plan
             </Link>
           ) : undefined
@@ -151,7 +159,10 @@ export default async function ActionPlansPage() {
                 <td style={td}>{i.description ?? "-"}</td>
 
                 <td style={td}>
-                  <Link href={`/dashboard/action-plans/${i.id}`}>
+                  <Link
+                    href={`/dashboard/action-plans/${i.id}`}
+                    prefetch={false}
+                  >
                     Open
                   </Link>
                 </td>

@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
-import { decodeJwtPayload } from "@/src/auth/jwt";
 
-type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
 type AssignedUserLite = {
@@ -24,8 +22,6 @@ type ActionPlan = {
   assignedToUserId?: string | null;
   assignedTo?: AssignedUserLite | null;
   createdAt?: string | null;
-  updatedAt?: string | null;
-  deletedAt?: string | null;
 };
 
 type PageProps = {
@@ -37,16 +33,8 @@ function normalizeId(raw: unknown): string {
   return String(raw ?? "").trim();
 }
 
-function actionPlanPath(id: string) {
-  return `/dashboard/action-plans/${encodeURIComponent(id)}`;
-}
-
 function actionPlanEditPath(id: string) {
   return `/dashboard/action-plans/${encodeURIComponent(id)}/edit`;
-}
-
-function safetyReportPath(id: string) {
-  return `/dashboard/safety-reports/${encodeURIComponent(id)}`;
 }
 
 function allowedNextStatuses(current: ActionPlanStatus): ActionPlanStatus[] {
@@ -60,13 +48,6 @@ function allowedNextStatuses(current: ActionPlanStatus): ActionPlanStatus[] {
     default:
       return [];
   }
-}
-
-function toDateInputValue(iso?: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
 }
 
 function formatDateDisplay(iso?: string | null): string {
@@ -99,14 +80,7 @@ function formatAssignedUser(
 
 function metricCard(label: string, value: string | number) {
   return (
-    <div
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 14,
-        background: "#fff",
-        padding: 16,
-      }}
-    >
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 16 }}>
       <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
     </div>
@@ -124,129 +98,60 @@ export default async function ActionPlanPage({
   if (!id) redirect("/dashboard/action-plans");
 
   const token = await requireAccessToken();
-  const payload = decodeJwtPayload(token);
-  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canOperateWorkflow =
-    currentRole !== "VIEWER" && currentRole !== "UNKNOWN";
-
-  const res = await fetch(api(`/action-plans/${id}`), {
-    headers: { Authorization: `Bearer ${token}` },
+  // ✅ FIX: تأمين fetch + no-store واضح
+  const res = await serverAppFetch(`/action-plans/${id}`, token, {
     cache: "no-store",
   });
 
+  if (res.status === 401) redirect("/login");
   if (!res.ok) redirect("/dashboard/action-plans");
 
   const ap = (await res.json()) as ActionPlan;
+
   const nextStatuses = allowedNextStatuses(ap.status);
   const err = normalizeId(resolvedSearchParams?.err);
   const statusStyle = getStatusStyle(ap.status);
 
   return (
-    <div
-      style={{
-        padding: 16,
-        maxWidth: 720,
-        margin: "0 auto",
-        fontFamily: "system-ui",
-      }}
-    >
-      <PageHeader
-        title="Action Plan Overview"
-        subtitle="Plan insight and control"
-      />
+    <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+      <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
 
       {err && (
         <div
           style={{
             marginBottom: 16,
             padding: 12,
-            borderRadius: 10,
             border: "1px solid #fecaca",
             background: "#fef2f2",
-            color: "#991b1b",
-            fontSize: 13,
           }}
         >
           {err}
         </div>
       )}
 
-      {/* Status */}
       <div style={{ marginBottom: 16 }}>
-        <span
-          style={{
-            padding: "6px 10px",
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 700,
-            ...statusStyle,
-          }}
-        >
+        <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
           {ap.status}
         </span>
       </div>
 
-      {/* Info */}
-      <div
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: 14,
-          padding: 16,
-          background: "#fff",
-          marginBottom: 16,
-        }}
-      >
+      <div style={{ border: "1px solid #e5e7eb", padding: 16, marginBottom: 16 }}>
         <div><b>ID:</b> {ap.id}</div>
         <div><b>Title:</b> {ap.title}</div>
         <div><b>Assigned:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}</div>
         <div><b>Due:</b> {formatDateDisplay(ap.dueDate)}</div>
       </div>
 
-      {/* Metrics */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 12,
-          marginBottom: 24,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
         {metricCard("Status", ap.status)}
         {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
         {metricCard("Next Steps", nextStatuses.length)}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 10 }}>
-        <Link
-          href={actionPlanEditPath(ap.id)}
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
-          Edit
-        </Link>
-
-        <Link
-          href="/dashboard/action-plans"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "#fff",
-            color: "#111",
-            textDecoration: "none",
-            fontWeight: 500,
-          }}
-        >
-          Back
-        </Link>
+      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+        <Link href={actionPlanEditPath(ap.id)}>Edit</Link>
+        <Link href="/dashboard/action-plans">Back</Link>
       </div>
     </div>
   );
