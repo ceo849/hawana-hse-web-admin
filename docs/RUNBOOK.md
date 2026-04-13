@@ -1,4 +1,3 @@
-
 # Hawana HSE — Operations Runbook
 
 Project: Hawana HSE Platform
@@ -42,7 +41,8 @@ docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse
 docker stop hawana-web
 docker rm hawana-web
 docker run -d \
---name haestart always \
+--name hawana-web \
+--restart always \
 -p 3000:3000 \
 -e NEXT_PUBLIC_API_BASE_URL=https://hawanaglobal.com \
 -e NEXT_PUBLIC_API_PREFIX=/api/v1 \
@@ -231,12 +231,22 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 Routing rule:
 
-/api/v1/ → Core API
-/api/ → Web Admin routes
-/ → Web Admin pages
+/api/v1/ → Core API  
+/api/ → Web Admin routes  
+/ → Web Admin pages  
 
 --------------------------------------------------
 
 ## 11. Rule
 
 Do not modify Nginx routing or production environment structure unless a verified issue requires change.
+
+--------------------------------------------------
+
+## 12. Architecture Reference
+
+Web Admin architecture follows:
+
+docs/WEB_ADMIN_ARCHITECTURE.md
+
+Do not introduce proxy-based server calls inside SSR.

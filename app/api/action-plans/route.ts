@@ -1,8 +1,11 @@
+// app/api/action-plans/route.ts
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+// ✅ توحيد الاتصال مع Core (لوكل + سيرفر)
 const CORE_API =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://hawana-core:3001").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
 async function getToken() {
   const cookieStore = await cookies();
@@ -20,7 +23,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ? url.search : "";
 
-    const r = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
+    const upstream = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -28,17 +31,23 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
 
-    const bodyText = await r.text();
+    const bodyText = await upstream.text();
 
     return new NextResponse(bodyText, {
-      status: r.status,
+      status: upstream.status,
       headers: {
         "content-type":
-          r.headers.get("content-type") ?? "application/json; charset=utf-8",
+          upstream.headers.get("content-type") ??
+          "application/json; charset=utf-8",
       },
     });
-  } catch {
-    return NextResponse.json({ message: "Proxy error" }, { status: 500 });
+  } catch (error) {
+    console.error("API PROXY ERROR (GET /action-plans):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 },
+    );
   }
 }
 
@@ -52,25 +61,32 @@ export async function POST(req: Request) {
 
     const body = await req.text();
 
-    const r = await fetch(`${CORE_API}/v1/action-plans`, {
+    const upstream = await fetch(`${CORE_API}/v1/action-plans`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
       body,
+      cache: "no-store",
     });
 
-    const bodyText = await r.text();
+    const bodyText = await upstream.text();
 
     return new NextResponse(bodyText, {
-      status: r.status,
+      status: upstream.status,
       headers: {
         "content-type":
-          r.headers.get("content-type") ?? "application/json; charset=utf-8",
+          upstream.headers.get("content-type") ??
+          "application/json; charset=utf-8",
       },
     });
-  } catch {
-    return NextResponse.json({ message: "Proxy error" }, { status: 500 });
+  } catch (error) {
+    console.error("API PROXY ERROR (POST /action-plans):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 },
+    );
   }
 }

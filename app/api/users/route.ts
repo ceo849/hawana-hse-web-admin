@@ -1,6 +1,11 @@
+// app/api/users/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { api } from "@/lib/core-api";
+
+// ✅ Core API direct (بدل api())
+const CORE_API =
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
@@ -10,13 +15,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const url = new URL(req.url);
-  const qs = url.search ? url.search : "";
+  const urlObj = new URL(req.url);
+  const qs = urlObj.search ? urlObj.search : "";
 
   try {
     console.log("API PROXY → GET /users", { qs });
 
-    const upstream = await fetch(`${api("/users")}${qs}`, {
+    // ✅ التصحيح هنا
+    const upstream = await fetch(`${CORE_API}/v1/users${qs}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -57,7 +63,8 @@ export async function POST(req: NextRequest) {
   try {
     console.log("API PROXY → POST /users");
 
-    const upstream = await fetch(api("/users"), {
+    // ✅ التصحيح هنا
+    const upstream = await fetch(`${CORE_API}/v1/users`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

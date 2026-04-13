@@ -1,11 +1,18 @@
+// app/dashboard/sites-projects/page.tsx
+
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { api } from "@/lib/core-api";
 
-type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+type Role =
+  | "OWNER"
+  | "ADMIN"
+  | "MANAGER"
+  | "WORKER"
+  | "VIEWER"
+  | "UNKNOWN";
 
 type SiteProject = {
   id: string;
@@ -19,29 +26,27 @@ type SiteProject = {
 function isSiteProject(value: unknown): value is SiteProject {
   if (typeof value !== "object" || value === null) return false;
 
-  const candidate = value as Record<string, unknown>;
+  const c = value as Record<string, unknown>;
 
   return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.location === "string" || candidate.location === null) &&
-    typeof candidate.status === "string" &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string"
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    (typeof c.location === "string" || c.location === null) &&
+    typeof c.status === "string" &&
+    typeof c.createdAt === "string" &&
+    typeof c.updatedAt === "string"
   );
 }
 
 function parseSiteProjects(value: unknown): SiteProject[] {
-  if (Array.isArray(value)) {
-    return value.filter(isSiteProject);
-  }
+  if (Array.isArray(value)) return value.filter(isSiteProject);
 
   if (
     typeof value === "object" &&
     value !== null &&
-    Array.isArray((value as { data?: unknown }).data)
+    Array.isArray((value as any).data)
   ) {
-    return ((value as { data: unknown[] }).data).filter(isSiteProject);
+    return (value as any).data.filter(isSiteProject);
   }
 
   return [];
@@ -61,21 +66,13 @@ function formatDate(value: string): string {
 }
 
 function getStatusStyle(status: string) {
-  const normalized = String(status).toUpperCase();
+  const s = status.toUpperCase();
 
-  if (normalized === "ACTIVE") {
+  if (s === "ACTIVE") {
     return {
       background: "#dcfce7",
       color: "#166534",
       border: "1px solid #86efac",
-    };
-  }
-
-  if (normalized === "INACTIVE") {
-    return {
-      background: "#f3f4f6",
-      color: "#111827",
-      border: "1px solid #d1d5db",
     };
   }
 
@@ -93,321 +90,85 @@ export default async function SitesProjectsPage() {
   if (!token) redirect("/login");
 
   const payload = decodeJwtPayload(token);
-  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const canManageSites =
-    currentRole === "OWNER" ||
-    currentRole === "ADMIN" ||
-    currentRole === "MANAGER";
+  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const r = await fetch(api("/sites-projects"), {
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const canManage =
+    role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  if (r.status === 401) redirect("/login");
+  let items: SiteProject[] = [];
 
-  if (!r.ok) {
-    const text = await r.text().catch(() => "");
+  try {
+    // ✅ FIX النهائي: direct Core call
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/sites-projects`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      }
+    );
 
+    if (res.status === 401) redirect("/login");
+
+    const json = await res.json();
+    items = parseSiteProjects(json);
+  } catch {
     return (
-      <div style={{ fontFamily: "system-ui", padding: 24 }}>
-        <PageHeader
-          title="Sites / Projects Administration"
-          subtitle="Control actions for operational site and project records"
-        />
-
-        <pre
-          style={{
-            marginTop: 16,
-            padding: 12,
-            background: "#f7f7f7",
-            borderRadius: 12,
-            overflowX: "auto",
-            whiteSpace: "pre-wrap",
-          }}
-        >{`Failed to load sites / projects (${r.status})
-${text}`}</pre>
+      <div style={{ padding: 24 }}>
+        <PageHeader title="Sites / Projects" subtitle="Error" />
+        Failed to load
       </div>
     );
   }
 
-  const json = (await r.json()) as unknown;
-  const items = parseSiteProjects(json);
-
   return (
-    <div style={{ fontFamily: "system-ui", padding: 24 }}>
+    <div style={{ padding: 24, fontFamily: "system-ui" }}>
       <PageHeader
         title="Sites / Projects Administration"
-        subtitle="Control actions for operational site and project records. Detail insight remains inside each site / project overview."
+        subtitle="Operational sites management"
         action={
-          canManageSites ? (
-            <Link
-              href="/dashboard/sites-projects/new"
-              style={{
-                display: "inline-block",
-                padding: "10px 16px",
-                background: "#111",
-                color: "#fff",
-                borderRadius: 10,
-                textDecoration: "none",
-                fontWeight: 800,
-              }}
-            >
+          canManage ? (
+            <Link href="/dashboard/sites-projects/new">
               + New Site / Project
             </Link>
           ) : undefined
         }
       />
 
-      <div
-        style={{
-          marginBottom: 12,
-          padding: "12px 14px",
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fafafa",
-          fontSize: 14,
-          color: "#444",
-        }}
-      >
-        Total sites / projects: <strong>{items.length}</strong>
-      </div>
+      <div>Total: {items.length}</div>
 
-      <div
-        style={{
-          marginBottom: 16,
-          padding: 14,
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          background: "#fff",
-          fontSize: 13,
-          color: "#444",
-        }}
-      >
-        <div style={{ fontWeight: 700, color: "#111", marginBottom: 6 }}>
-          Scope of this page
-        </div>
-        <div>
-          This page is for site and project administration actions. Operational
-          insight remains inside the individual site / project detail page.
-        </div>
-      </div>
+      <table>
+        <tbody>
+          {items.map((i) => {
+            const style = getStatusStyle(i.status);
 
-      <div
-        style={{
-          border: "1px solid #eee",
-          borderRadius: 12,
-          overflowX: "auto",
-          background: "#fff",
-        }}
-      >
-        <table
-          style={{
-            width: "100%",
-            minWidth: 1100,
-            borderCollapse: "collapse",
-          }}
-        >
-          <thead>
-            <tr style={{ background: "#fafafa" }}>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Site / Project
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Status
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Site / Project ID
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Created At
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                }}
-              >
-                Updated At
-              </th>
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: 14,
-                  borderBottom: "1px solid #eee",
-                  fontSize: 13,
-                  width: 150,
-                }}
-              >
-                Actions
-              </th>
-            </tr>
-          </thead>
+            return (
+              <tr key={i.id}>
+                <td>
+                  <Link href={`/dashboard/sites-projects/${i.id}`}>
+                    {i.name}
+                  </Link>
+                </td>
 
-          <tbody>
-            {items.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  style={{
-                    padding: 24,
-                    color: "#555",
-                  }}
-                >
-                  No sites / projects found.
+                <td>
+                  <span style={style}>{i.status}</span>
+                </td>
+
+                <td>{i.id}</td>
+                <td>{formatDate(i.createdAt)}</td>
+                <td>{formatDate(i.updatedAt)}</td>
+
+                <td>
+                  <Link href={`/dashboard/sites-projects/${i.id}`}>
+                    Open
+                  </Link>
                 </td>
               </tr>
-            ) : (
-              items.map((item) => {
-                const statusStyle = getStatusStyle(item.status);
-
-                return (
-                  <tr key={item.id}>
-                    <td
-                      style={{
-                        padding: 14,
-                        borderBottom: "1px solid #eee",
-                        verticalAlign: "top",
-                      }}
-                    >
-                      <Link
-                        href={`/dashboard/sites-projects/${item.id}`}
-                        style={{
-                          color: "#111",
-                          fontWeight: 800,
-                          textDecoration: "none",
-                        }}
-                      >
-                        {item.name}
-                      </Link>
-
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 13,
-                          color: "#666",
-                        }}
-                      >
-                        {item.location ?? "-"}
-                      </div>
-                    </td>
-
-                    <td
-                      style={{
-                        padding: 14,
-                        borderBottom: "1px solid #eee",
-                        verticalAlign: "top",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          fontSize: 12,
-                          fontWeight: 800,
-                          ...statusStyle,
-                        }}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-
-                    <td
-                      style={{
-                        padding: 14,
-                        borderBottom: "1px solid #eee",
-                        verticalAlign: "top",
-                        fontFamily: "monospace",
-                        fontSize: 12,
-                        color: "#444",
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      {item.id}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: 14,
-                        borderBottom: "1px solid #eee",
-                        verticalAlign: "top",
-                        fontSize: 13,
-                        color: "#444",
-                      }}
-                    >
-                      {formatDate(item.createdAt)}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: 14,
-                        borderBottom: "1px solid #eee",
-                        verticalAlign: "top",
-                        fontSize: 13,
-                        color: "#444",
-                      }}
-                    >
-                      {formatDate(item.updatedAt)}
-                    </td>
-
-                    <td
-                      style={{
-                        padding: 14,
-                        borderBottom: "1px solid #eee",
-                        verticalAlign: "top",
-                      }}
-                    >
-                      <Link
-                        href={`/dashboard/sites-projects/${item.id}`}
-                        style={{
-                          textDecoration: "underline",
-                          color: "#111",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Open detail
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

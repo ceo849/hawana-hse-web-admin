@@ -1,44 +1,34 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
-async function getBaseUrl() {
-  const h = await headers();
+const BASE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const protocol = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("host");
-
-  if (!host) {
-    throw new Error("Missing host header");
-  }
-
-  return `${protocol}://${host}`;
-}
-
-export async function serverAppFetch(path: string, init?: RequestInit) {
+export async function serverAppFetch(
+  path: string,
+  init?: RequestInit,
+) {
   const cookieStore = await cookies();
-  const baseUrl = await getBaseUrl();
 
-  const requestHeaders = new Headers(init?.headers);
-
-  const cookieHeader = cookieStore.toString();
-
-  if (cookieHeader) {
-    requestHeaders.set("cookie", cookieHeader);
-  }
-
-  // ✅ إضافة Authorization header
   const token = cookieStore.get("access_token")?.value;
 
-  if (token) {
-    requestHeaders.set("Authorization", `Bearer ${token}`);
+  if (!token) {
+    throw new Error("401 Unauthorized");
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-  const res = await fetch(`${baseUrl}${normalizedPath}`, {
+  const res = await fetch(`${BASE_URL}${normalizedPath}`, {
     ...init,
-    headers: requestHeaders,
+    headers: {
+      ...init?.headers,
+      Authorization: `Bearer ${token}`, // ✅ هنا الحل
+    },
     cache: "no-store",
   });
+
+  if (res.status === 401) {
+    throw new Error("401 Unauthorized");
+  }
 
   if (!res.ok) {
     const text = await res.text();

@@ -1,66 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { api } from "@/lib/core-api";
+
+const CORE_API =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001";
+
+function getAuthHeader(req: NextRequest) {
+  const auth = req.headers.get("authorization");
+  return auth ?? null;
+}
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
+  const auth = getAuthHeader(req);
 
-  if (!token) {
+  if (!auth) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const url = new URL(req.url);
-  const qs = url.search ? url.search : "";
+  try {
+    const url = new URL(`${CORE_API}/v1/companies`);
+    url.search = req.nextUrl.search;
 
-  const upstream = await fetch(`${api("/companies")}${qs}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+    const upstream = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: auth,
+      },
+      cache: "no-store",
+    });
 
-  const bodyText = await upstream.text();
+    const text = await upstream.text();
 
-  return new NextResponse(bodyText, {
-    status: upstream.status,
-    headers: {
-      "content-type":
-        upstream.headers.get("content-type") ??
-        "application/json; charset=utf-8",
-    },
-  });
+    return new NextResponse(text, {
+      status: upstream.status,
+      headers: {
+        "content-type":
+          upstream.headers.get("content-type") ??
+          "application/json; charset=utf-8",
+      },
+    });
+  } catch (error) {
+    console.error("[COMPANIES_PROXY_ERROR]", error);
+
+    return NextResponse.json(
+      { message: "Proxy error" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
+  const auth = getAuthHeader(req);
 
-  if (!token) {
+  if (!auth) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const rawBody = await req.text();
+  try {
+    const body = await req.text();
 
-  const upstream = await fetch(api("/companies"), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: rawBody,
-    cache: "no-store",
-  });
+    const upstream = await fetch(`${CORE_API}/v1/companies`, {
+      method: "POST",
+      headers: {
+        Authorization: auth,
+        "Content-Type": "application/json",
+      },
+      body,
+    });
 
-  const bodyText = await upstream.text();
+    const text = await upstream.text();
 
-  return new NextResponse(bodyText, {
-    status: upstream.status,
-    headers: {
-      "content-type":
-        upstream.headers.get("content-type") ??
-        "application/json; charset=utf-8",
-    },
-  });
+    return new NextResponse(text, {
+      status: upstream.status,
+      headers: {
+        "content-type":
+          upstream.headers.get("content-type") ??
+          "application/json; charset=utf-8",
+      },
+    });
+  } catch (error) {
+    console.error("[COMPANIES_PROXY_ERROR]", error);
+
+    return NextResponse.json(
+      { message: "Proxy error" },
+      { status: 500 },
+    );
+  }
 }
