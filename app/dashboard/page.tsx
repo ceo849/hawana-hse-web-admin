@@ -25,35 +25,35 @@ export default async function DashboardPage() {
   let plansCount = 0;
 
   try {
-    // USERS
-    const usersRes = await serverAppFetch("/users?page=1&limit=100", token);
-    if (usersRes.status === 401) redirect("/login");
+    // ✅ Parallel Fetch
+    const [usersRes, reportsRes, plansRes] = await Promise.all([
+      serverAppFetch("/users?page=1&limit=100", token),
+      serverAppFetch("/safety-reports?page=1&limit=100", token),
+      serverAppFetch("/action-plans?page=1&limit=100", token),
+    ]);
 
+    if (
+      usersRes.status === 401 ||
+      reportsRes.status === 401 ||
+      plansRes.status === 401
+    ) {
+      redirect("/login");
+    }
+
+    // USERS
     const usersJson = await usersRes.json();
     usersCount = Array.isArray(usersJson?.data)
       ? usersJson.data.length
       : 0;
 
     // REPORTS
-    const reportsRes = await serverAppFetch(
-      "/safety-reports?page=1&limit=100",
-      token
-    );
-    if (reportsRes.status === 401) redirect("/login");
-
     const reportsJson = await reportsRes.json();
     reports = Array.isArray(reportsJson?.data)
       ? reportsJson.data
       : [];
     reportsCount = reports.length;
 
-    // ACTION PLANS
-    const plansRes = await serverAppFetch(
-      "/action-plans?page=1&limit=100",
-      token
-    );
-    if (plansRes.status === 401) redirect("/login");
-
+    // PLANS
     const plansJson = await plansRes.json();
     plansCount = Array.isArray(plansJson?.data)
       ? plansJson.data.length
