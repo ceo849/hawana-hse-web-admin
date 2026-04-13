@@ -5,6 +5,15 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
+
+type Role =
+  | "OWNER"
+  | "ADMIN"
+  | "MANAGER"
+  | "WORKER"
+  | "VIEWER"
+  | "UNKNOWN";
 
 type UserDto = {
   id: string;
@@ -14,21 +23,30 @@ type UserDto = {
   createdAt: string;
 };
 
-function getCoreUrl() {
-  const url = process.env.CORE_API_BASE_URL;
-  if (!url) throw new Error("CORE_API_BASE_URL missing");
-  return url;
+function isUser(v: unknown): v is UserDto {
+  if (typeof v !== "object" || v === null) return false;
+
+  const c = v as Record<string, unknown>;
+
+  return (
+    typeof c.id === "string" &&
+    typeof c.email === "string" &&
+    typeof c.fullName === "string" &&
+    typeof c.role === "string" &&
+    typeof c.createdAt === "string"
+  );
 }
 
-function normalizeUsers(value: any): UserDto[] {
-  // الحالة 1: { data: [...] }
-  if (Array.isArray(value?.data)) return value.data;
+function parse(value: unknown): UserDto[] {
+  if (Array.isArray(value)) return value.filter(isUser);
 
-  // الحالة 2: array مباشر
-  if (Array.isArray(value)) return value;
-
-  // الحالة 3: object واحد (سبب المشكلة)
-  if (value && typeof value === "object") return [value];
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as any).data)
+  ) {
+    return (value as any).data.filter(isUser);
+  }
 
   return [];
 }
@@ -40,38 +58,37 @@ export default async function UsersPage() {
   if (!token) redirect("/login");
 
   const payload = decodeJwtPayload(token);
-  const role = payload?.role;
+  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canManageUsers = role === "OWNER" || role === "ADMIN";
+  const canManageUsers =
+    role === "OWNER" || role === "ADMIN";
 
   let users: UserDto[] = [];
 
-  try {
-    const res = await fetch(`${getCoreUrl()}/users?page=1&limit=20`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    });
+  const res = await serverAppFetch(
+    "/users?page=1&limit=20",
+    token
+  );
 
-    if (res.status === 401) redirect("/login");
+  if (res.status === 401) redirect("/login");
 
-    const json = await res.json();
-
-    // ✅ FIX الحقيقي
-    users = normalizeUsers(json);
-  } catch {
+  if (!res.ok) {
     return <div style={{ padding: 24 }}>Failed to load</div>;
   }
 
+  const json = await res.json();
+  users = parse(json);
+
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 24, fontFamily: "system-ui" }}>
       <PageHeader
         title="Users"
         subtitle="Users Management"
         action={
           canManageUsers ? (
-            <Link href="/dashboard/users/new">+ New User</Link>
+            <Link href="/dashboard/users/new">
+              + New User
+            </Link>
           ) : undefined
         }
       />
