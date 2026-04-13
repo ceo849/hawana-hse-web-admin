@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx
-
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
@@ -8,6 +6,7 @@ import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -20,67 +19,56 @@ export default async function DashboardPage() {
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  // =========================
-  // USERS
-  // =========================
   let usersCount = 0;
-
-  try {
-    const res = await fetch(`/api/users`, {
-      cache: "no-store",
-      headers: {
-        Cookie: `access_token=${token}`,
-      },
-    });
-
-    const data = await res.json();
-    usersCount = Array.isArray(data?.data) ? data.data.length : 0;
-  } catch {}
-
-  // =========================
-  // REPORTS
-  // =========================
   let reports: any[] = [];
   let reportsCount = 0;
-
-  try {
-    const res = await fetch(`/api/safety-reports`, {
-      cache: "no-store",
-      headers: {
-        Cookie: `access_token=${token}`,
-      },
-    });
-
-    const data = await res.json();
-    reports = Array.isArray(data?.data) ? data.data : [];
-    reportsCount = reports.length;
-  } catch {}
-
-  // =========================
-  // ACTION PLANS
-  // =========================
   let plansCount = 0;
 
   try {
-    const res = await fetch(`/api/action-plans`, {
-      cache: "no-store",
-      headers: {
-        Cookie: `access_token=${token}`,
-      },
-    });
+    // USERS
+    const usersRes = await serverAppFetch("/users?page=1&limit=100", token);
+    if (usersRes.status === 401) redirect("/login");
 
-    const data = await res.json();
-    plansCount = Array.isArray(data?.data) ? data.data.length : 0;
-  } catch {}
+    const usersJson = await usersRes.json();
+    usersCount = Array.isArray(usersJson?.data)
+      ? usersJson.data.length
+      : 0;
 
-  // =========================
-  // HSE STATUS
-  // =========================
+    // REPORTS
+    const reportsRes = await serverAppFetch(
+      "/safety-reports?page=1&limit=100",
+      token
+    );
+    if (reportsRes.status === 401) redirect("/login");
+
+    const reportsJson = await reportsRes.json();
+    reports = Array.isArray(reportsJson?.data)
+      ? reportsJson.data
+      : [];
+    reportsCount = reports.length;
+
+    // ACTION PLANS
+    const plansRes = await serverAppFetch(
+      "/action-plans?page=1&limit=100",
+      token
+    );
+    if (plansRes.status === 401) redirect("/login");
+
+    const plansJson = await plansRes.json();
+    plansCount = Array.isArray(plansJson?.data)
+      ? plansJson.data.length
+      : 0;
+  } catch (err) {
+    console.error("Dashboard Error:", err);
+  }
+
   const openCount = reports.filter((r) => r.status === "OPEN").length;
   const inProgressCount = reports.filter(
     (r) => r.status === "IN_PROGRESS"
   ).length;
-  const closedCount = reports.filter((r) => r.status === "CLOSED").length;
+  const closedCount = reports.filter(
+    (r) => r.status === "CLOSED"
+  ).length;
 
   return (
     <div
