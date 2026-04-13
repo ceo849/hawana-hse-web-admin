@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 
 type PageProps = {
@@ -71,16 +71,13 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
   let users: UserLite[] = [];
 
   try {
-    const r = await fetch(api("/users"), {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    // ✅ FIX
+    const r = await serverAppFetch("/users", token);
 
     if (r.status === 401) redirect("/login");
 
     if (r.ok) {
-      const data = (await r.json()) as unknown;
+      const data = await r.json();
       users = parseUsers(data);
     }
   } catch {
@@ -97,12 +94,12 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
     const srId = String(formData.get("safetyReportId") ?? "").trim();
     const dueDateRaw = String(formData.get("dueDate") ?? "").trim();
     const assignedToUserId = String(
-      formData.get("assignedToUserId") ?? "",
+      formData.get("assignedToUserId") ?? ""
     ).trim();
 
     const effectiveSafetyReportId = srId || safetyReportId;
     const base = `/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(
-      effectiveSafetyReportId,
+      effectiveSafetyReportId
     )}`;
 
     if (!title) {
@@ -111,7 +108,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
 
     if (!effectiveSafetyReportId) {
       redirect(
-        `${base}&err=${encodeURIComponent("Safety Report ID is required")}`,
+        `${base}&err=${encodeURIComponent("Safety Report ID is required")}`
       );
     }
 
@@ -129,14 +126,13 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       payload.assignedToUserId = assignedToUserId;
     }
 
-    const res = await fetch(api("/action-plans"), {
+    // ✅ FIX
+    const res = await serverAppFetch("/action-plans", tokenInner, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${tokenInner}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-      cache: "no-store",
     });
 
     if (res.status === 401) redirect("/login");
@@ -145,8 +141,8 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       const text = await res.text().catch(() => "");
       redirect(
         `${base}&err=${encodeURIComponent(
-          `Failed to create Action Plan (${res.status}) ${text}`,
-        )}`,
+          `Failed to create Action Plan (${res.status}) ${text}`
+        )}`
       );
     }
 
@@ -190,17 +186,14 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           }}
         >
           <div>
-            <label
-              htmlFor="title"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label htmlFor="title" style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
               Title
             </label>
             <input
               id="title"
               name="title"
-              placeholder="Enter action plan title"
               required
+              placeholder="Enter action plan title"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -211,36 +204,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <label
-              htmlFor="safetyReportIdDisplay"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Safety Report ID
-            </label>
-            <input
-              id="safetyReportIdDisplay"
-              value={safetyReportId}
-              placeholder="Safety Report ID"
-              readOnly
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                background: "#f7f7f7",
-              }}
-            />
-            <div style={{ marginTop: 6, fontSize: 12, color: "#666" }}>
-              Safety Report ID is passed automatically from the Safety Report
-              page.
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="assignedToUserId"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label htmlFor="assignedToUserId" style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
               Assigned To
             </label>
 
@@ -268,7 +232,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
               <input
                 id="assignedToUserId"
                 name="assignedToUserId"
-                placeholder="User ID responsible for this action"
+                placeholder="User ID responsible"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -280,38 +244,13 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <label
-              htmlFor="description"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label htmlFor="description" style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
               Description
             </label>
             <textarea
               id="description"
               name="description"
               rows={5}
-              placeholder="Enter action plan description"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                resize: "vertical",
-              }}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="dueDate"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Due Date
-            </label>
-            <input
-              id="dueDate"
-              type="date"
-              name="dueDate"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -322,38 +261,17 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #111",
-              background: "#111",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Create Action Plan
-          </button>
-
-          <Link
-            href="/dashboard/action-plans"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              background: "#fff",
-              textDecoration: "none",
-              color: "#111",
-              fontWeight: 600,
-            }}
-          >
-            Cancel
-          </Link>
-        </div>
+        <button
+          type="submit"
+          style={{
+            padding: "10px 16px",
+            borderRadius: 10,
+            background: "#111",
+            color: "#fff",
+          }}
+        >
+          Create Action Plan
+        </button>
       </form>
     </div>
   );
