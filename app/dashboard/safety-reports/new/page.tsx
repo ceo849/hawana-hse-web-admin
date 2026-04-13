@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { api } from "@/lib/core-api";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -17,27 +19,26 @@ type SiteProject = {
 function isSiteProject(value: unknown): value is SiteProject {
   if (typeof value !== "object" || value === null) return false;
 
-  const candidate = value as Record<string, unknown>;
+  const c = value as Record<string, unknown>;
 
   return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (typeof candidate.location === "string" || candidate.location === null) &&
-    typeof candidate.status === "string"
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    (typeof c.location === "string" || c.location === null) &&
+    typeof c.status === "string"
   );
 }
 
 function parseSiteProjects(value: unknown): SiteProject[] {
-  if (Array.isArray(value)) {
-    return value.filter(isSiteProject);
-  }
+  if (Array.isArray(value)) return value.filter(isSiteProject);
 
   if (
     typeof value === "object" &&
     value !== null &&
-    Array.isArray((value as { data?: unknown }).data)
+    "data" in value &&
+    Array.isArray((value as any).data)
   ) {
-    return ((value as { data: unknown[] }).data).filter(isSiteProject);
+    return (value as any).data.filter(isSiteProject);
   }
 
   return [];
@@ -59,17 +60,22 @@ export default async function NewSafetyReportPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const sitesRes = await fetch(api("/sites-projects"), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+  let siteProjects: SiteProject[] = [];
 
-  if (sitesRes.status === 401) redirect("/login");
+  try {
+    const res = await serverAppFetch("/sites-projects", token);
 
-  const sitesJson = sitesRes.ok ? ((await sitesRes.json()) as unknown) : [];
-  const siteProjects = parseSiteProjects(sitesJson);
+    if (res.status === 401) redirect("/login");
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
+    siteProjects = parseSiteProjects(json);
+  } catch (err) {
+    console.error("SitesProjects Error:", err);
+  }
 
   async function createSafetyReport(formData: FormData) {
     "use server";
@@ -90,22 +96,15 @@ export default async function NewSafetyReportPage({
 
     const payload: Record<string, string> = { title };
 
-    if (description) {
-      payload.description = description;
-    }
+    if (description) payload.description = description;
+    if (siteProjectId) payload.siteProjectId = siteProjectId;
 
-    if (siteProjectId) {
-      payload.siteProjectId = siteProjectId;
-    }
-
-    const res = await fetch(api("/safety-reports"), {
+    const res = await serverAppFetch("/safety-reports", tokenInner, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${tokenInner}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-      cache: "no-store",
     });
 
     if (res.status === 401) redirect("/login");
@@ -157,16 +156,11 @@ export default async function NewSafetyReportPage({
           }}
         >
           <div>
-            <label
-              htmlFor="title"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
               Title
             </label>
             <input
-              id="title"
               name="title"
-              placeholder="Enter safety report title"
               required
               style={{
                 width: "100%",
@@ -178,14 +172,10 @@ export default async function NewSafetyReportPage({
           </div>
 
           <div>
-            <label
-              htmlFor="siteProjectId"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
+            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
               Site / Project
             </label>
             <select
-              id="siteProjectId"
               name="siteProjectId"
               defaultValue=""
               style={{
@@ -193,10 +183,10 @@ export default async function NewSafetyReportPage({
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: "1px solid #ddd",
-                background: "#fff",
               }}
             >
               <option value="">No Site / Project</option>
+
               {siteProjects.map((site) => (
                 <option key={site.id} value={site.id}>
                   {formatSiteProjectLabel(site)}
@@ -205,61 +195,29 @@ export default async function NewSafetyReportPage({
             </select>
           </div>
 
-          <div>
-            <label
-              htmlFor="description"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={8}
-              placeholder="Enter report description"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                resize: "vertical",
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="submit"
+          <textarea
+            name="description"
+            rows={6}
+            placeholder="Description"
             style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #111",
-              background: "#111",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Create Safety Report
-          </button>
-
-          <a
-            href="/dashboard/safety-reports"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
+              padding: 10,
               borderRadius: 10,
               border: "1px solid #ddd",
-              background: "#fff",
-              textDecoration: "none",
-              color: "#111",
-              fontWeight: 600,
             }}
-          >
-            Cancel
-          </a>
+          />
         </div>
+
+        <button
+          type="submit"
+          style={{
+            padding: 12,
+            background: "#111",
+            color: "#fff",
+            borderRadius: 10,
+          }}
+        >
+          Create
+        </button>
       </form>
     </div>
   );
