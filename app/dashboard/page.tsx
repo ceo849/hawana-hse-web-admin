@@ -1,6 +1,7 @@
 // app/dashboard/page.tsx
 
-import Link from "next/link";
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
@@ -9,14 +10,6 @@ import ActionButton from "@/components/ui/action-button";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
-
-// ✅ حل مشكلة fetch داخل Server Component
-function getBaseUrl() {
-  if (process.env.NODE_ENV === "development") {
-    return "http://localhost:3000";
-  }
-  return "https://hawanaglobal.com";
-}
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -27,15 +20,13 @@ export default async function DashboardPage() {
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const BASE_URL = getBaseUrl();
-
   // =========================
   // USERS
   // =========================
   let usersCount = 0;
 
   try {
-    const res = await fetch(`${BASE_URL}/api/users`, {
+    const res = await fetch(`/api/users`, {
       cache: "no-store",
       headers: {
         Cookie: `access_token=${token}`,
@@ -53,7 +44,7 @@ export default async function DashboardPage() {
   let reportsCount = 0;
 
   try {
-    const res = await fetch(`${BASE_URL}/api/safety-reports`, {
+    const res = await fetch(`/api/safety-reports`, {
       cache: "no-store",
       headers: {
         Cookie: `access_token=${token}`,
@@ -71,7 +62,7 @@ export default async function DashboardPage() {
   let plansCount = 0;
 
   try {
-    const res = await fetch(`${BASE_URL}/api/action-plans`, {
+    const res = await fetch(`/api/action-plans`, {
       cache: "no-store",
       headers: {
         Cookie: `access_token=${token}`,
@@ -105,7 +96,6 @@ export default async function DashboardPage() {
         subtitle="Platform and HSE operational overview"
       />
 
-      {/* Quick Actions */}
       <div style={sectionTitle}>Quick Actions</div>
 
       <div style={gridStyle}>
@@ -123,7 +113,6 @@ export default async function DashboardPage() {
         </ActionButton>
       </div>
 
-      {/* Platform Metrics */}
       <div style={sectionTitle}>Platform Metrics</div>
 
       <div style={gridStyle}>
@@ -133,7 +122,6 @@ export default async function DashboardPage() {
         <StatsCard label="Action Plans" value={plansCount} />
       </div>
 
-      {/* HSE Operations */}
       <div style={sectionTitle}>HSE Operations</div>
 
       <div style={gridStyle}>
@@ -145,9 +133,6 @@ export default async function DashboardPage() {
   );
 }
 
-// =========================
-// STYLES
-// =========================
 const gridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",

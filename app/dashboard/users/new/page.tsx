@@ -1,7 +1,10 @@
+// app/dashboard/users/new/page.tsx
+
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -39,22 +42,33 @@ export default async function NewUserPage({ searchParams }: PageProps) {
     };
 
     try {
-      await serverAppFetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/users`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tokenInner}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (res.status === 401) {
+        redirect("/login");
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Create user failed");
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Create user failed";
 
-      if (message.includes("401")) {
-        redirect("/login");
-      }
-
-      redirect(`/dashboard/users/new?error=${encodeURIComponent(message)}`);
+      redirect(
+        `/dashboard/users/new?error=${encodeURIComponent(message)}`
+      );
     }
 
     redirect("/dashboard/users");
@@ -95,91 +109,23 @@ export default async function NewUserPage({ searchParams }: PageProps) {
           }}
         >
           <div>
-            <label
-              htmlFor="fullName"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Full Name
-            </label>
-            <input
-              id="fullName"
-              name="fullName"
-              type="text"
-              required
-              placeholder="Enter full name"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #ddd",
-                borderRadius: 10,
-              }}
-            />
+            <label htmlFor="fullName">Full Name</label>
+            <input id="fullName" name="fullName" required />
           </div>
 
           <div>
-            <label
-              htmlFor="email"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              placeholder="Enter email address"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #ddd",
-                borderRadius: 10,
-              }}
-            />
+            <label htmlFor="email">Email</label>
+            <input id="email" name="email" type="email" required />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              placeholder="Enter password"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #ddd",
-                borderRadius: 10,
-              }}
-            />
+            <label htmlFor="password">Password</label>
+            <input id="password" name="password" type="password" required />
           </div>
 
           <div>
-            <label
-              htmlFor="role"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Role
-            </label>
-            <select
-              id="role"
-              name="role"
-              required
-              defaultValue="VIEWER"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #ddd",
-                borderRadius: 10,
-                background: "#fff",
-              }}
-            >
+            <label htmlFor="role">Role</label>
+            <select id="role" name="role" defaultValue="VIEWER">
               <option value="OWNER">OWNER</option>
               <option value="ADMIN">ADMIN</option>
               <option value="MANAGER">MANAGER</option>
@@ -189,38 +135,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "10px 16px",
-              background: "#111",
-              color: "#fff",
-              border: "1px solid #111",
-              borderRadius: 10,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Create User
-          </button>
-
-          <a
-            href="/dashboard/users"
-            style={{
-              display: "inline-block",
-              padding: "10px 16px",
-              border: "1px solid #ddd",
-              borderRadius: 10,
-              textDecoration: "none",
-              color: "#111",
-              background: "#fff",
-              fontWeight: 600,
-            }}
-          >
-            Cancel
-          </a>
-        </div>
+        <button type="submit">Create User</button>
       </form>
     </div>
   );

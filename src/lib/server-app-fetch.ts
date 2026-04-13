@@ -1,39 +1,35 @@
-import { cookies } from "next/headers";
+export function getCoreUrl(): string {
+  const url = process.env.CORE_API_BASE_URL;
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  if (!url) {
+    throw new Error("CORE_API_BASE_URL is not defined");
+  }
+
+  // نضمن عدم وجود / في النهاية لتفادي // في URL
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+}
+
+export function normalizePath(path: string): string {
+  if (!path.startsWith("/")) return `/${path}`;
+  return path;
+}
 
 export async function serverAppFetch(
   path: string,
-  init?: RequestInit,
+  token?: string,
+  options?: RequestInit
 ) {
-  const cookieStore = await cookies();
-
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) {
-    throw new Error("401 Unauthorized");
-  }
-
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const BASE_URL = getCoreUrl();
+  const normalizedPath = normalizePath(path);
 
   const res = await fetch(`${BASE_URL}${normalizedPath}`, {
-    ...init,
+    ...options,
     headers: {
-      ...init?.headers,
-      Authorization: `Bearer ${token}`, // ✅ هنا الحل
+      ...(options?.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     cache: "no-store",
   });
 
-  if (res.status === 401) {
-    throw new Error("401 Unauthorized");
-  }
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Request failed: ${res.status} ${text}`);
-  }
-
-  return res.json();
+  return res;
 }

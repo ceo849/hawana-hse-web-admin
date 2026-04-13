@@ -1,10 +1,11 @@
-// app/dashboard/safety-reports/page.tsx
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -22,23 +23,6 @@ type SafetyReport = {
   createdAt: string | null;
 };
 
-type SafetyReportsMeta = {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-};
-
-type SafetyReportsResponse = {
-  data: SafetyReport[];
-  meta?: SafetyReportsMeta;
-};
-
-type SearchParams = {
-  page?: string;
-  limit?: string;
-};
-
 function isSafetyReport(value: unknown): value is SafetyReport {
   if (typeof value !== "object" || value === null) return false;
 
@@ -53,74 +37,21 @@ function isSafetyReport(value: unknown): value is SafetyReport {
   );
 }
 
-function parseResponse(
-  value: unknown,
-  page: number,
-  limit: number
-): SafetyReportsResponse {
-  if (Array.isArray(value)) {
-    const data = value.filter(isSafetyReport);
-    return {
-      data,
-      meta: {
-        total: data.length,
-        page,
-        limit,
-        totalPages: 1,
-      },
-    };
+function parse(value: unknown): SafetyReport[] {
+  if (Array.isArray(value)) return value.filter(isSafetyReport);
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as any).data)
+  ) {
+    return (value as any).data.filter(isSafetyReport);
   }
 
-  if (typeof value !== "object" || value === null) {
-    return {
-      data: [],
-      meta: {
-        total: 0,
-        page,
-        limit,
-        totalPages: 1,
-      },
-    };
-  }
-
-  const c = value as Record<string, unknown>;
-
-  const data = Array.isArray(c.data)
-    ? c.data.filter(isSafetyReport)
-    : [];
-
-  const metaRaw =
-    typeof c.meta === "object" && c.meta !== null
-      ? (c.meta as Record<string, unknown>)
-      : null;
-
-  return {
-    data,
-    meta: {
-      total:
-        typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
-      page:
-        typeof metaRaw?.page === "number" ? metaRaw.page : page,
-      limit:
-        typeof metaRaw?.limit === "number" ? metaRaw.limit : limit,
-      totalPages:
-        typeof metaRaw?.totalPages === "number"
-          ? metaRaw.totalPages
-          : 1,
-    },
-  };
+  return [];
 }
 
-function toInt(v: unknown, fallback: number) {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-}
-
-export default async function SafetyReportsPage({
-  searchParams,
-}: {
-  searchParams?: Promise<SearchParams> | SearchParams;
-}) {
+export default async function SafetyReportsPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
 
@@ -129,35 +60,24 @@ export default async function SafetyReportsPage({
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const sp = searchParams
-    ? await Promise.resolve(searchParams)
-    : {};
+  let items: SafetyReport[] = [];
 
-  const page = toInt(sp.page ?? "1", 1);
-  const limit = Math.min(Math.max(toInt(sp.limit ?? "20", 20), 1), 100);
+  const res = await serverAppFetch(
+    "/safety-reports?page=1&limit=20",
+    token
+  );
 
-  let parsed: SafetyReportsResponse;
+  // ✅ مهم: خارج أي try/catch
+  if (res.status === 401) {
+    redirect("/login");
+  }
 
-  try {
-    // ✅ FIX النهائي: direct call to Core (NO /api)
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/safety-reports?page=${page}&limit=${limit}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      }
-    );
-
-    if (res.status === 401) redirect("/login");
-
-    const json = await res.json();
-
-    parsed = parseResponse(json, page, limit);
-  } catch {
+  if (!res.ok) {
     return <div>Failed to load safety reports</div>;
   }
+
+  const json = await res.json();
+  items = parse(json);
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
@@ -167,12 +87,12 @@ export default async function SafetyReportsPage({
       />
 
       <div style={{ marginBottom: 12 }}>
-        Total: {parsed.meta?.total ?? 0}
+        Total: {items.length}
       </div>
 
       <table style={{ width: "100%" }}>
         <tbody>
-          {parsed.data.map((r) => (
+          {items.map((r) => (
             <tr key={r.id}>
               <td>{r.title ?? "-"}</td>
               <td>{r.status ?? "-"}</td>
@@ -181,16 +101,6 @@ export default async function SafetyReportsPage({
           ))}
         </tbody>
       </table>
-
-      <div style={{ marginTop: 16 }}>
-        <Link href={`/dashboard/safety-reports?page=${page - 1}`}>
-          Prev
-        </Link>{" "}
-        |{" "}
-        <Link href={`/dashboard/safety-reports?page=${page + 1}`}>
-          Next
-        </Link>
-      </div>
     </div>
   );
 }

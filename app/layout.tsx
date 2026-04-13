@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,23 +16,26 @@ export const metadata: Metadata = {
   title: "Hawana HSE",
   description: "HSE Management Platform",
 
-  // 🔥 PWA Setup
+  // PWA
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#111111",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <head>
-        {/* 🔥 iPhone PWA Support */}
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* ✅ FIX: updated meta */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Hawana HSE" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>

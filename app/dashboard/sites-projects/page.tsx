@@ -1,10 +1,11 @@
-// app/dashboard/sites-projects/page.tsx
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -98,22 +99,19 @@ export default async function SitesProjectsPage() {
   let items: SiteProject[] = [];
 
   try {
-    // ✅ FIX النهائي: direct Core call
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/sites-projects`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      }
-    );
+    const res = await serverAppFetch("/sites-projects", token);
 
     if (res.status === 401) redirect("/login");
 
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     const json = await res.json();
     items = parseSiteProjects(json);
-  } catch {
+  } catch (err) {
+    console.error("SitesProjects Error:", err);
+
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Sites / Projects" subtitle="Error" />

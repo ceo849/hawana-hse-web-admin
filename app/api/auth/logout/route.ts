@@ -1,23 +1,44 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
-  const res = NextResponse.json({ ok: true });
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
 
-  res.cookies.set('access_token', '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: false,
-    path: '/',
-    maxAge: 0,
-  });
+    const upstream = await fetch("http://localhost:3001/v1/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-  res.cookies.set('refresh_token', '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: false,
-    path: '/',
-    maxAge: 0,
-  });
+    const data = await upstream.json();
 
-  return res;
+    if (!upstream.ok) {
+      return NextResponse.json(data, { status: upstream.status });
+    }
+
+    const res = NextResponse.json({ ok: true });
+
+    res.cookies.set("access_token", data.access_token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: true,
+      path: "/",
+    });
+
+    res.cookies.set("refresh_token", data.refresh_token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: true,
+      path: "/",
+    });
+
+    return res;
+  } catch {
+    return NextResponse.json(
+      { message: "Login route error" },
+      { status: 500 }
+    );
+  }
 }

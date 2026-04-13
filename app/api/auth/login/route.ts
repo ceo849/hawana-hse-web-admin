@@ -29,16 +29,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Unified Core API base (Gateway Rule)
+    // ✅ FIXED: Docker-safe fallback (CRITICAL)
     const coreBase =
-      process.env.CORE_API_BASE_URL || "http://localhost:3001/v1";
+      process.env.CORE_API_BASE_URL ||
+      "http://host.docker.internal:3001/v1";
 
-    // ✅ Build final URL safely (no double /v1 bugs)
+    // ✅ Safe URL builder
     const loginUrl = coreBase.endsWith("/v1")
       ? `${coreBase}/auth/login`
       : `${coreBase}/v1/auth/login`;
 
-    // 🔍 Debug (important for Runbook)
     console.log("[LOGIN_PROXY] →", loginUrl);
 
     const upstream = await fetch(loginUrl, {
@@ -77,20 +77,23 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({ ok: true });
 
-    // ✅ Production-safe cookies
     const isProd = process.env.NODE_ENV === "production";
 
     const cookieOptions = {
       httpOnly: true,
       sameSite: "lax" as const,
-      secure: isProd, // ✔ Production HTTPS only
+      secure: isProd,
       path: "/",
     };
 
     res.cookies.set("access_token", accessToken, cookieOptions);
 
     if (refreshToken) {
-      res.cookies.set("refresh_token", String(refreshToken), cookieOptions);
+      res.cookies.set(
+        "refresh_token",
+        String(refreshToken),
+        cookieOptions
+      );
     }
 
     return res;

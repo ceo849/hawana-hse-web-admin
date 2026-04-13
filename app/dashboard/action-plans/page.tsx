@@ -1,10 +1,11 @@
-// app/dashboard/action-plans/page.tsx
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -62,25 +63,22 @@ export default async function ActionPlansPage() {
 
   let items: ActionPlan[] = [];
 
-  try {
-    // ✅ FIX: direct Core
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/action-plans`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      }
-    );
+  const res = await serverAppFetch(
+    "/action-plans?page=1&limit=20",
+    token
+  );
 
-    if (res.status === 401) redirect("/login");
+  // ✅ مهم جدًا
+  if (res.status === 401) {
+    redirect("/login");
+  }
 
-    const json = await res.json();
-    items = parse(json);
-  } catch {
+  if (!res.ok) {
     return <div>Failed to load action plans</div>;
   }
+
+  const json = await res.json();
+  items = parse(json);
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
@@ -105,7 +103,6 @@ export default async function ActionPlansPage() {
               <td>{i.title}</td>
               <td>{i.status}</td>
               <td>{i.description ?? "-"}</td>
-
               <td>
                 <Link href={`/dashboard/action-plans/${i.id}`}>
                   Open
