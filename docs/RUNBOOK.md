@@ -1,29 +1,129 @@
-# Hawana HSE — Operations Runbook
+# Hawana HSE — Production Operations Runbook
 
-Project: Hawana HSE Platform
-Phase: Phase 5 — Cloud Deployment
-Purpose: Document standard deployment, rollback, and operational recovery steps.
+Project: Hawana HSE Platform  
+System Type: Multi-Tenant SaaS (Production Grade)  
+Purpose: Deterministic operation, deployment, recovery, and incident handling  
+
+--------------------------------------------------
+## 0. SYSTEM ENTRY PROTOCOL (MANDATORY)
+--------------------------------------------------
+
+This is the ONLY allowed entry point to operate the system.
+
+No operator is allowed to:
+- run random commands  
+- skip steps  
+- assume system state  
+
+Execution MUST follow this sequence.
 
 --------------------------------------------------
 
+### STEP 0 — Environment Verification
+
+docker ps
+
+Expected:
+- hawana-core running  
+- hawana-web running  
+
+IF FAILED:
+→ STOP immediately
+
+--------------------------------------------------
+
+### STEP 1 — Health Verification
+
+curl https://hawanaglobal.com/api/v1/health  
+curl https://hawanaglobal.com/api/v1/health/ready  
+
+Expected:
+
+{"status":"ok"}  
+{"status":"ready","database":"connected"}
+
+IF FAILED:
+→ SYSTEM NOT OPERATIONAL  
+→ MOVE TO INCIDENT HANDLING  
+
+--------------------------------------------------
+
+### STEP 2 — Authentication Verification
+
+curl -X POST https://hawanaglobal.com/api/v1/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"owner@hawana.com","password":"*****"}'
+
+Expected:
+- access_token returned  
+
+IF FAILED:
+→ AUTH SYSTEM FAILURE  
+
+--------------------------------------------------
+
+### STEP 3 — Core Functional Verification
+
+Operator MUST verify:
+
+1. Login works  
+2. Dashboard loads  
+3. Users page loads  
+4. Safety Reports accessible  
+5. Action Plans accessible  
+
+IF ANY FAILS:
+→ SYSTEM NOT OPERATIONAL  
+
+--------------------------------------------------
+
+### STEP 4 — Event Processing Verification (CRITICAL)
+
+curl https://hawanaglobal.com/api/v1/stripe-events \
+-H "Authorization: Bearer <TOKEN>"
+
+IF failed events exist:
+
+curl -X POST https://hawanaglobal.com/api/v1/stripe-events/{eventId}/retry \
+-H "Authorization: Bearer <TOKEN>"
+
+--------------------------------------------------
+
+### STEP 5 — Logs Verification
+
+docker logs hawana-core --tail 50
+
+Check:
+- errors  
+- retry loops  
+- failed events  
+
+--------------------------------------------------
+
+### RULE
+
+If any step fails:
+
+→ DO NOT continue  
+→ DO NOT deploy  
+→ DO NOT modify system  
+
+→ MOVE TO INCIDENT HANDLING  
+
+--------------------------------------------------
 ## 1. Production Deployment Flow
-
-Standard deployment sequence:
-
-build
-→ push
-→ pull
-→ restart containers
-→ verify health
-→ verify workflow
-
-This flow must be followed for every production-safe deployment.
-
 --------------------------------------------------
 
-## 2. Web Admin Deployment
+build  
+→ push  
+→ pull  
+→ restart containers  
+→ verify health  
+→ verify workflow  
 
-### Build image locally
+--------------------------------------------------
+## 2. Web Admin Deployment
+--------------------------------------------------
 
 docker buildx build \
 --platform linux/amd64 \
@@ -32,14 +132,11 @@ docker buildx build \
 -t us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<tag> \
 --push .
 
-### Pull image on server
-
 docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<tag>
-
-### Restart web container
 
 docker stop hawana-web
 docker rm hawana-web
+
 docker run -d \
 --name hawana-web \
 --restart always \
@@ -49,24 +146,19 @@ docker run -d \
 us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<tag>
 
 --------------------------------------------------
-
 ## 3. Core API Deployment
-
-### Build and push core image
+--------------------------------------------------
 
 docker buildx build \
 --platform linux/amd64 \
 -t us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:latest \
 --push .
 
-### Pull core image on server
-
 docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:latest
-
-### Restart core container
 
 docker stop hawana-core
 docker rm hawana-core
+
 docker run -d \
 --name hawana-core \
 --restart always \
@@ -74,179 +166,133 @@ docker run -d \
 -p 3001:3001 \
 -e NODE_ENV=production \
 -e PORT=3001 \
--e DATABASE_URL="postgresql://postgres:Hawana%402026@34.44.9.217:5432/hawana_hse" \
--e JWT_SECRET="hawana_super_secure_jwt_secret_key_2026" \
--e JWT_EXPIRES_IN=15m \
--e REFRESH_TOKEN_SECRET="hawana_super_secure_refresh_secret_key_2026" \
--e REFRESH_TOKEN_EXPIRES_IN_DAYS=7 \
+-e DATABASE_URL="postgresql://..." \
+-e JWT_SECRET="..." \
+-e REFRESH_TOKEN_SECRET="..." \
 -e CORS_ORIGIN="*" \
 us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:latest
 
 --------------------------------------------------
-
 ## 4. Rollback Procedure
-
-If a deployment fails:
-
-### Rollback Web Admin
-
-docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<previous-tag>
-docker stop hawana-web
-docker rm hawana-web
-docker run -d \
---name hawana-web \
---restart always \
--p 3000:3000 \
--e NEXT_PUBLIC_API_BASE_URL=https://hawanaglobal.com \
--e NEXT_PUBLIC_API_PREFIX=/api/v1 \
-us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-web:<previous-tag>
-
-### Rollback Core API
-
-docker pull us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:<previous-tag>
-docker stop hawana-core
-docker rm hawana-core
-docker run -d \
---name hawana-core \
---restart always \
---network hawana-network \
--p 3001:3001 \
--e NODE_ENV=production \
--e PORT=3001 \
--e DATABASE_URL="postgresql://postgres:Hawana%402026@34.44.9.217:5432/hawana_hse" \
--e JWT_SECRET="hawana_super_secure_jwt_secret_key_2026" \
--e JWT_EXPIRES_IN=15m \
--e REFRESH_TOKEN_SECRET="hawana_super_secure_refresh_secret_key_2026" \
--e REFRESH_TOKEN_EXPIRES_IN_DAYS=7 \
--e CORS_ORIGIN="*" \
-us-central1-docker.pkg.dev/hawana-hse-platform/hawana-hse/hawana-hse-core:<previous-tag>
-
-### Verify rollback
-
-docker ps
-curl https://hawanaglobal.com/api/v1/health
-curl https://hawanaglobal.com/api/v1/health/ready
-
 --------------------------------------------------
 
-## 5. Nginx Verification
-
-Configuration file:
-
-/etc/nginx/sites-available/hawana
-
-Validation:
-
-sudo nginx -t
-
-Reload:
-
-sudo systemctl reload nginx
+Rollback Web / Core using previous tags  
+→ restart containers  
+→ verify health  
 
 --------------------------------------------------
-
-## 6. Container Verification
-
-Check running containers:
-
-docker ps
-
-Check web logs:
-
-docker logs hawana-web --tail 50
-
-Check core logs:
-
-docker logs hawana-core --tail 50
-
-Expected result:
-
-- hawana-web is running
-- hawana-core is running
-- restart policy is active
-- no critical runtime errors
-
+## 5. Incident Handling (CRITICAL)
 --------------------------------------------------
 
-## 7. Health Verification
+### Case 1 — API Down
 
-Core API health endpoint:
+- Check docker logs hawana-core  
+- Restart container  
+- Verify health endpoint  
 
-https://hawanaglobal.com/api/v1/health
+---
 
-Expected result:
+### Case 2 — Database Down
 
-{"status":"ok"}
+- Check DB connectivity  
+- Verify DATABASE_URL  
+- Restart core  
 
-Core API readiness endpoint:
+---
 
-https://hawanaglobal.com/api/v1/health/ready
+### Case 3 — Authentication Failure
 
-Expected result:
+- Verify JWT_SECRET  
+- Restart core  
+- Test login endpoint  
 
-{"status":"ready","database":"connected"}
+---
 
---------------------------------------------------
+### Case 4 — Stripe Events Failing
 
-## 8. Functional Verification
+curl /v1/stripe-events  
 
-Minimum production verification after deployment:
+If failed:
 
-1. Open login page
-2. Sign in successfully
-3. Open dashboard
-4. Verify Users page
-5. Verify Companies page
-6. Verify Sites / Projects page
-7. Verify Safety Reports page
-8. Verify Action Plans page
+→ retry manually  
+→ check logs  
+→ verify payload structure  
 
---------------------------------------------------
+---
 
-## 9. Automated Smoke Tests
+### Case 5 — Billing Blocking Users
 
-Available scripts:
-
-smoke-check.sh
-deep-smoke-check.sh
-workflow-smoke-check.sh
-
-Recommended final verification:
-
-./workflow-smoke-check.sh
-
-Expected result:
-
-WORKFLOW SMOKE CHECK PASSED
+- Verify subscriptionStatus  
+- Verify stripeSubscriptionId  
+- Verify billing guard logs  
 
 --------------------------------------------------
-
-## 10. Production Incident Reference
-
-Nginx reverse proxy issue was previously resolved by ensuring correct forwarding headers:
-
-proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-Forwarded-Host $host;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-Routing rule:
-
-/api/v1/ → Core API  
-/api/ → Web Admin routes  
-/ → Web Admin pages  
-
+## 6. Retry Operations (CRITICAL)
 --------------------------------------------------
 
-## 11. Rule
+List events:
 
-Do not modify Nginx routing or production environment structure unless a verified issue requires change.
+curl /v1/stripe-events
+
+Retry event:
+
+curl -X POST /v1/stripe-events/{id}/retry
+
+Rules:
+
+- retryCount < 5  
+- payload must be valid  
+- subscription must exist  
 
 --------------------------------------------------
+## 7. Container Verification
+--------------------------------------------------
 
-## 12. Architecture Reference
+docker ps  
+docker logs hawana-core --tail 50  
+docker logs hawana-web --tail 50  
 
-Web Admin architecture follows:
+--------------------------------------------------
+## 8. Health Verification
+--------------------------------------------------
 
-docs/WEB_ADMIN_ARCHITECTURE.md
+/health → ok  
+/health/ready → database connected  
 
-Do not introduce proxy-based server calls inside SSR.
+--------------------------------------------------
+## 9. Functional Verification
+--------------------------------------------------
+
+Login → Dashboard → Users → Reports → Action Plans  
+
+--------------------------------------------------
+## 10. Automated Smoke Tests
+--------------------------------------------------
+
+./workflow-smoke-check.sh  
+
+Expected:
+
+WORKFLOW SMOKE CHECK PASSED  
+
+--------------------------------------------------
+## 11. Nginx Rules
+--------------------------------------------------
+
+/api/v1/ → Core  
+/api/ → Web routes  
+/ → Web UI  
+
+DO NOT MODIFY unless required  
+
+--------------------------------------------------
+## 12. Final Rule
+--------------------------------------------------
+
+System operation is deterministic.
+
+No improvisation allowed.  
+No undocumented action allowed.  
+No production change without verification.  
+
+--------------------------------------------------
