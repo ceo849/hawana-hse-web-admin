@@ -1,22 +1,15 @@
-
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
-import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
-
-type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
+  const token = await requireAccessToken();
 
-  if (!token) redirect("/login");
-
-  const payload = decodeJwtPayload(token);
-  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const CORE_API =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
 
   let usersCount = 0;
   let reports: any[] = [];
@@ -24,39 +17,57 @@ export default async function DashboardPage() {
   let plansCount = 0;
 
   try {
-    // ✅ Parallel Fetch
     const [usersRes, reportsRes, plansRes] = await Promise.all([
-      serverAppFetch("/users?page=1&limit=100", token),
-      serverAppFetch("/safety-reports?page=1&limit=100", token),
-      serverAppFetch("/action-plans?page=1&limit=100", token),
+      fetch(`${CORE_API}/v1/users?page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      }),
+      fetch(`${CORE_API}/v1/safety-reports?page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      }),
+      fetch(`${CORE_API}/v1/action-plans?page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      }),
     ]);
 
+    // 🔐 Auth check
     if (
-      usersRes.status === 401 ||
-      reportsRes.status === 401 ||
+      usersRes.status === 401 &&
+      reportsRes.status === 401 &&
       plansRes.status === 401
     ) {
       redirect("/login");
     }
 
-    // USERS
-    const usersJson = await usersRes.json();
-    usersCount = Array.isArray(usersJson?.data)
-      ? usersJson.data.length
-      : 0;
+    // USERS (قد يكون 403)
+    if (usersRes.ok) {
+      const usersJson = await usersRes.json();
+      usersCount = Array.isArray(usersJson?.data)
+        ? usersJson.data.length
+        : 0;
+    } else if (usersRes.status === 403) {
+      usersCount = 0;
+    }
 
     // REPORTS
-    const reportsJson = await reportsRes.json();
-    reports = Array.isArray(reportsJson?.data)
-      ? reportsJson.data
-      : [];
-    reportsCount = reports.length;
+    if (reportsRes.ok) {
+      const reportsJson = await reportsRes.json();
+      reports = Array.isArray(reportsJson?.data)
+        ? reportsJson.data
+        : [];
+      reportsCount = reports.length;
+    }
 
     // PLANS
-    const plansJson = await plansRes.json();
-    plansCount = Array.isArray(plansJson?.data)
-      ? plansJson.data.length
-      : 0;
+    if (plansRes.ok) {
+      const plansJson = await plansRes.json();
+      plansCount = Array.isArray(plansJson?.data)
+        ? plansJson.data.length
+        : 0;
+    }
+
   } catch (err) {
     console.error("Dashboard Error:", err);
   }
@@ -70,14 +81,7 @@ export default async function DashboardPage() {
   ).length;
 
   return (
-    <div
-      style={{
-        padding: 16,
-        fontFamily: "system-ui",
-        maxWidth: 680,
-        margin: "0 auto",
-      }}
-    >
+    <div style={container}>
       <PageHeader
         title="Dashboard"
         subtitle="Platform and HSE operational overview"
@@ -85,7 +89,7 @@ export default async function DashboardPage() {
 
       <div style={sectionTitle}>Quick Actions</div>
 
-      <div style={gridStyle}>
+      <div style={grid}>
         <ActionButton href="/dashboard/safety-reports/new">
           + Safety Report
         </ActionButton>
@@ -102,7 +106,7 @@ export default async function DashboardPage() {
 
       <div style={sectionTitle}>Platform Metrics</div>
 
-      <div style={gridStyle}>
+      <div style={grid}>
         <StatsCard label="Companies" value={1} />
         <StatsCard label="Users" value={usersCount} />
         <StatsCard label="Reports" value={reportsCount} />
@@ -111,7 +115,7 @@ export default async function DashboardPage() {
 
       <div style={sectionTitle}>HSE Operations</div>
 
-      <div style={gridStyle}>
+      <div style={grid}>
         <StatsCard label="Open" value={openCount} />
         <StatsCard label="In Progress" value={inProgressCount} />
         <StatsCard label="Closed" value={closedCount} />
@@ -120,7 +124,14 @@ export default async function DashboardPage() {
   );
 }
 
-const gridStyle: React.CSSProperties = {
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const grid: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
   gap: 10,

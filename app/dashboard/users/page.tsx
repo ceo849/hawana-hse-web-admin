@@ -1,10 +1,8 @@
-
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -22,6 +20,7 @@ type UserDto = {
   createdAt: string;
 };
 
+// ---------- Type Guard ----------
 function isUser(v: unknown): v is UserDto {
   if (typeof v !== "object" || v === null) return false;
 
@@ -36,6 +35,7 @@ function isUser(v: unknown): v is UserDto {
   );
 }
 
+// ---------- Parser ----------
 function parse(value: unknown): UserDto[] {
   if (Array.isArray(value)) return value.filter(isUser);
 
@@ -50,11 +50,21 @@ function parse(value: unknown): UserDto[] {
   return [];
 }
 
-export default async function UsersPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
+// ---------- Date Formatter ----------
+function formatDate(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
 
-  if (!token) redirect("/login");
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(d);
+}
+
+// ---------- Page ----------
+export default async function UsersPage() {
+  const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
@@ -62,24 +72,47 @@ export default async function UsersPage() {
   const canManageUsers =
     role === "OWNER" || role === "ADMIN";
 
-  let users: UserDto[] = [];
+  const CORE_API =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
 
-  const res = await serverAppFetch(
-    "/users?page=1&limit=20",
-    token
+  const res = await fetch(
+    `${CORE_API}/v1/users?page=1&limit=20`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    }
   );
 
+  // 🔐 Auth
   if (res.status === 401) redirect("/login");
 
+  // 🔐 RBAC
+  if (res.status === 403) {
+    return (
+      <div style={container}>
+        <PageHeader title="Users" subtitle="Access restricted" />
+        <div>Not authorized to view users</div>
+      </div>
+    );
+  }
+
   if (!res.ok) {
-    return <div style={{ padding: 24 }}>Failed to load</div>;
+    return (
+      <div style={container}>
+        <PageHeader title="Users" subtitle="Error" />
+        Failed to load users
+      </div>
+    );
   }
 
   const json = await res.json();
-  users = parse(json);
+  const users = parse(json);
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui" }}>
+    <div style={container}>
       <PageHeader
         title="Users"
         subtitle="Users Management"
@@ -92,16 +125,27 @@ export default async function UsersPage() {
         }
       />
 
-      <div>Total: {users.length}</div>
+      <div style={{ marginBottom: 12 }}>
+        Total: {users.length}
+      </div>
 
-      <table>
+      <table style={table}>
+        <thead>
+          <tr>
+            <th style={th}>Name</th>
+            <th style={th}>Email</th>
+            <th style={th}>Role</th>
+            <th style={th}>Created</th>
+          </tr>
+        </thead>
+
         <tbody>
           {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.fullName}</td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>{u.createdAt}</td>
+            <tr key={u.id} style={row}>
+              <td style={td}>{u.fullName}</td>
+              <td style={td}>{u.email}</td>
+              <td style={td}>{u.role}</td>
+              <td style={td}>{formatDate(u.createdAt)}</td>
             </tr>
           ))}
         </tbody>
@@ -109,3 +153,30 @@ export default async function UsersPage() {
     </div>
   );
 }
+
+// ---------- Styles ----------
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+};
+
+const table: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const th: React.CSSProperties = {
+  textAlign: "left",
+  borderBottom: "1px solid #ddd",
+  padding: "10px 8px",
+  fontSize: 13,
+  color: "#6b7280",
+};
+
+const td: React.CSSProperties = {
+  padding: "10px 8px",
+};
+
+const row: React.CSSProperties = {
+  borderBottom: "1px solid #eee",
+};

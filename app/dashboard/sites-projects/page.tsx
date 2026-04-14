@@ -1,10 +1,8 @@
-
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -65,29 +63,29 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
+function style(bg: string, color: string, border: string) {
+  return {
+    background: bg,
+    color,
+    border: `1px solid ${border}`,
+    padding: "4px 8px",
+    borderRadius: 8,
+    fontSize: 12,
+  };
+}
+
 function getStatusStyle(status: string) {
   const s = status.toUpperCase();
 
   if (s === "ACTIVE") {
-    return {
-      background: "#dcfce7",
-      color: "#166534",
-      border: "1px solid #86efac",
-    };
+    return style("#dcfce7", "#166534", "#86efac");
   }
 
-  return {
-    background: "#f3f4f6",
-    color: "#111827",
-    border: "1px solid #d1d5db",
-  };
+  return style("#f3f4f6", "#111827", "#d1d5db");
 }
 
 export default async function SitesProjectsPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) redirect("/login");
+  const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
@@ -95,22 +93,24 @@ export default async function SitesProjectsPage() {
   const canManage =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  let items: SiteProject[] = [];
+  const CORE_API =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
 
-  try {
-    const res = await serverAppFetch("/sites-projects", token);
-
-    if (res.status === 401) redirect("/login");
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+  const res = await fetch(
+    `${CORE_API}/v1/sites-projects?page=1&limit=20`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
     }
+  );
 
-    const json = await res.json();
-    items = parseSiteProjects(json);
-  } catch (err) {
-    console.error("SitesProjects Error:", err);
+  // ✅ مهم: خارج try
+  if (res.status === 401) redirect("/login");
 
+  if (!res.ok) {
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Sites / Projects" subtitle="Error" />
@@ -118,6 +118,9 @@ export default async function SitesProjectsPage() {
       </div>
     );
   }
+
+  const json = await res.json();
+  const items = parseSiteProjects(json);
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>
@@ -138,7 +141,7 @@ export default async function SitesProjectsPage() {
       <table>
         <tbody>
           {items.map((i) => {
-            const style = getStatusStyle(i.status);
+            const s = getStatusStyle(i.status);
 
             return (
               <tr key={i.id}>
@@ -149,7 +152,7 @@ export default async function SitesProjectsPage() {
                 </td>
 
                 <td>
-                  <span style={style}>{i.status}</span>
+                  <span style={s}>{i.status}</span>
                 </td>
 
                 <td>{i.id}</td>

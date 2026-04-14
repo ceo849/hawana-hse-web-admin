@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -51,42 +50,25 @@ function getStatusStyle(status: string) {
   const s = status.toUpperCase();
 
   if (s === "VERIFIED") {
-    return {
-      background: "#dcfce7",
-      color: "#166534",
-      border: "1px solid #86efac",
-      padding: "4px 8px",
-      borderRadius: 8,
-      fontSize: 12,
-    };
+    return style("#dcfce7", "#166534", "#86efac");
   }
 
   if (s === "COMPLETED") {
-    return {
-      background: "#e0f2fe",
-      color: "#075985",
-      border: "1px solid #7dd3fc",
-      padding: "4px 8px",
-      borderRadius: 8,
-      fontSize: 12,
-    };
+    return style("#e0f2fe", "#075985", "#7dd3fc");
   }
 
   if (s === "IN_PROGRESS") {
-    return {
-      background: "#dbeafe",
-      color: "#1d4ed8",
-      border: "1px solid #93c5fd",
-      padding: "4px 8px",
-      borderRadius: 8,
-      fontSize: 12,
-    };
+    return style("#dbeafe", "#1d4ed8", "#93c5fd");
   }
 
+  return style("#f3f4f6", "#111827", "#d1d5db");
+}
+
+function style(bg: string, color: string, border: string) {
   return {
-    background: "#f3f4f6",
-    color: "#111827",
-    border: "1px solid #d1d5db",
+    background: bg,
+    color,
+    border: `1px solid ${border}`,
     padding: "4px 8px",
     borderRadius: 8,
     fontSize: 12,
@@ -94,7 +76,6 @@ function getStatusStyle(status: string) {
 }
 
 export default async function ActionPlansPage() {
-  // ✅ FIX: بدل cookies()
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
@@ -103,10 +84,18 @@ export default async function ActionPlansPage() {
   const canManage =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  const res = await serverAppFetch(
-    "/action-plans?page=1&limit=20",
-    token,
-    { cache: "no-store" } // تثبيت إضافي
+  const CORE_API =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
+
+  const res = await fetch(
+    `${CORE_API}/v1/action-plans?page=1&limit=20`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    }
   );
 
   if (res.status === 401) redirect("/login");
@@ -132,7 +121,9 @@ export default async function ActionPlansPage() {
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
+      <div style={{ marginBottom: 12 }}>
+        Total: {items.length}
+      </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
@@ -146,14 +137,14 @@ export default async function ActionPlansPage() {
 
         <tbody>
           {items.map((i) => {
-            const style = getStatusStyle(i.status);
+            const s = getStatusStyle(i.status);
 
             return (
               <tr key={i.id} style={{ borderBottom: "1px solid #eee" }}>
                 <td style={td}>{i.title}</td>
 
                 <td style={td}>
-                  <span style={style}>{i.status}</span>
+                  <span style={s}>{i.status}</span>
                 </td>
 
                 <td style={td}>{i.description ?? "-"}</td>

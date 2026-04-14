@@ -1,10 +1,7 @@
-
-import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -51,25 +48,28 @@ function parse(value: unknown): SafetyReport[] {
 }
 
 export default async function SafetyReportsPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) redirect("/login");
+  const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
+  const CORE_API =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
+
   let items: SafetyReport[] = [];
 
-  const res = await serverAppFetch(
-    "/safety-reports?page=1&limit=20",
-    token
+  const res = await fetch(
+    `${CORE_API}/v1/safety-reports?page=1&limit=20`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    }
   );
 
-  // ✅ مهم: خارج أي try/catch
-  if (res.status === 401) {
-    redirect("/login");
-  }
+  if (res.status === 401) redirect("/login");
 
   if (!res.ok) {
     return <div>Failed to load safety reports</div>;

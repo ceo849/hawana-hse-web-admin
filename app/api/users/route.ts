@@ -1,27 +1,28 @@
-// app/api/users/route.ts
-
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-// ✅ Core API direct (بدل api())
 const CORE_API =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
-export async function GET(req: NextRequest) {
+async function getToken() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
+  return cookieStore.get("access_token")?.value ?? null;
+}
 
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const urlObj = new URL(req.url);
-  const qs = urlObj.search ? urlObj.search : "";
-
+// =========================
+// GET
+// =========================
+export async function GET(req: Request) {
   try {
-    console.log("API PROXY → GET /users", { qs });
+    const token = await getToken();
 
-    // ✅ التصحيح هنا
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const url = new URL(req.url);
+    const qs = url.search ?? "";
+
     const upstream = await fetch(`${CORE_API}/v1/users${qs}`, {
       method: "GET",
       headers: {
@@ -45,32 +46,31 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       { message: "Upstream service unavailable" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }
 
-export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
-
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const rawBody = await req.text();
-
+// =========================
+// POST
+// =========================
+export async function POST(req: Request) {
   try {
-    console.log("API PROXY → POST /users");
+    const token = await getToken();
 
-    // ✅ التصحيح هنا
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.text();
+
     const upstream = await fetch(`${CORE_API}/v1/users`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        "content-type": "application/json",
       },
-      body: rawBody,
+      body,
       cache: "no-store",
     });
 
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { message: "Upstream service unavailable" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }

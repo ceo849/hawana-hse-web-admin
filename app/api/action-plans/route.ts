@@ -1,17 +1,18 @@
-// app/api/action-plans/route.ts
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-// ✅ توحيد الاتصال مع Core (لوكل + سيرفر)
+// ✅ Server-only (Correct)
 const CORE_API =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
 async function getToken() {
   const cookieStore = await cookies();
   return cookieStore.get("access_token")?.value ?? null;
 }
 
+// =========================
+// GET
+// =========================
 export async function GET(req: Request) {
   try {
     const token = await getToken();
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url);
-    const qs = url.search ? url.search : "";
+    const qs = url.search ?? "";
 
     const upstream = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
       method: "GET",
@@ -46,11 +47,14 @@ export async function GET(req: Request) {
 
     return NextResponse.json(
       { message: "Upstream service unavailable" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }
 
+// =========================
+// POST
+// =========================
 export async function POST(req: Request) {
   try {
     const token = await getToken();
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { message: "Upstream service unavailable" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }
