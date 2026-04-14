@@ -1,193 +1,309 @@
-# Hawana HSE — Phase 4 Status
+# Hawana HSE — Phase 5 Status
 
-Project: Hawana HSE Platform
-Phase: Phase 4 — Web Admin + Production Deployment
-Status: Operational Baseline Established
-
---------------------------------------------------
-
-1. Overview
-
-Phase 4 introduces the Web Administration Interface for the Hawana HSE platform.
-
-Architecture:
-
-Web Admin (Next.js)
-→ Core API (NestJS)
-→ PostgreSQL Database
-
-Deployment environment:
-
-Production cloud server
-Docker containers
-Domain: https://hawanaglobal.com
+Project: Hawana HSE Platform  
+Phase: Phase 5 — Production System Layer  
+Status: CLOSED — Production Baseline + Billing + Retry Engine Verified  
 
 --------------------------------------------------
 
-2. Web Admin Modules
+## 1. Phase Objective
 
-The Web Admin provides management for:
+Phase 5 establishes a **real production system**, not فقط deployment.
 
-Users
-Companies
-Sites / Projects
-Safety Reports
-Action Plans
+Scope:
 
-Authentication:
-
-JWT stored in cookies
-
-Authorization:
-
-RBAC (Role Based Access Control)
-
---------------------------------------------------
-
-3. Dashboard Capabilities
-
-Users
-- View users
-- Role visibility
-
-Companies
-- List companies
-- View details
-- Edit company
-- Delete company
-
-Sites / Projects
-- Create site
-- View sites
-- Edit sites
-
-Safety Reports
-- Create safety report
-- Link to site/project
-- View reports
-
-Action Plans
-- Create action plan
-- Link to safety report
-- Assign responsible user
-- Define due date
-
---------------------------------------------------
-
-4. API Integration Layer
-
-Next.js API routes act as proxy to the Core API.
-
-Examples:
-
-/api/users
-/api/companies
-/api/sites-projects
-/api/safety-reports
-/api/action-plans
-
-These routes forward requests to:
-
-Core API → /v1 endpoints
-
-Benefits:
-
-- Secure cookie based authentication
-- Server-side token handling
-- Centralized API access
-
---------------------------------------------------
-
-5. Production Deployment
-
-Deployment method:
-
-Docker container
-
-Image registry:
-
-Google Artifact Registry
-
-Container port:
-
-3000
-
-Environment variables:
-
-NEXT_PUBLIC_API_BASE_URL
-NEXT_PUBLIC_API_PREFIX
-
---------------------------------------------------
-
-6. Production Smoke Tests
-
-Three verification scripts were created.
-
-smoke-check.sh
-Basic system health verification.
-
-deep-smoke-check.sh
-Tenant isolation and relationship checks.
-
-workflow-smoke-check.sh
-Full workflow verification.
-
---------------------------------------------------
-
-7. Verified Workflow
-
-The following chain has been verified:
-
-Site / Project
-→ Safety Report
-→ Action Plan
-→ Assigned User
+- Cloud deployment baseline  
+- Production runtime stability  
+- Billing system enforcement  
+- Stripe event processing  
+- Retry engine (failure recovery)  
+- Deterministic operations (Runbook)  
 
 Result:
 
-WORKFLOW SMOKE CHECK PASSED
+A **self-operating SaaS core system**.
 
 --------------------------------------------------
 
-8. Current Production State
+## 2. Production Architecture
 
-System stack:
+System architecture:
 
-Next.js Web Admin
-NestJS Core API
-PostgreSQL
-Docker deployment
+User  
+→ Nginx (HTTPS Reverse Proxy)  
+→ Web Admin (Next.js)  
+→ Core API (NestJS)  
+→ PostgreSQL  
 
-Access URL:
+Key properties:
 
-https://hawanaglobal.com
-
---------------------------------------------------
-
-9. Git Checkpoint
-
-Tag:
-
-phase4/workflow-verified
-
-Branch:
-
-phase4.2-admin-management
-
-This tag represents the first operational deployment of the Hawana HSE platform.
+- Multi-tenant isolation (companyId from JWT)  
+- RBAC enforced at backend  
+- Stateless API  
+- Containerized deployment (Docker)  
 
 --------------------------------------------------
 
-10. Next Steps
+## 3. Cloud Deployment Baseline
 
-Remaining Phase 4 work:
+Infrastructure:
 
-Admin UI improvements
-Monitoring
-Error observability
+- Google Cloud VM  
+- Ubuntu 22.04  
+- Docker containers  
+- Nginx reverse proxy  
+- HTTPS via Let's Encrypt  
 
-Future phases:
+Containers:
 
-Phase 5 — Cloud infrastructure hardening
-Phase 6 — Mobile application
-Phase 7 — SaaS commercial layer
+- hawana-web (port 3000)  
+- hawana-core (port 3001)  
+
+Deployment verified:
+
+- Images build / push / pull ✔  
+- Containers restart policy ✔  
+- Reverse proxy routing ✔  
+- Domain active ✔  
+
+--------------------------------------------------
+
+## 4. Application Verification
+
+Verified modules:
+
+- Authentication (JWT) ✔  
+- Users ✔  
+- Companies ✔  
+- Sites / Projects ✔  
+- Safety Reports ✔  
+- Action Plans ✔  
+
+End-to-End workflow:
+
+Site  
+→ Safety Report  
+→ Action Plan  
+→ Assignment  
+
+Result:
+
+WORKFLOW VERIFIED  
+
+--------------------------------------------------
+
+## 5. Billing System (CRITICAL)
+
+Billing layer enforces **access control at runtime**.
+
+Components:
+
+- subscriptionPlan  
+- subscriptionStatus  
+- trialEndsAt  
+- stripeCustomerId  
+- stripeSubscriptionId  
+
+Guard:
+
+BillingActiveGuard
+
+Rules:
+
+- ACTIVE → access allowed  
+- TRIAL → access allowed (time-bound)  
+- SUSPENDED / CANCELLED → access denied  
+
+No bypass allowed in production.
+
+--------------------------------------------------
+
+## 6. Stripe Event Processing
+
+System processes real Stripe-like events.
+
+Flow:
+
+Stripe Event  
+→ Stored in DB (StripeEvent table)  
+→ Processed by handler  
+→ Updates system state  
+
+Supported:
+
+- invoice.payment_failed  
+- subscription events  
+
+Requirements:
+
+- Valid payload structure  
+- Linked companyId  
+- Linked subscription  
+
+--------------------------------------------------
+
+## 7. Retry Engine (CRITICAL)
+
+Handles failed Stripe events.
+
+Strategy:
+
+Exponential Backoff
+
+Formula:
+
+nextRetryAt = now + (2^retryCount × 60 seconds)
+
+Conditions:
+
+- status = failed  
+- retryCount < 5  
+- payload valid  
+- subscription exists  
+
+Actions:
+
+- markRetry → increments retryCount  
+- markFailed → stores error  
+
+Result:
+
+System is **self-healing under failure**
+
+--------------------------------------------------
+
+## 8. Observability Baseline
+
+Implemented:
+
+- Structured logging (Pino)  
+- Request ID tracing  
+- Error classification:
+  - OPERATIONAL  
+  - SYSTEM  
+
+Captured:
+
+- requestId  
+- path  
+- method  
+- error  
+- stack  
+
+Logs accessible via:
+
+docker logs hawana-core  
+
+--------------------------------------------------
+
+## 9. Runbook (Operations Control)
+
+Runbook defines:
+
+- System entry protocol  
+- Deployment procedure  
+- Rollback procedure  
+- Incident handling  
+- Retry operations  
+
+Rule:
+
+System operation is **deterministic**  
+No manual improvisation allowed  
+
+--------------------------------------------------
+
+## 10. Production Verification
+
+Health:
+
+/v1/health → ok  
+/v1/health/ready → database connected  
+
+Manual verification:
+
+- Login ✔  
+- Dashboard ✔  
+- Core modules ✔  
+
+Stripe verification:
+
+- Event ingestion ✔  
+- Retry execution ✔  
+- Handler execution ✔  
+
+Example result:
+
+{"handled":"invoice.failed"}
+
+--------------------------------------------------
+
+## 11. Data Safety
+
+- Backup created ✔  
+- Restore tested ✔  
+- Data integrity verified ✔  
+
+--------------------------------------------------
+
+## 12. Git Checkpoints
+
+Key tags:
+
+- phase5/cloud-baseline  
+- retry-engine-stable  
+- retry-engine-verified  
+- billing-enforcement-stable  
+- runbook-v2-stable  
+
+These represent **production-safe checkpoints**
+
+--------------------------------------------------
+
+## 13. Constraints (MANDATORY)
+
+Do NOT:
+
+- Refactor core architecture  
+- Break schema  
+- Modify Nginx routing  
+- Change deployment pattern  
+
+Unless:
+
+A verified production issue exists  
+
+--------------------------------------------------
+
+## 14. Final Engineering Conclusion
+
+Phase 5 is NOT just deployment.
+
+It is:
+
+- Production runtime system ✔  
+- Billing enforcement ✔  
+- Failure recovery system ✔  
+- Operational control layer ✔  
+
+System state:
+
+STABLE  
+SELF-RECOVERING  
+PRODUCTION-GRADE  
+
+--------------------------------------------------
+
+## 15. Official Phase Result
+
+Phase 5: CLOSED  
+Production Baseline: ESTABLISHED  
+System State: STABLE  
+Failure Handling: VERIFIED  
+Operations: DETERMINISTIC  
+
+Next Phase:
+
+Phase 6 — Expansion Layer (Mobile / Features)
+
+--------------------------------------------------
