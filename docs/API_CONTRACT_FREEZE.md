@@ -1,126 +1,216 @@
-HAWANA HSE — API CONTRACT FREEZE
+# HAWANA HSE — API CONTRACT FREEZE
 
-Project: Hawana HSE Platform
-API Version: v1
-Status: Frozen for Mobile Integration
-Date: Phase 6 Preparation
+Project: Hawana HSE Platform  
+API Version: v1  
+Status: FROZEN — PRODUCTION CONTRACT  
+Phase: Phase 5 → Phase 6 Transition  
 
-────────────────────────────────
+--------------------------------------------------
 
-1. Purpose
+## 1. Purpose
 
-This document freezes the current API contract of the Hawana HSE Core API before the start of Phase 6 (Mobile Application Layer).
+This document freezes the Core API contract before Phase 6 (Mobile Layer).
 
-The goal is to ensure that the mobile application can safely integrate with a stable API without breaking changes during development.
+Objective:
 
-────────────────────────────────
+- Ensure stable integration for Web Admin and Mobile  
+- Prevent breaking changes  
+- Enforce strict API governance  
 
-2. Freeze Rule
+--------------------------------------------------
 
-The following rule applies from this point forward:
+## 2. Freeze Rule (CRITICAL)
 
-The existing API endpoints are considered stable.
+From this point:
 
-Any modification must follow one of these rules:
+ALL v1 endpoints are STABLE.
 
-1. The change must be backward compatible.
-2. If backward compatibility cannot be maintained, a new API version must be introduced.
+Allowed changes:
 
-Example:
+✔ Backward-compatible additions  
+✔ Optional fields  
 
-/v1/safety-reports → existing stable endpoint  
-/v2/safety-reports → future incompatiation uses JWT tokens.
+Forbidden:
 
-The token contains:
+❌ Breaking changes  
+❌ Removing fields  
+❌ Changing response structure  
 
-userId  
-role  
-companyId
+If required:
 
-These fields must remain stable because they are used by both Web Admin and Mobile clients.
+→ Create new version:
 
-────────────────────────────────
+/v2/...
 
-4. Users Endpoints
+--------------------------------------------------
+
+## 3. Authentication Contract
+
+Authentication uses JWT.
+
+Token payload:
+
+- sub (userId)  
+- email  
+- role  
+- companyId  
+
+Rules:
+
+- companyId MUST be trusted from JWT only  
+- NEVER accepted from client payload  
+
+--------------------------------------------------
+
+## 4. Multi-Tenant Enforcement
+
+All endpoints are scoped by:
+
+companyId  
+
+Rules:
+
+- No cross-tenant access  
+- All queries filtered by companyId  
+- Isolation enforced at backend  
+
+--------------------------------------------------
+
+## 5. Users Endpoints
 
 GET /v1/users  
 GET /v1/users/{id}  
 POST /v1/users  
-PATCH /v1/users/{id}
+PATCH /v1/users/{id}  
 
-Users are always scoped by companyId to enforce tenant isolation.
+--------------------------------------------------
 
-────────────────────────────────
-
-5. Companies Endpoints
+## 6. Companies Endpoints
 
 GET /v1/companies  
 GET /v1/companies/{id}  
 POST /v1/companies  
-PATCHoints
+PATCH /v1/companies/{id}  
+
+--------------------------------------------------
+
+## 7. Sites / Projects Endpoints
 
 GET /v1/sites-projects  
 GET /v1/sites-projects/{id}  
 POST /v1/sites-projects  
-PATCH /v1/sites-projects/{id}
+PATCH /v1/sites-projects/{id}  
 
-Sites / Projects are operational locations belonging to a company.
+--------------------------------------------------
 
-────────────────────────────────
-
-7. Safety Reports Endpoints
+## 8. Safety Reports Endpoints
 
 GET /v1/safety-reports  
 GET /v1/safety-reports/{id}  
 POST /v1/safety-reports  
-PATCH /v1/safety-reports/{id}
+PATCH /v1/safety-reports/{id}  
 
-Workflow states:
+Workflow:
 
 OPEN  
 IN_PROGRESS  
-CLOSED
+CLOSED  
 
-Once CLOSED, the report should not allow further modifications.
+Rules:
 
-────────────────────────────────
+- CLOSED reports are immutable  
 
-8. Action Plans Endpoints
+--------------------------------------------------
+
+## 9. Action Plans Endpoints
 
 GET /v1/action-plans  
 GET /v1/action-plans/{id}  
 POST /v1/action-plans  
-PATCH /v1/action-plans/{id}
+PATCH /v1/action-plans/{id}  
 
-Workflow states:
+Workflow:
 
 OPEN  
 IN_PROGRESS  
 COMPLETED  
-VERIFIED
+VERIFIED  
 
-VERIFIED actions must be treated as read-only.
+Rules:
 
-────────────────────────────────
+- VERIFIED actions are read-only  
+- Self-verification is NOT allowed  
 
-9. Health and Monitoring Endpoints
+--------------------------------------------------
 
-GET /v1/healpanyId
+## 10. Billing & Access Control (Phase 5)
 
-No request may access data outside its tenant scope.
+Access to endpoints depends on subscription state.
 
-────────────────────────────────
+States:
 
-11. Change Policy After Freeze
+- ACTIVE  
+- TRIAL  
+- BLOCKED  
 
-After this contract freeze:
+Enforced via:
 
-No breaking changes may be introduced to the v1 API.
+BillingActiveGuard  
 
-Any incompatible change must be implemented through:
+--------------------------------------------------
 
-/v2 API version
+## 11. Health & Monitoring Endpoints
 
-────────────────────────────────
+GET /v1/health  
+GET /v1/health/ready  
 
-End of Document
+--------------------------------------------------
+
+## 12. Error Contract
+
+All errors follow unified format:
+
+- statusCode  
+- error  
+- message  
+- timestamp  
+- path  
+- method  
+- errorType (OPERATIONAL / SYSTEM)  
+
+--------------------------------------------------
+
+## 13. Versioning Policy
+
+v1 is frozen.
+
+Future changes:
+
+- v2 introduced for breaking changes  
+- v1 remains backward-compatible  
+
+--------------------------------------------------
+
+## 14. Enforcement Level
+
+This contract is:
+
+✔ Mandatory  
+✔ Production-critical  
+✔ Non-negotiable  
+
+Any violation is:
+
+API Contract Breach  
+
+--------------------------------------------------
+
+## 15. Final Statement
+
+API v1 is officially FROZEN.
+
+- Safe for Web Admin ✔  
+- Safe for Mobile ✔  
+- Stable for Production ✔  
+
+--------------------------------------------------
