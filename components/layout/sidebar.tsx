@@ -64,17 +64,21 @@ export default function Sidebar({
         style={{
           position: 'fixed',
           top: 0,
-          left: 0, // ثابت
-          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)', // ✔ الحل الحقيقي
+          left: 0,
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
           width: 260,
           height: '100vh',
           background: '#fff',
           padding: 20,
-          zIndex: 2000, // ✔ أعلى من overlay
+          zIndex: 2000,
           display: 'flex',
           flexDirection: 'column',
           transition: 'transform 0.25s ease',
           boxShadow: isOpen ? '2px 0 12px rgba(0,0,0,0.15)' : 'none',
+
+          // ✅ ADDITIVE: mobile scroll fix
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {/* Top */}
@@ -89,6 +93,9 @@ export default function Sidebar({
               border: 'none',
               fontSize: 18,
               cursor: 'pointer',
+
+              // ✅ ADDITIVE: better touch target
+              padding: 6,
             }}
           >
             ✕
@@ -146,6 +153,9 @@ export default function Sidebar({
                   background: isActive ? '#111' : '#fff',
                   color: isActive ? '#fff' : '#111',
                   transition: 'all 0.15s ease',
+
+                  // ✅ ADDITIVE: better mobile tap
+                  minHeight: 44,
                 }}
               >
                 <span style={{ fontSize: 16 }}>

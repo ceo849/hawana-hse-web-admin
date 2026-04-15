@@ -110,7 +110,22 @@ export default async function SitesProjectsPage() {
   // ✅ مهم: خارج try
   if (res.status === 401) redirect("/login");
 
+  // ✅ ADDITIVE: handle billing restriction
   if (!res.ok) {
+    if (res.status === 403) {
+      return (
+        <div style={{ padding: 24 }}>
+          <PageHeader
+            title="Sites / Projects"
+            subtitle="Operational sites management"
+          />
+          <div style={{ color: "#b91c1c", marginTop: 12 }}>
+            Access restricted — subscription inactive
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Sites / Projects" subtitle="Error" />

@@ -1,6 +1,5 @@
 // app/dashboard/companies/page.tsx
 
-
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -147,8 +146,17 @@ export default async function CompaniesPage({
   let json: CompaniesResponse;
 
   try {
+    // ✅ ADDITIVE DEBUG + FIX
+    console.log("API BASE:", process.env.NEXT_PUBLIC_API_BASE_URL);
+
+    const BASE =
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "http://127.0.0.1:3001";
+
+    console.log("FINAL BASE USED:", BASE);
+
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/companies?page=${page}&limit=${limit}` +
+      `${BASE}/v1/companies?page=${page}&limit=${limit}` +
         (search ? `&search=${encodeURIComponent(search)}` : ""),
       {
         headers: {
@@ -158,11 +166,17 @@ export default async function CompaniesPage({
       }
     );
 
+    console.log("RESPONSE STATUS:", res.status);
+
     if (res.status === 401) redirect("/login");
 
     const raw = await res.json();
+    console.log("RAW RESPONSE:", raw);
+
     json = parseCompaniesResponse(raw, page, limit);
-  } catch {
+  } catch (err) {
+    console.error("FETCH ERROR:", err);
+
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Companies Administration" subtitle="Error" />

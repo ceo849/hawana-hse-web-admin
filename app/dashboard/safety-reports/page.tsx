@@ -71,7 +71,22 @@ export default async function SafetyReportsPage() {
 
   if (res.status === 401) redirect("/login");
 
+  // ✅ ADDITIVE: handle billing restriction
   if (!res.ok) {
+    if (res.status === 403) {
+      return (
+        <div style={{ fontFamily: "system-ui", padding: 24 }}>
+          <PageHeader
+            title="Safety Reports"
+            subtitle="Operational reports"
+          />
+          <div style={{ color: "#b91c1c", marginTop: 12 }}>
+            Access restricted — subscription inactive
+          </div>
+        </div>
+      );
+    }
+
     return <div>Failed to load safety reports</div>;
   }
 

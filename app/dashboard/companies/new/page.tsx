@@ -1,7 +1,27 @@
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch"; // ❌ سيظل موجود (لا نحذفه)
 import PageHeader from "@/components/ui/page-header";
+
+// ✅ ADDITIVE: fallback بدل الملف المفقود
+async function serverAppFetchFallback(
+  path: string,
+  token: string,
+  options: RequestInit = {}
+) {
+  const BASE =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
+
+  return fetch(`${BASE}/v1${path}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+}
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -38,8 +58,8 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (country) payload.country = country;
     if (industry) payload.industry = industry;
 
-    // ✅ FIX
-    const res = await serverAppFetch("/companies", token, {
+    // ✅ FIX: استخدام fallback بدل serverAppFetch
+    const res = await serverAppFetchFallback("/companies", token, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

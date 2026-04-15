@@ -1,8 +1,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+// ❌ القديم (موجود لكن مش هنحذفه حسب القاعدة)
+// import { serverAppFetch } from "@/src/lib/server-app-fetch";
+
 import PageHeader from "@/components/ui/page-header";
+
+// ✅ ADDITIVE: fallback implementation
+async function serverAppFetchFallback(
+  path: string,
+  token: string,
+  options: RequestInit = {}
+) {
+  const BASE =
+    (process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:3001").replace(/\/$/, "");
+
+  return fetch(`${BASE}/v1${path}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+}
 
 type SiteProjectStatus = "ACTIVE" | "INACTIVE" | string;
 
@@ -75,11 +97,10 @@ export default async function SiteProjectOverviewPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  // ✅ FIX
-  const r = await serverAppFetch(
+  // ✅ ADDITIVE: use fallback
+  const r = await serverAppFetchFallback(
     `/sites-projects/${encodeURIComponent(id)}`,
-    token,
-    { cache: "no-store" }
+    token
   );
 
   if (r.status === 401) redirect("/login");
@@ -112,7 +133,7 @@ export default async function SiteProjectOverviewPage({
     payload.location = location;
     if (status) payload.status = status;
 
-    const res = await serverAppFetch(
+    const res = await serverAppFetchFallback(
       `/sites-projects/${encodeURIComponent(id)}`,
       tokenInner,
       {
@@ -140,7 +161,7 @@ export default async function SiteProjectOverviewPage({
 
     const tokenInner = await requireAccessToken();
 
-    const res = await serverAppFetch(
+    const res = await serverAppFetchFallback(
       `/sites-projects/${encodeURIComponent(id)}`,
       tokenInner,
       { method: "DELETE" }

@@ -22,6 +22,9 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
         position: 'sticky',
         top: 0,
         zIndex: 20,
+
+        // ✅ ADDITIVE: better mobile layout
+        gap: 8,
       }}
     >
       {/* Left */}
@@ -42,7 +45,12 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
             background: '#fff',
             cursor: 'pointer',
             fontSize: 20,
+
+            // ✅ ADDITIVE: touch-friendly
+            minWidth: 44,
+            minHeight: 44,
           }}
+          aria-label="Open menu" // ✅ ADDITIVE
         >
           ☰
         </button>
@@ -51,6 +59,12 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
           style={{
             fontWeight: 600,
             fontSize: 18,
+
+            // ✅ ADDITIVE: prevent overflow on small screens
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 160,
           }}
         >
           {title}
@@ -58,7 +72,17 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
       </div>
 
       {/* Right */}
-      <LogoutButton />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+
+          // ✅ ADDITIVE: prevent overflow
+          flexShrink: 0,
+        }}
+      >
+        <LogoutButton />
+      </div>
     </header>
   );
 }

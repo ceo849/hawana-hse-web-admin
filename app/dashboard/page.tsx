@@ -16,6 +16,11 @@ export default async function DashboardPage() {
   let reportsCount = 0;
   let plansCount = 0;
 
+  // ✅ ADDITIVE: dashboard source of truth
+  let dashboardUsers = 0;
+  let dashboardCompanies = 0;
+  let dashboardPlans = 0;
+
   try {
     const [usersRes, reportsRes, plansRes] = await Promise.all([
       fetch(`${CORE_API}/v1/users?page=1&limit=100`, {
@@ -41,7 +46,7 @@ export default async function DashboardPage() {
       redirect("/login");
     }
 
-    // USERS (قد يكون 403)
+    // USERS
     if (usersRes.ok) {
       const usersJson = await usersRes.json();
       usersCount = Array.isArray(usersJson?.data)
@@ -58,6 +63,9 @@ export default async function DashboardPage() {
         ? reportsJson.data
         : [];
       reportsCount = reports.length;
+    } else if (reportsRes.status === 403) {
+      // ✅ ADDITIVE: billing block awareness
+      reportsCount = 0;
     }
 
     // PLANS
@@ -70,6 +78,27 @@ export default async function DashboardPage() {
 
   } catch (err) {
     console.error("Dashboard Error:", err);
+  }
+
+  // ✅ ADDITIVE: unified dashboard API
+  try {
+    const dashboardRes = await fetch(`${CORE_API}/v1/dashboard`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+
+    if (dashboardRes.status === 401) {
+      redirect("/login");
+    }
+
+    if (dashboardRes.ok) {
+      const data = await dashboardRes.json();
+      dashboardUsers = data.users ?? 0;
+      dashboardCompanies = data.companies ?? 0;
+      dashboardPlans = data.actionPlans ?? 0;
+    }
+  } catch (err) {
+    console.error("Dashboard API Error:", err);
   }
 
   const openCount = reports.filter((r) => r.status === "OPEN").length;
@@ -107,10 +136,11 @@ export default async function DashboardPage() {
       <div style={sectionTitle}>Platform Metrics</div>
 
       <div style={grid}>
-        <StatsCard label="Companies" value={1} />
-        <StatsCard label="Users" value={usersCount} />
+        {/* ✅ ADDITIVE: trusted values */}
+        <StatsCard label="Companies" value={dashboardCompanies} />
+        <StatsCard label="Users" value={dashboardUsers} />
         <StatsCard label="Reports" value={reportsCount} />
-        <StatsCard label="Action Plans" value={plansCount} />
+        <StatsCard label="Action Plans" value={dashboardPlans} />
       </div>
 
       <div style={sectionTitle}>HSE Operations</div>
