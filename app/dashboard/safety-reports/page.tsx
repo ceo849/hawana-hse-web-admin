@@ -17,6 +17,12 @@ type SafetyReport = {
   description: string | null;
   status: string | null;
   createdAt: string | null;
+  siteProjectId?: string | null;
+};
+
+type SiteProject = {
+  id: string;
+  name: string | null;
 };
 
 function isSafetyReport(value: unknown): value is SafetyReport {
@@ -33,7 +39,7 @@ function isSafetyReport(value: unknown): value is SafetyReport {
   );
 }
 
-function parse(value: unknown): SafetyReport[] {
+function parseReports(value: unknown): SafetyReport[] {
   if (Array.isArray(value)) return value.filter(isSafetyReport);
 
   if (
@@ -42,6 +48,20 @@ function parse(value: unknown): SafetyReport[] {
     Array.isArray((value as any).data)
   ) {
     return (value as any).data.filter(isSafetyReport);
+  }
+
+  return [];
+}
+
+function parseSites(value: unknown): SiteProject[] {
+  if (Array.isArray(value)) return value as SiteProject[];
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as any).data)
+  ) {
+    return (value as any).data as SiteProject[];
   }
 
   return [];
@@ -58,8 +78,10 @@ export default async function SafetyReportsPage() {
       "http://localhost:3001").replace(/\/$/, "");
 
   let items: SafetyReport[] = [];
+  let sitesMap: Record<string, string> = {};
 
-  const res = await fetch(
+  // ===== Fetch Reports =====
+  const reportsRes = await fetch(
     `${CORE_API}/v1/safety-reports?page=1&limit=20`,
     {
       headers: {
@@ -69,17 +91,13 @@ export default async function SafetyReportsPage() {
     }
   );
 
-  if (res.status === 401) redirect("/login");
+  if (reportsRes.status === 401) redirect("/login");
 
-  // ✅ ADDITIVE: handle billing restriction
-  if (!res.ok) {
-    if (res.status === 403) {
+  if (!reportsRes.ok) {
+    if (reportsRes.status === 403) {
       return (
         <div style={{ fontFamily: "system-ui", padding: 24 }}>
-          <PageHeader
-            title="Safety Reports"
-            subtitle="Operational reports"
-          />
+          <PageHeader title="Safety Reports" subtitle="Operational reports" />
           <div style={{ color: "#b91c1c", marginTop: 12 }}>
             Access restricted — subscription inactive
           </div>
@@ -90,19 +108,31 @@ export default async function SafetyReportsPage() {
     return <div>Failed to load safety reports</div>;
   }
 
-  const json = await res.json();
-  items = parse(json);
+  const reportsJson = await reportsRes.json();
+  items = parseReports(reportsJson);
+
+  // ===== Fetch Sites (Additive) =====
+  const sitesRes = await fetch(`${CORE_API}/v1/sites-projects`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (sitesRes.ok) {
+    const sitesJson = await sitesRes.json();
+    const sites = parseSites(sitesJson);
+
+    sitesMap = Object.fromEntries(
+      sites.map((s) => [s.id, s.name ?? s.id])
+    );
+  }
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 24 }}>
-      <PageHeader
-        title="Safety Reports"
-        subtitle="Operational reports"
-      />
+      <PageHeader title="Safety Reports" subtitle="Operational reports" />
 
-      <div style={{ marginBottom: 12 }}>
-        Total: {items.length}
-      </div>
+      <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
 
       <table style={{ width: "100%" }}>
         <tbody>
@@ -110,6 +140,14 @@ export default async function SafetyReportsPage() {
             <tr key={r.id}>
               <td>{r.title ?? "-"}</td>
               <td>{r.status ?? "-"}</td>
+
+              {/* ✅ Show Site Name instead of ID */}
+              <td>
+                {r.siteProjectId
+                  ? sitesMap[r.siteProjectId] ?? r.siteProjectId
+                  : "-"}
+              </td>
+
               <td>{r.createdAt ?? "-"}</td>
             </tr>
           ))}
