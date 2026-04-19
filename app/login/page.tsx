@@ -63,18 +63,8 @@ function LoginPageInner() {
     setResult('');
 
     try {
-      const r = await fetch(`${window.location.origin}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data: LoginErrorPayload = await r.json().catch(() => ({}));
-
-      if (!r.ok) {
-        throw new Error(normalizeLoginError(data, r.status));
-      }
+      // ✅ استخدام apiClient بدل fetch المباشر
+      await apiClient.post('/auth/login', { email, password });
 
       window.location.assign(nextPath);
       return;

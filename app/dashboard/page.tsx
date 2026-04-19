@@ -1,50 +1,30 @@
-import { redirect } from "next/navigation";
+// app/dashboard/page.tsx
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 export default async function DashboardPage() {
   const token = await requireAccessToken();
-
-  const CORE_API =
-    (process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:3001").replace(/\/$/, "");
 
   let usersCount = 0;
   let reports: any[] = [];
   let reportsCount = 0;
   let plansCount = 0;
 
-  // ✅ ADDITIVE: dashboard source of truth
+  // ✅ dashboard source of truth
   let dashboardUsers = 0;
   let dashboardCompanies = 0;
   let dashboardPlans = 0;
 
   try {
     const [usersRes, reportsRes, plansRes] = await Promise.all([
-      fetch(`${CORE_API}/v1/users?page=1&limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }),
-      fetch(`${CORE_API}/v1/safety-reports?page=1&limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }),
-      fetch(`${CORE_API}/v1/action-plans?page=1&limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }),
+      serverSafeFetch("/users?page=1&limit=100", token),
+      serverSafeFetch("/safety-reports?page=1&limit=100", token),
+      serverSafeFetch("/action-plans?page=1&limit=100", token),
     ]);
-
-    // 🔐 Auth check
-    if (
-      usersRes.status === 401 &&
-      reportsRes.status === 401 &&
-      plansRes.status === 401
-    ) {
-      redirect("/login");
-    }
 
     // USERS
     if (usersRes.ok) {
@@ -64,7 +44,6 @@ export default async function DashboardPage() {
         : [];
       reportsCount = reports.length;
     } else if (reportsRes.status === 403) {
-      // ✅ ADDITIVE: billing block awareness
       reportsCount = 0;
     }
 
@@ -80,16 +59,9 @@ export default async function DashboardPage() {
     console.error("Dashboard Error:", err);
   }
 
-  // ✅ ADDITIVE: unified dashboard API
+  // ===== Dashboard Aggregated API =====
   try {
-    const dashboardRes = await fetch(`${CORE_API}/v1/dashboard`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-
-    if (dashboardRes.status === 401) {
-      redirect("/login");
-    }
+    const dashboardRes = await serverSafeFetch("/dashboard", token);
 
     if (dashboardRes.ok) {
       const data = await dashboardRes.json();
@@ -136,7 +108,6 @@ export default async function DashboardPage() {
       <div style={sectionTitle}>Platform Metrics</div>
 
       <div style={grid}>
-        {/* ✅ ADDITIVE: trusted values */}
         <StatsCard label="Companies" value={dashboardCompanies} />
         <StatsCard label="Users" value={dashboardUsers} />
         <StatsCard label="Reports" value={reportsCount} />

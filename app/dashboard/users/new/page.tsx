@@ -1,9 +1,7 @@
-// app/dashboard/users/new/page.tsx
-
-
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
+import { serverAppFetch } from "@/src/lib/server-app-fetch"; // ✅ ADDITIVE
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -41,15 +39,17 @@ export default async function NewUserPage({ searchParams }: PageProps) {
     };
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/users`,
+      // ❌ تم حذف fetch المباشر
+      // ✅ استخدام serverAppFetch
+      const res = await serverAppFetch(
+        tokenInner,
+        "/users",
         {
           method: "POST",
+          body: JSON.stringify(payload),
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${tokenInner}`,
           },
-          body: JSON.stringify(payload),
         }
       );
 

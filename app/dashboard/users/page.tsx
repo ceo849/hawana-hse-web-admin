@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -16,12 +17,20 @@ type UserDto = {
   id: string;
   email: string;
   fullName: string;
-  role: string;
+  role: Role;
+  companyId: string;
   createdAt: string;
 };
 
-// ---------- Type Guard ----------
-function isUser(v: unknown): v is UserDto {
+type UsersResponse = {
+  data: UserDto[];
+  meta?: {
+    total: number;
+  };
+};
+
+// ===== Parsers =====
+function isUserDto(v: unknown): v is UserDto {
   if (typeof v !== "object" || v === null) return false;
 
   const c = v as Record<string, unknown>;
@@ -31,121 +40,106 @@ function isUser(v: unknown): v is UserDto {
     typeof c.email === "string" &&
     typeof c.fullName === "string" &&
     typeof c.role === "string" &&
-    typeof c.createdAt === "string"
+    typeof c.companyId === "string"
   );
 }
 
-// ---------- Parser ----------
-function parse(value: unknown): UserDto[] {
-  if (Array.isArray(value)) return value.filter(isUser);
+function parseUsers(value: unknown): UsersResponse {
+  if (Array.isArray(value)) {
+    const data = value.filter(isUserDto);
+    return { data, meta: { total: data.length } };
+  }
 
   if (
     typeof value === "object" &&
     value !== null &&
     Array.isArray((value as any).data)
   ) {
-    return (value as any).data.filter(isUser);
+    const data = (value as any).data.filter(isUserDto);
+
+    return {
+      data,
+      meta: {
+        total:
+          typeof (value as any)?.meta?.total === "number"
+            ? (value as any).meta.total
+            : data.length,
+      },
+    };
   }
 
-  return [];
+  return { data: [], meta: { total: 0 } };
 }
 
-// ---------- Date Formatter ----------
-function formatDate(value: string): string {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(d);
-}
-
-// ---------- Page ----------
+// ===== PAGE =====
 export default async function UsersPage() {
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canManageUsers =
+  const canManage =
     role === "OWNER" || role === "ADMIN";
 
-  const CORE_API =
-    (process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:3001").replace(/\/$/, "");
+  let users: UserDto[] = [];
+  let total = 0;
 
-  const res = await fetch(
-    `${CORE_API}/v1/users?page=1&limit=20`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
+  try {
+    const res = await serverAppFetch(
+      "/api/users?page=1&limit=20",
+      token,
+      { cache: "no-store" }
+    );
+
+    if (res.status === 401) redirect("/login");
+
+    if (!res.ok) {
+      return <div>Failed to load users</div>;
     }
-  );
 
-  // 🔐 Auth
-  if (res.status === 401) redirect("/login");
+    const json = await res.json();
+    const parsed = parseUsers(json);
 
-  // 🔐 RBAC
-  if (res.status === 403) {
-    return (
-      <div style={container}>
-        <PageHeader title="Users" subtitle="Access restricted" />
-        <div>Not authorized to view users</div>
-      </div>
-    );
+    users = parsed.data;
+    total = parsed.meta?.total ?? users.length;
+
+  } catch (err) {
+    console.error("Users Fetch Error:", err);
+
+    return <div>Failed to load users</div>;
   }
-
-  if (!res.ok) {
-    return (
-      <div style={container}>
-        <PageHeader title="Users" subtitle="Error" />
-        Failed to load users
-      </div>
-    );
-  }
-
-  const json = await res.json();
-  const users = parse(json);
 
   return (
-    <div style={container}>
+    <div style={{ padding: 24, fontFamily: "system-ui" }}>
       <PageHeader
         title="Users"
-        subtitle="Users Management"
+        subtitle="User management"
         action={
-          canManageUsers ? (
-            <Link href="/dashboard/users/new">
-              + New User
-            </Link>
+          canManage ? (
+            <Link href="/dashboard/users/new">+ New User</Link>
           ) : undefined
         }
       />
 
-      <div style={{ marginBottom: 12 }}>
-        Total: {users.length}
-      </div>
+      <div>Total users: {total}</div>
 
-      <table style={table}>
+      <table>
         <thead>
           <tr>
-            <th style={th}>Name</th>
-            <th style={th}>Email</th>
-            <th style={th}>Role</th>
-            <th style={th}>Created</th>
+            <th align="left">Name</th>
+            <th align="left">Email</th>
+            <th align="left">Role</th>
+            <th align="left">Company</th>
           </tr>
         </thead>
 
         <tbody>
           {users.map((u) => (
-            <tr key={u.id} style={row}>
-              <td style={td}>{u.fullName}</td>
-              <td style={td}>{u.email}</td>
-              <td style={td}>{u.role}</td>
-              <td style={td}>{formatDate(u.createdAt)}</td>
+            <tr key={u.id}>
+              <td>{u.fullName}</td>
+              <td>{u.email}</td>
+              <td>{u.role}</td>
+              <td>{u.companyId}</td>
             </tr>
           ))}
         </tbody>
@@ -153,30 +147,3 @@ export default async function UsersPage() {
     </div>
   );
 }
-
-// ---------- Styles ----------
-const container: React.CSSProperties = {
-  padding: 24,
-  fontFamily: "system-ui",
-};
-
-const table: React.CSSProperties = {
-  width: "100%",
-  borderCollapse: "collapse",
-};
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  borderBottom: "1px solid #ddd",
-  padding: "10px 8px",
-  fontSize: 13,
-  color: "#6b7280",
-};
-
-const td: React.CSSProperties = {
-  padding: "10px 8px",
-};
-
-const row: React.CSSProperties = {
-  borderBottom: "1px solid #eee",
-};

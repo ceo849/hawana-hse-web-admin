@@ -1,3 +1,5 @@
+// app/api/auth/login/route.ts
+
 import { NextResponse } from "next/server";
 
 type LoginBody = {
@@ -5,16 +7,19 @@ type LoginBody = {
   password?: string;
 };
 
+const CORE_API =
+  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+
 export async function POST(req: Request) {
   try {
     let body: LoginBody = {};
 
-    // Parse body safely
+    // ===== Parse body safely =====
     try {
       body = (await req.json()) as LoginBody;
     } catch {
       return NextResponse.json(
-        { ok: false, message: "Invalid or empty request body" },
+        { ok: false, message: "Invalid request body" },
         { status: 400 }
       );
     }
@@ -29,19 +34,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ FIXED: Docker-safe fallback (CRITICAL)
-    const coreBase =
-      process.env.CORE_API_BASE_URL ||
-      "http://host.docker.internal:3001/v1";
-
-    // ✅ Safe URL builder
-    const loginUrl = coreBase.endsWith("/v1")
-      ? `${coreBase}/auth/login`
-      : `${coreBase}/v1/auth/login`;
-
-    console.log("[LOGIN_PROXY] →", loginUrl);
-
-    const upstream = await fetch(loginUrl, {
+    // ===== Call Core API =====
+    const upstream = await fetch(`${CORE_API}/v1/auth/login`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -50,16 +44,20 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    let data: any = {};
-    try {
-      data = await upstream.json();
-    } catch {
-      data = {};
-    }
+    const contentType = upstream.headers.get("content-type") ?? "";
+    const isJson = contentType.includes("application/json");
+
+    const data = isJson
+      ? await upstream.json().catch(() => ({}))
+      : {};
 
     if (!upstream.ok) {
-      console.error("[LOGIN_PROXY_ERROR]", data);
-      return NextResponse.json(data, { status: upstream.status });
+      return NextResponse.json(
+        data?.message
+          ? data
+          : { ok: false, message: "Authentication failed" },
+        { status: upstream.status }
+      );
     }
 
     const accessToken =
@@ -86,14 +84,17 @@ export async function POST(req: Request) {
       path: "/",
     };
 
-    res.cookies.set("access_token", accessToken, cookieOptions);
+    // ===== CRITICAL FIX =====
+    res.cookies.set("access_token", String(accessToken), {
+      ...cookieOptions,
+      maxAge: 60 * 60 * 24, // 1 day
+    });
 
     if (refreshToken) {
-      res.cookies.set(
-        "refresh_token",
-        String(refreshToken),
-        cookieOptions
-      );
+      res.cookies.set("refresh_token", String(refreshToken), {
+        ...cookieOptions,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
     }
 
     return res;

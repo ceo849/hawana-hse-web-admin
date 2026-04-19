@@ -1,21 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { api } from "@/lib/core-api";
-
-async function getBaseUrl() {
-  const h = await headers();
-
-  const protocol =
-    h.get("x-forwarded-proto") ||
-    (process.env.NODE_ENV === "development" ? "http" : "https");
-
-  const host =
-    h.get("host") ||
-    process.env.NEXT_PUBLIC_APP_HOST ||
-    "localhost:3000";
-
-  return `${protocol}://${host}`;
-}
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
@@ -28,10 +13,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const baseUrl = await getBaseUrl();
+    // ✅ FIX: direct call to Core (no baseUrl)
+    const url = api("/platform/metrics");
 
-    // ✅ FIX هنا
-    const url = `${baseUrl}${api("/platform/metrics")}`;
+    console.log("FINAL URL:", url);
 
     const upstream = await fetch(url, {
       method: "GET",

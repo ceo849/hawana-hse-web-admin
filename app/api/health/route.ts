@@ -1,7 +1,10 @@
+// app/api/health/route.ts
+
 import { NextResponse } from "next/server";
 
 const CORE_API =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "");
+  (process.env.CORE_API_BASE_URL ?? "http://127.0.0.1:3001")
+    .replace(/\/$/, "");
 
 export async function GET() {
   try {
@@ -18,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json(
       { ok: false, message: "Health route error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

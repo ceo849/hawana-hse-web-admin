@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -29,6 +30,7 @@ type CompaniesResponse = {
   meta?: CompaniesMeta;
 };
 
+// ===== Guards =====
 function isCompanyDto(value: unknown): value is CompanyDto {
   if (typeof value !== "object" || value === null) return false;
 
@@ -119,6 +121,7 @@ function buildDashboardCompaniesUrl(page: number) {
   return `/dashboard/companies?page=${page}`;
 }
 
+// ===== PAGE =====
 export default async function CompaniesPage({
   searchParams,
 }: {
@@ -146,34 +149,24 @@ export default async function CompaniesPage({
   let json: CompaniesResponse;
 
   try {
-    // ✅ ADDITIVE DEBUG + FIX
-    console.log("API BASE:", process.env.NEXT_PUBLIC_API_BASE_URL);
-
-    const BASE =
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "http://127.0.0.1:3001";
-
-    console.log("FINAL BASE USED:", BASE);
-
-    const res = await fetch(
-      `${BASE}/v1/companies?page=${page}&limit=${limit}` +
+    const res = await serverSafeFetch(
+      `/companies?page=${page}&limit=${limit}` +
         (search ? `&search=${encodeURIComponent(search)}` : ""),
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      }
+      token
     );
 
-    console.log("RESPONSE STATUS:", res.status);
-
-    if (res.status === 401) redirect("/login");
+    if (!res.ok) {
+      return (
+        <div style={{ padding: 24 }}>
+          <PageHeader title="Companies Administration" subtitle="Error" />
+          Failed to load companies
+        </div>
+      );
+    }
 
     const raw = await res.json();
-    console.log("RAW RESPONSE:", raw);
-
     json = parseCompaniesResponse(raw, page, limit);
+
   } catch (err) {
     console.error("FETCH ERROR:", err);
 

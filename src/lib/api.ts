@@ -1,70 +1,57 @@
 // WEB-ADMIN — src/lib/api.ts
 
+import { apiClient } from '@/src/lib/api-client';
+
 type ApiFetchOptions = Omit<RequestInit, "headers"> & {
   headers?: Record<string, string>;
 };
 
-function getApiBaseUrl(): string {
-  // Server-side (Next API routes)
-  if (typeof window === "undefined") {
-    const core = process.env.CORE_API_BASE_URL;
-
-    if (!core) {
-      throw new Error("Missing CORE_API_BASE_URL in environment");
-    }
-
-    return core.replace(/\/$/, "");
+function normalizePath(path: string): string {
+  // ✅ enforce API Proxy contract (no /api here)
+  if (path.startsWith("/api")) {
+    return path.replace(/^\/api/, "");
   }
 
-  // Browser (frontend)
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  if (!base) {
-    throw new Error("Missing NEXT_PUBLIC_API_BASE_URL in environment");
-  }
-
-  return base.replace(/\/$/, "");
+  return path.startsWith("/") ? path : `/${path}`;
 }
 
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const baseUrl = getApiBaseUrl();
+  const method = (options.method ?? "GET").toUpperCase();
 
-  const url = path.startsWith("http")
-    ? path
-    : `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+  // ✅ normalized path (critical to avoid /api/api issue)
+  const normalizedPath = normalizePath(path);
 
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-    },
-  });
+  try {
+    switch (method) {
+      case "POST":
+        return await apiClient.post<T>(
+          normalizedPath,
+          options.body ? JSON.parse(String(options.body)) : undefined
+        );
 
-  const contentType = res.headers.get("content-type") ?? "";
-  const isJson = contentType.includes("application/json");
+      case "PUT":
+        return await apiClient.put<T>(
+          normalizedPath,
+          options.body ? JSON.parse(String(options.body)) : undefined
+        );
 
-  if (!res.ok) {
-    const body = isJson
-      ? await res.json().catch(() => null)
-      : await res.text().catch(() => "");
+      case "PATCH":
+        return await apiClient.patch<T>(
+          normalizedPath,
+          options.body ? JSON.parse(String(options.body)) : undefined
+        );
 
-    const msg =
-      typeof body === "string" && body
-        ? body
-        : body && typeof body === "object" && "message" in body
-        ? String((body as any).message)
-        : `Request failed: ${res.status} ${res.statusText}`;
+      case "DELETE":
+        return await apiClient.delete<T>(normalizedPath);
 
-    throw new Error(msg);
+      case "GET":
+      default:
+        return await apiClient.get<T>(normalizedPath);
+    }
+  } catch (err) {
+    throw err;
   }
-
-  if (!isJson) {
-    return (await res.text()) as unknown as T;
-  }
-
-  return (await res.json()) as T;
 }

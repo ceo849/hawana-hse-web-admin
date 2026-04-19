@@ -1,15 +1,9 @@
-import { redirect } from "next/navigation";
+// app/dashboard/safety-reports/page.tsx
+
+import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
-import { decodeJwtPayload } from "@/src/auth/jwt";
-
-type Role =
-  | "OWNER"
-  | "ADMIN"
-  | "MANAGER"
-  | "WORKER"
-  | "VIEWER"
-  | "UNKNOWN";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 type SafetyReport = {
   id: string;
@@ -25,6 +19,7 @@ type SiteProject = {
   name: string | null;
 };
 
+// ===== Parsers =====
 function isSafetyReport(value: unknown): value is SafetyReport {
   if (typeof value !== "object" || value === null) return false;
 
@@ -67,65 +62,82 @@ function parseSites(value: unknown): SiteProject[] {
   return [];
 }
 
+// ===== Status Badge =====
+function StatusBadge({ status }: { status: string | null }) {
+  const s = status ?? "UNKNOWN";
+
+  let bg = "#e5e7eb";
+  let color = "#111827";
+
+  if (s === "OPEN") {
+    bg = "#fef3c7";
+    color = "#92400e";
+  } else if (s === "IN_PROGRESS") {
+    bg = "#dbeafe";
+    color = "#1e40af";
+  } else if (s === "COMPLETED") {
+    bg = "#dcfce7";
+    color = "#166534";
+  } else if (s === "VERIFIED") {
+    bg = "#bbf7d0";
+    color = "#14532d";
+  }
+
+  return (
+    <span
+      style={{
+        padding: "4px 10px",
+        borderRadius: "999px",
+        fontSize: "12px",
+        fontWeight: 600,
+        background: bg,
+        color,
+      }}
+    >
+      {s}
+    </span>
+  );
+}
+
+// ===== PAGE =====
 export default async function SafetyReportsPage() {
   const token = await requireAccessToken();
-
-  const payload = decodeJwtPayload(token);
-  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
-
-  const CORE_API =
-    (process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:3001").replace(/\/$/, "");
 
   let items: SafetyReport[] = [];
   let sitesMap: Record<string, string> = {};
 
-  // ===== Fetch Reports =====
-  const reportsRes = await fetch(
-    `${CORE_API}/v1/safety-reports?page=1&limit=20`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    }
-  );
-
-  if (reportsRes.status === 401) redirect("/login");
-
-  if (!reportsRes.ok) {
-    if (reportsRes.status === 403) {
-      return (
-        <div style={{ fontFamily: "system-ui", padding: 24 }}>
-          <PageHeader title="Safety Reports" subtitle="Operational reports" />
-          <div style={{ color: "#b91c1c", marginTop: 12 }}>
-            Access restricted — subscription inactive
-          </div>
-        </div>
-      );
-    }
-
-    return <div>Failed to load safety reports</div>;
-  }
-
-  const reportsJson = await reportsRes.json();
-  items = parseReports(reportsJson);
-
-  // ===== Fetch Sites (Additive) =====
-  const sitesRes = await fetch(`${CORE_API}/v1/sites-projects`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (sitesRes.ok) {
-    const sitesJson = await sitesRes.json();
-    const sites = parseSites(sitesJson);
-
-    sitesMap = Object.fromEntries(
-      sites.map((s) => [s.id, s.name ?? s.id])
+  try {
+    // ===== Reports =====
+    const res = await serverSafeFetch(
+      "/safety-reports?page=1&limit=20",
+      token
     );
+
+    if (res.ok) {
+      const json = await res.json();
+      items = parseReports(json);
+    } else {
+      console.error("Safety Reports Fetch Failed:", res.status);
+    }
+
+    // ===== Sites =====
+    const sitesRes = await serverSafeFetch(
+      "/sites-projects",
+      token
+    );
+
+    if (sitesRes.ok) {
+      const sitesJson = await sitesRes.json();
+      const sites = parseSites(sitesJson);
+
+      sitesMap = Object.fromEntries(
+        sites.map((s) => [s.id, s.name ?? s.id])
+      );
+    } else {
+      console.error("Sites Fetch Failed:", sitesRes.status);
+    }
+  } catch (err) {
+    console.error("Safety Reports Error:", err);
   }
 
   return (
@@ -134,25 +146,46 @@ export default async function SafetyReportsPage() {
 
       <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
 
-      <table style={{ width: "100%" }}>
-        <tbody>
-          {items.map((r) => (
-            <tr key={r.id}>
-              <td>{r.title ?? "-"}</td>
-              <td>{r.status ?? "-"}</td>
-
-              {/* ✅ Show Site Name instead of ID */}
-              <td>
-                {r.siteProjectId
-                  ? sitesMap[r.siteProjectId] ?? r.siteProjectId
-                  : "-"}
-              </td>
-
-              <td>{r.createdAt ?? "-"}</td>
+      {items.length === 0 ? (
+        <div>No reports found</div>
+      ) : (
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th align="left" style={{ padding: "8px 12px" }}>Title</th>
+              <th align="left" style={{ padding: "8px 12px" }}>Status</th>
+              <th align="left" style={{ padding: "8px 12px" }}>Site</th>
+              <th align="left" style={{ padding: "8px 12px" }}>Created At</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {items.map((r) => (
+              <tr key={r.id} style={{ borderTop: "1px solid #e5e7eb" }}>
+                <td style={{ padding: "8px 12px" }}>
+                  <Link href={`/dashboard/safety-reports/${r.id}`}>
+                    {r.title ?? "-"}
+                  </Link>
+                </td>
+
+                <td style={{ padding: "8px 12px" }}>
+                  <StatusBadge status={r.status} />
+                </td>
+
+                <td style={{ padding: "8px 12px" }}>
+                  {r.siteProjectId
+                    ? sitesMap[r.siteProjectId] ?? r.siteProjectId
+                    : "-"}
+                </td>
+
+                <td style={{ padding: "8px 12px" }}>
+                  {r.createdAt ?? "-"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

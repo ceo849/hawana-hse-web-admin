@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link"; // ✅ FIX
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
@@ -35,8 +36,7 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
     if (location) payload.location = location;
     if (status) payload.status = status;
 
-    // ✅ FIX
-    const res = await serverAppFetch("/sites-projects", token, {
+    const res = await serverAppFetch(token, "/api/sites-projects", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -106,9 +106,10 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
         <div style={{ display: "flex", gap: 10 }}>
           <button type="submit">Create</button>
 
-          <a href="/dashboard/sites-projects">
+          {/* ✅ FIX */}
+          <Link href="/dashboard/sites-projects">
             Cancel
-          </a>
+          </Link>
         </div>
       </form>
     </div>

@@ -1,6 +1,5 @@
 // hawana-hse-web-admin/src/lib/api-client.ts
 
-// default timeout (ms)
 const DEFAULT_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 15000);
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -11,24 +10,51 @@ export type ApiError = {
   error?: string;
 };
 
-// ✅ NEW — Request ID generator
+// ✅ Request ID
 function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ✅ URL Builder (STRICT)
 function buildUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
+    throw new Error('Direct external URLs are not allowed');
   }
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-  // كل طلبات الواجهة تذهب إلى Next.js API routes فقط
-  if (cleanPath.startsWith('/api/')) {
-    return cleanPath;
+  // enforce API proxy only
+  if (!cleanPath.startsWith('/api/')) {
+    return `/api${cleanPath}`;
   }
 
-  return `/api${cleanPath}`;
+  return cleanPath;
+}
+
+// ❌ ARCH GUARD — Prevent direct Core / external access (ADDITIVE)
+function enforceArchitecture(url: string) {
+  if (
+    url.includes(':3001') ||     // direct core port
+    url.includes('/v1/') ||      // direct core prefix
+    url.startsWith('http://') ||
+    url.startsWith('https://')
+  ) {
+    console.error('🚨 ARCHITECTURE VIOLATION');
+    console.error('Blocked URL:', url);
+
+    throw new Error(
+      'ARCH VIOLATION: Direct Core/external access is forbidden. Use /api proxy.'
+    );
+  }
+}
+
+// ✅ Debug
+function debugUrlTrace(url: string) {
+  if (url.includes('/api/v1')) {
+    console.error('🚨 ARCH VIOLATION DETECTED');
+    console.error('URL:', url);
+    console.trace();
+  }
 }
 
 function normalizeErrorMessage(err: ApiError): string {
@@ -53,23 +79,23 @@ async function request<T>(
   path: string,
   method: HttpMethod,
   body?: unknown,
-  accessToken?: string,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
 ): Promise<T> {
   const url = buildUrl(path);
 
+  // ✅ enforce architecture (ADDITIVE)
+  enforceArchitecture(url);
+
+  // debug
+  debugUrlTrace(url);
+
   const headers: Record<string, string> = {};
 
-  // ✅ NEW — attach request id
   const requestId = generateRequestId();
   headers['x-request-id'] = requestId;
 
   if (method !== 'GET' && method !== 'DELETE') {
     headers['Content-Type'] = 'application/json';
-  }
-
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
   const hasBody = body !== undefined && method !== 'GET' && method !== 'DELETE';
@@ -81,9 +107,11 @@ async function request<T>(
     const response = await fetch(url, {
       method,
       headers,
-      credentials: 'include',
+      credentials: 'include', // ✅ يعتمد على cookie فقط
       signal: controller.signal,
-      body: hasBody ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
+      body: hasBody
+        ? (typeof body === 'string' ? body : JSON.stringify(body))
+        : undefined,
     });
 
     const contentType = response.headers.get('content-type') ?? '';
@@ -94,7 +122,6 @@ async function request<T>(
       const err: ApiError = { status: response.status, ...(payload ?? {}) };
       (err as any).message = normalizeErrorMessage(err);
 
-      // ✅ optional debug trace
       console.error('API ERROR', {
         requestId,
         url,
@@ -139,18 +166,18 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string, token?: string) =>
-    request<T>(path, 'GET', undefined, token),
+  get: <T>(path: string) =>
+    request<T>(path, 'GET'),
 
-  post: <T>(path: string, body: unknown, token?: string) =>
-    request<T>(path, 'POST', body, token),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(path, 'POST', body),
 
-  put: <T>(path: string, body: unknown, token?: string) =>
-    request<T>(path, 'PUT', body, token),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, 'PUT', body),
 
-  patch: <T>(path: string, body: unknown, token?: string) =>
-    request<T>(path, 'PATCH', body, token),
+  patch: <T>(path: string, body: unknown) =>
+    request<T>(path, 'PATCH', body),
 
-  delete: <T>(path: string, token?: string) =>
-    request<T>(path, 'DELETE', undefined, token),
+  delete: <T>(path: string) =>
+    request<T>(path, 'DELETE'),
 };

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -93,24 +94,17 @@ export default async function SitesProjectsPage() {
   const canManage =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  const CORE_API =
-    (process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:3001").replace(/\/$/, "");
-
-  const res = await fetch(
-    `${CORE_API}/v1/sites-projects?page=1&limit=20`,
+  // ✅ FIX: correct serverAppFetch signature + correct path
+  const res = await serverAppFetch(
+    "/sites-projects?page=1&limit=20",
+    token,
     {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
       cache: "no-store",
     }
   );
 
-  // ✅ مهم: خارج try
   if (res.status === 401) redirect("/login");
 
-  // ✅ ADDITIVE: handle billing restriction
   if (!res.ok) {
     if (res.status === 403) {
       return (

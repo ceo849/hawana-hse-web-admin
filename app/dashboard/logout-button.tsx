@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { apiClient } from '@/src/lib/api-client'; // ✅ ADDITIVE
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -13,14 +14,8 @@ export default function LogoutButton() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        console.error('Logout failed:', res.status);
-      }
+      // ✅ استبدال fetch بـ apiClient
+      await apiClient.post('/auth/logout');
     } catch (err) {
       console.error('Network logout error:', err);
     } finally {
@@ -40,7 +35,7 @@ export default function LogoutButton() {
         alignItems: 'center',
         justifyContent: 'center',
 
-        height: 40,                // ✔ نفس نظام الهيدر
+        height: 40,
         padding: '0 14px',
 
         borderRadius: 10,
@@ -50,7 +45,7 @@ export default function LogoutButton() {
         color: '#fff',
 
         fontSize: 14,
-        fontWeight: 600,          // ✔ أقوى بصريًا
+        fontWeight: 600,
         letterSpacing: '-0.2px',
 
         cursor: loading ? 'not-allowed' : 'pointer',
@@ -58,7 +53,7 @@ export default function LogoutButton() {
 
         transition: 'all 0.15s ease',
 
-        boxShadow: '0 1px 2px rgba(0,0,0,0.08)', // ✔ depth خفيف
+        boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
       }}
     >
       {loading ? 'Logging out...' : 'Logout'}

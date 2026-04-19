@@ -31,14 +31,16 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
 
-    const bodyText = await upstream.text();
+    const contentType =
+      upstream.headers.get("content-type") ??
+      "application/json; charset=utf-8";
 
-    return new NextResponse(bodyText, {
+    const body = await upstream.text();
+
+    return new NextResponse(body, {
       status: upstream.status,
       headers: {
-        "content-type":
-          upstream.headers.get("content-type") ??
-          "application/json; charset=utf-8",
+        "content-type": contentType,
       },
     });
   } catch (error) {
@@ -74,14 +76,16 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    const bodyText = await upstream.text();
+    const contentType =
+      upstream.headers.get("content-type") ??
+      "application/json; charset=utf-8";
 
-    return new NextResponse(bodyText, {
+    const responseBody = await upstream.text();
+
+    return new NextResponse(responseBody, {
       status: upstream.status,
       headers: {
-        "content-type":
-          upstream.headers.get("content-type") ??
-          "application/json; charset=utf-8",
+        "content-type": contentType,
       },
     });
   } catch (error) {

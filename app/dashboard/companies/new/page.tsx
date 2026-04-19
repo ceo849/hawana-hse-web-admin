@@ -1,27 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link"; // ✅ FIX
 import { requireAccessToken } from "@/lib/server-auth";
-import { serverAppFetch } from "@/src/lib/server-app-fetch"; // ❌ سيظل موجود (لا نحذفه)
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
-
-// ✅ ADDITIVE: fallback بدل الملف المفقود
-async function serverAppFetchFallback(
-  path: string,
-  token: string,
-  options: RequestInit = {}
-) {
-  const BASE =
-    (process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:3001").replace(/\/$/, "");
-
-  return fetch(`${BASE}/v1${path}`, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-}
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -58,13 +39,13 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (country) payload.country = country;
     if (industry) payload.industry = industry;
 
-    // ✅ FIX: استخدام fallback بدل serverAppFetch
-    const res = await serverAppFetchFallback("/companies", token, {
+    const res = await serverAppFetch(token, "/api/companies", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      cache: "no-store",
     });
 
     if (res.status === 401) redirect("/login");
@@ -108,7 +89,8 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
 
         <button type="submit">Create</button>
 
-        <a href="/dashboard/companies">Cancel</a>
+        {/* ✅ FIX */}
+        <Link href="/dashboard/companies">Cancel</Link>
       </form>
     </div>
   );
