@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { apiClient } from '@/src/lib/api-client'; // ✅ ADDITIVE
+import { apiClient } from '@/src/lib/api-client';
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -14,8 +14,8 @@ export default function LogoutButton() {
     setLoading(true);
 
     try {
-      // ✅ استبدال fetch بـ apiClient
-      await apiClient.post('/auth/logout');
+      // ✅ FIX: apiClient.post requires body
+      await apiClient.post('/auth/logout', {});
     } catch (err) {
       console.error('Network logout error:', err);
     } finally {
@@ -34,25 +34,18 @@ export default function LogoutButton() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-
         height: 40,
         padding: '0 14px',
-
         borderRadius: 10,
         border: '1px solid #e5e7eb',
-
         backgroundColor: '#111',
         color: '#fff',
-
         fontSize: 14,
         fontWeight: 600,
         letterSpacing: '-0.2px',
-
         cursor: loading ? 'not-allowed' : 'pointer',
         opacity: loading ? 0.7 : 1,
-
         transition: 'all 0.15s ease',
-
         boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
       }}
     >

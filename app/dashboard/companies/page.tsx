@@ -1,8 +1,7 @@
-// app/dashboard/companies/page.tsx
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
@@ -133,10 +132,7 @@ export default async function CompaniesPage({
     ? await Promise.resolve(searchParams)
     : {};
 
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) redirect("/login");
+  const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
@@ -146,30 +142,15 @@ export default async function CompaniesPage({
   const search = resolvedSearchParams.search ?? "";
   const limit = 10;
 
-  let json: CompaniesResponse;
+  // ✅ SSR flow الصحيح
+  const res = await serverSafeFetch(
+    `/companies?page=${page}&limit=${limit}` +
+      (search ? `&search=${encodeURIComponent(search)}` : ""),
+    token,
+    { cache: "no-store" }
+  );
 
-  try {
-    const res = await serverSafeFetch(
-      `/companies?page=${page}&limit=${limit}` +
-        (search ? `&search=${encodeURIComponent(search)}` : ""),
-      token
-    );
-
-    if (!res.ok) {
-      return (
-        <div style={{ padding: 24 }}>
-          <PageHeader title="Companies Administration" subtitle="Error" />
-          Failed to load companies
-        </div>
-      );
-    }
-
-    const raw = await res.json();
-    json = parseCompaniesResponse(raw, page, limit);
-
-  } catch (err) {
-    console.error("FETCH ERROR:", err);
-
+  if (!res.ok) {
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Companies Administration" subtitle="Error" />
@@ -177,6 +158,9 @@ export default async function CompaniesPage({
       </div>
     );
   }
+
+  const raw = await res.json();
+  const json = parseCompaniesResponse(raw, page, limit);
 
   const companies = json.data;
   const meta = json.meta ?? {

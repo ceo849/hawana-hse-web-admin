@@ -1,9 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 type Role =
   | "OWNER"
@@ -48,10 +49,7 @@ function parse(value: unknown): ActionPlan[] {
 }
 
 export default async function ActionPlansPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) redirect("/login");
+  const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
@@ -59,26 +57,19 @@ export default async function ActionPlansPage() {
   const canManage =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  let items: ActionPlan[] = [];
+  // ✅ الالتزام بالـ SSR Flow
+  const res = await serverSafeFetch(
+    "/action-plans?page=1&limit=20",
+    token,
+    { cache: "no-store" }
+  );
 
-  try {
-    const res = await serverAppFetch(
-      "/api/action-plans?page=1&limit=20",
-      token,
-      {
-        cache: "no-store",
-      }
-    );
-
-    if (res.status === 401) redirect("/login");
-
-    const json = await res.json();
-    items = parse(json);
-  } catch (err) {
-    console.error("Action Plans Fetch Error:", err);
-
+  if (!res.ok) {
     return <div>Failed to load action plans</div>;
   }
+
+  const json = await res.json();
+  const items = parse(json);
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>

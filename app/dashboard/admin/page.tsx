@@ -1,11 +1,11 @@
-// app/dashboard/admin/page.tsx
+export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import { requireAccessToken } from "@/lib/server-auth";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 export default async function AdminPage() {
   const token = await requireAccessToken();
@@ -17,41 +17,33 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
+  // ✅ SSR flow الصحيح
+  const [u, r, p] = await Promise.all([
+    serverSafeFetch("/users?page=1&limit=1", token),
+    serverSafeFetch("/safety-reports?page=1&limit=1", token),
+    serverSafeFetch("/action-plans?page=1&limit=1", token),
+  ]);
+
   let users = 0;
   let reports = 0;
   let plans = 0;
 
-  try {
-    const [u, r, p] = await Promise.all([
-      serverAppFetch("/users?page=1&limit=1", token),
-      serverAppFetch("/safety-reports?page=1&limit=1", token),
-      serverAppFetch("/action-plans?page=1&limit=1", token),
-    ]);
+  // USERS
+  if (u.ok) {
+    const j = await u.json();
+    users = j?.meta?.total ?? 0;
+  }
 
-    if (u.status === 401 || r.status === 401 || p.status === 401) {
-      redirect("/login");
-    }
+  // REPORTS
+  if (r.ok) {
+    const j = await r.json();
+    reports = j?.meta?.total ?? 0;
+  }
 
-    // USERS
-    if (u.ok) {
-      const j = await u.json();
-      users = j?.meta?.total ?? 0;
-    }
-
-    // REPORTS
-    if (r.ok) {
-      const j = await r.json();
-      reports = j?.meta?.total ?? 0;
-    }
-
-    // PLANS
-    if (p.ok) {
-      const j = await p.json();
-      plans = j?.meta?.total ?? 0;
-    }
-
-  } catch (e) {
-    console.error("Admin fallback error:", e);
+  // PLANS
+  if (p.ok) {
+    const j = await p.json();
+    plans = j?.meta?.total ?? 0;
   }
 
   return (

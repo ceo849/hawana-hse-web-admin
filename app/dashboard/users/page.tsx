@@ -1,9 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 type Role =
   | "OWNER"
@@ -78,36 +79,24 @@ export default async function UsersPage() {
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canManage =
-    role === "OWNER" || role === "ADMIN";
+  const canManage = role === "OWNER" || role === "ADMIN";
 
-  let users: UserDto[] = [];
-  let total = 0;
+  // ✅ SSR fetch عبر الطبقة الصحيحة
+  const res = await serverSafeFetch(
+    "/users?page=1&limit=20",
+    token,
+    { cache: "no-store" }
+  );
 
-  try {
-    const res = await serverAppFetch(
-      "/api/users?page=1&limit=20",
-      token,
-      { cache: "no-store" }
-    );
-
-    if (res.status === 401) redirect("/login");
-
-    if (!res.ok) {
-      return <div>Failed to load users</div>;
-    }
-
-    const json = await res.json();
-    const parsed = parseUsers(json);
-
-    users = parsed.data;
-    total = parsed.meta?.total ?? users.length;
-
-  } catch (err) {
-    console.error("Users Fetch Error:", err);
-
+  if (!res.ok) {
     return <div>Failed to load users</div>;
   }
+
+  const json = await res.json();
+  const parsed = parseUsers(json);
+
+  const users = parsed.data;
+  const total = parsed.meta?.total ?? users.length;
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui" }}>

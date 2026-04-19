@@ -1,9 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 
 type Role =
   | "OWNER"
@@ -94,32 +95,29 @@ export default async function SitesProjectsPage() {
   const canManage =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  // ✅ FIX: correct serverAppFetch signature + correct path
-  const res = await serverAppFetch(
+  // ✅ SSR flow الصحيح
+  const res = await serverSafeFetch(
     "/sites-projects?page=1&limit=20",
     token,
-    {
-      cache: "no-store",
-    }
+    { cache: "no-store" }
   );
 
-  if (res.status === 401) redirect("/login");
+  // ⚠️ نحافظ فقط على business logic (403)
+  if (res.status === 403) {
+    return (
+      <div style={{ padding: 24 }}>
+        <PageHeader
+          title="Sites / Projects"
+          subtitle="Operational sites management"
+        />
+        <div style={{ color: "#b91c1c", marginTop: 12 }}>
+          Access restricted — subscription inactive
+        </div>
+      </div>
+    );
+  }
 
   if (!res.ok) {
-    if (res.status === 403) {
-      return (
-        <div style={{ padding: 24 }}>
-          <PageHeader
-            title="Sites / Projects"
-            subtitle="Operational sites management"
-          />
-          <div style={{ color: "#b91c1c", marginTop: 12 }}>
-            Access restricted — subscription inactive
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Sites / Projects" subtitle="Error" />

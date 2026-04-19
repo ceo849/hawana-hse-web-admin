@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+export const dynamic = "force-dynamic";
 
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
@@ -9,68 +9,55 @@ import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 export default async function DashboardPage() {
   const token = await requireAccessToken();
 
+  // ❗ NO try/catch هنا
+  const [usersRes, reportsRes, plansRes] = await Promise.all([
+    serverSafeFetch("/users?page=1&limit=100", token),
+    serverSafeFetch("/safety-reports?page=1&limit=100", token),
+    serverSafeFetch("/action-plans?page=1&limit=100", token),
+  ]);
+
   let usersCount = 0;
   let reports: any[] = [];
   let reportsCount = 0;
   let plansCount = 0;
 
-  // ✅ dashboard source of truth
+  // USERS
+  if (usersRes.ok) {
+    const usersJson = await usersRes.json();
+    usersCount = Array.isArray(usersJson?.data)
+      ? usersJson.data.length
+      : 0;
+  }
+
+  // REPORTS
+  if (reportsRes.ok) {
+    const reportsJson = await reportsRes.json();
+    reports = Array.isArray(reportsJson?.data)
+      ? reportsJson.data
+      : [];
+    reportsCount = reports.length;
+  }
+
+  // PLANS
+  if (plansRes.ok) {
+    const plansJson = await plansRes.json();
+    plansCount = Array.isArray(plansJson?.data)
+      ? plansJson.data.length
+      : 0;
+  }
+
+  // ===== Dashboard API =====
+  const dashboardRes = await serverSafeFetch("/dashboard", token);
+
   let dashboardUsers = 0;
   let dashboardCompanies = 0;
   let dashboardPlans = 0;
 
-  try {
-    const [usersRes, reportsRes, plansRes] = await Promise.all([
-      serverSafeFetch("/users?page=1&limit=100", token),
-      serverSafeFetch("/safety-reports?page=1&limit=100", token),
-      serverSafeFetch("/action-plans?page=1&limit=100", token),
-    ]);
-
-    // USERS
-    if (usersRes.ok) {
-      const usersJson = await usersRes.json();
-      usersCount = Array.isArray(usersJson?.data)
-        ? usersJson.data.length
-        : 0;
-    } else if (usersRes.status === 403) {
-      usersCount = 0;
-    }
-
-    // REPORTS
-    if (reportsRes.ok) {
-      const reportsJson = await reportsRes.json();
-      reports = Array.isArray(reportsJson?.data)
-        ? reportsJson.data
-        : [];
-      reportsCount = reports.length;
-    } else if (reportsRes.status === 403) {
-      reportsCount = 0;
-    }
-
-    // PLANS
-    if (plansRes.ok) {
-      const plansJson = await plansRes.json();
-      plansCount = Array.isArray(plansJson?.data)
-        ? plansJson.data.length
-        : 0;
-    }
-
-  } catch (err) {
-    console.error("Dashboard Error:", err);
-  }
-
-  // ===== Dashboard Aggregated API =====
-  try {
-    const dashboardRes = await serverSafeFetch("/dashboard", token);
-
-    if (dashboardRes.ok) {
-      const data = await dashboardRes.json();
-      dashboardUsers = data.users ?? 0;
-      dashboardCompanies = data.companies ?? 0;
-      dashboardPlans = data.actionPlans ?? 0;
-    }
-  } catch (err) {
-    console.error("Dashboard API Error:", err);
+  if (dashboardRes.ok) {
+    const data = await dashboardRes.json();
+    dashboardUsers = data.users ?? 0;
+    dashboardCompanies = data.companies ?? 0;
+    dashboardPlans = data.actionPlans ?? 0;
   }
 
   const openCount = reports.filter((r) => r.status === "OPEN").length;

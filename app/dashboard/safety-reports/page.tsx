@@ -1,4 +1,4 @@
-// app/dashboard/safety-reports/page.tsx
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -103,41 +103,33 @@ function StatusBadge({ status }: { status: string | null }) {
 export default async function SafetyReportsPage() {
   const token = await requireAccessToken();
 
+  // ✅ Parallel calls مع flow سليم
+  const [reportsRes, sitesRes] = await Promise.all([
+    serverSafeFetch("/safety-reports?page=1&limit=20", token, {
+      cache: "no-store",
+    }),
+    serverSafeFetch("/sites-projects", token, {
+      cache: "no-store",
+    }),
+  ]);
+
   let items: SafetyReport[] = [];
   let sitesMap: Record<string, string> = {};
 
-  try {
-    // ===== Reports =====
-    const res = await serverSafeFetch(
-      "/safety-reports?page=1&limit=20",
-      token
+  // REPORTS
+  if (reportsRes.ok) {
+    const json = await reportsRes.json();
+    items = parseReports(json);
+  }
+
+  // SITES
+  if (sitesRes.ok) {
+    const sitesJson = await sitesRes.json();
+    const sites = parseSites(sitesJson);
+
+    sitesMap = Object.fromEntries(
+      sites.map((s) => [s.id, s.name ?? s.id])
     );
-
-    if (res.ok) {
-      const json = await res.json();
-      items = parseReports(json);
-    } else {
-      console.error("Safety Reports Fetch Failed:", res.status);
-    }
-
-    // ===== Sites =====
-    const sitesRes = await serverSafeFetch(
-      "/sites-projects",
-      token
-    );
-
-    if (sitesRes.ok) {
-      const sitesJson = await sitesRes.json();
-      const sites = parseSites(sitesJson);
-
-      sitesMap = Object.fromEntries(
-        sites.map((s) => [s.id, s.name ?? s.id])
-      );
-    } else {
-      console.error("Sites Fetch Failed:", sitesRes.status);
-    }
-  } catch (err) {
-    console.error("Safety Reports Error:", err);
   }
 
   return (

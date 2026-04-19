@@ -1,13 +1,31 @@
+// app/api/users/route.ts
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const CORE_API =
   (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
-// ✅ centralized token extraction (no change in behavior)
+// ===== Token Extraction =====
 async function getToken() {
   const cookieStore = await cookies();
   return cookieStore.get("access_token")?.value ?? null;
+}
+
+// ===== Response Builder =====
+async function buildResponse(upstream: Response) {
+  const contentType =
+    upstream.headers.get("content-type") ??
+    "application/json; charset=utf-8";
+
+  const bodyText = await upstream.text();
+
+  return new NextResponse(bodyText, {
+    status: upstream.status,
+    headers: {
+      "content-type": contentType,
+    },
+  });
 }
 
 // =========================
@@ -24,10 +42,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ?? "";
 
-    // ✅ explicit path build (no implicit assumptions)
-    const upstreamUrl = `${CORE_API}/v1/users${qs}`;
-
-    const upstream = await fetch(upstreamUrl, {
+    const upstream = await fetch(`${CORE_API}/v1/users${qs}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -35,17 +50,8 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
 
-    // ✅ safe passthrough (avoid JSON parse issues)
-    const bodyText = await upstream.text();
+    return buildResponse(upstream);
 
-    return new NextResponse(bodyText, {
-      status: upstream.status,
-      headers: {
-        "content-type":
-          upstream.headers.get("content-type") ??
-          "application/json; charset=utf-8",
-      },
-    });
   } catch (error) {
     console.error("API PROXY ERROR (GET /users):", error);
 
@@ -69,10 +75,7 @@ export async function POST(req: Request) {
 
     const body = await req.text();
 
-    // ✅ explicit path build
-    const upstreamUrl = `${CORE_API}/v1/users`;
-
-    const upstream = await fetch(upstreamUrl, {
+    const upstream = await fetch(`${CORE_API}/v1/users`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -82,16 +85,8 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    const bodyText = await upstream.text();
+    return buildResponse(upstream);
 
-    return new NextResponse(bodyText, {
-      status: upstream.status,
-      headers: {
-        "content-type":
-          upstream.headers.get("content-type") ??
-          "application/json; charset=utf-8",
-      },
-    });
   } catch (error) {
     console.error("API PROXY ERROR (POST /users):", error);
 

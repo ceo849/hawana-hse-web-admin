@@ -1,5 +1,3 @@
-// app/api/auth/login/route.ts
-
 import { NextResponse } from "next/server";
 
 type LoginBody = {
@@ -39,6 +37,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        connection: "close", // ✅ FIX (حل التعليق)
       },
       body: JSON.stringify({ email, password }),
       cache: "no-store",
@@ -84,16 +83,15 @@ export async function POST(req: Request) {
       path: "/",
     };
 
-    // ===== CRITICAL FIX =====
     res.cookies.set("access_token", String(accessToken), {
       ...cookieOptions,
-      maxAge: 60 * 60 * 24, // 1 day
+      maxAge: 60 * 60 * 24,
     });
 
     if (refreshToken) {
       res.cookies.set("refresh_token", String(refreshToken), {
         ...cookieOptions,
-        maxAge: 60 * 60 * 24 * 30, // 30 days
+        maxAge: 60 * 60 * 24 * 30,
       });
     }
 

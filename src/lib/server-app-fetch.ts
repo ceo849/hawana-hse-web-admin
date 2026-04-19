@@ -1,51 +1,46 @@
-// src/lib/server-app-fetch.ts
-
 import { cookies } from "next/headers";
-import { clearSessionCookies } from "@/src/lib/server-session-guard";
 
 // ===== ARCH GUARD =====
 function enforceServerArchitecture(path: string) {
   if (
     path.startsWith("http://") ||
     path.startsWith("https://") ||
-    path.includes(":3001") ||
-    path.includes("/v1/")
+    path.includes(":3001")
   ) {
     console.error("🚨 SERVER ARCH VIOLATION");
     console.error("Blocked path:", path);
 
-    throw new Error(
-      "ARCH VIOLATION: Must use API Proxy only (Web → API → Core)"
-    );
+    throw new Error("ARCH VIOLATION: Invalid path usage");
   }
 }
 
 // ===== Normalize Path =====
 function normalizePath(path: string): string {
   const clean = path.startsWith("/") ? path : `/${path}`;
-
-  if (clean.startsWith("/api/")) {
-    return clean.replace(/^\/api/, "");
-  }
-
   return clean;
 }
 
 // ===== Refresh Token =====
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(
+  refreshToken: string
+): Promise<string | null> {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const CORE_API =
+      (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
-    const res = await fetch(`${baseUrl}/api/auth/refresh`, {
+    const res = await fetch(`${CORE_API}/v1/auth/refresh`, {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
       cache: "no-store",
     });
 
     if (!res.ok) return null;
 
-    const cookieStore = await cookies();
-    return cookieStore.get("access_token")?.value ?? null;
+    const data = await res.json().catch(() => ({}));
+
+    return data?.access_token || data?.accessToken || null;
   } catch {
     return null;
   }
@@ -60,7 +55,7 @@ export async function serverAppFetch(
   let token: string | undefined;
   let options: RequestInit = {};
 
-  // overload handling
+  // overload
   if (typeof arg2 === "string" && arg3) {
     token = arg2;
     options = arg3;
@@ -76,18 +71,19 @@ export async function serverAppFetch(
     token = cookieStore.get("access_token")?.value;
   }
 
-  // ❌ No token → Session انتهت
+  const refreshToken = cookieStore.get("refresh_token")?.value;
+
+  // ❌ No token
   if (!token) {
-    await clearSessionCookies();
     throw new Error("SESSION_EXPIRED");
   }
 
   enforceServerArchitecture(path);
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const CORE_API =
+    (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
-  const finalUrl = `${baseUrl}/api${normalizePath(path)}`;
+  const finalUrl = `${CORE_API}/v1${normalizePath(path)}`;
 
   const buildHeaders = (t: string): Record<string, string> => {
     const headers: Record<string, string> = {
@@ -117,24 +113,24 @@ export async function serverAppFetch(
   if (res.status === 401) {
     console.warn("[AUTO_REFRESH_TRIGGERED]");
 
-    const newToken = await refreshAccessToken();
-
-    // ❌ Refresh فشل → Logout
-    if (!newToken) {
-      await clearSessionCookies();
+    if (!refreshToken) {
       throw new Error("SESSION_EXPIRED");
     }
 
-    // 🔁 Retry
+    const newToken = await refreshAccessToken(refreshToken);
+
+    if (!newToken) {
+      throw new Error("SESSION_EXPIRED");
+    }
+
+    // 🔁 Retry (مرة واحدة فقط)
     res = await fetch(finalUrl, {
       ...options,
       headers: buildHeaders(newToken),
       cache: "no-store",
     });
 
-    // ❌ Still 401 → Logout
     if (res.status === 401) {
-      await clearSessionCookies();
       throw new Error("SESSION_EXPIRED");
     }
   }
