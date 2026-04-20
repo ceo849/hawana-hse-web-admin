@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 // ===== Clear Session (Universal Safe) =====
-export function clearSessionCookies(res?: NextResponse) {
+export async function clearSessionCookies(res?: NextResponse) {
   const isProd = process.env.NODE_ENV === "production";
 
   const baseOptions = {
@@ -30,9 +30,9 @@ export function clearSessionCookies(res?: NextResponse) {
   }
 
   // =========================
-  // SSR MODE (Next 13+)
+  // SSR MODE (Next 13+ / 16 fix)
   // =========================
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   cookieStore.set("access_token", "", {
     ...baseOptions,

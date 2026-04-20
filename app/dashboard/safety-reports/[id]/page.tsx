@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -13,34 +15,49 @@ type SafetyReport = {
 };
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: { id: string }; // ✅ FIX (no Promise)
 };
 
 export default async function SafetyReportDetailsPage({
   params,
 }: PageProps) {
   const token = await requireAccessToken();
-  const { id } = await params;
-  const reportId = String(id ?? "").trim();
+
+  const reportId = String(params.id ?? "").trim();
 
   if (!reportId) redirect("/dashboard/safety-reports");
 
   let sr: SafetyReport | null = null;
 
-  const res = await serverAppFetch(
-    token,
-    `/safety-reports/${encodeURIComponent(reportId)}`, // ✅ FIX
-    { cache: "no-store" }
-  );
+  let res;
+
+  try {
+    // ✅ FIX: correct signature
+    res = await serverAppFetch(
+      `/safety-reports/${encodeURIComponent(reportId)}`,
+      token,
+      { cache: "no-store" }
+    );
+  } catch (err) {
+    console.error("Details Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 24 }}>
+        <PageHeader title="Safety Report" subtitle="Error" />
+        Failed to load
+      </div>
+    );
+  }
 
   if (res.status === 401) redirect("/login");
 
   if (res.ok) {
     sr = (await res.json()) as SafetyReport;
   } else if (res.status === 404) {
+    // ✅ fallback safe (no breaking)
     const listRes = await serverAppFetch(
+      `/safety-reports?page=1&limit=50`,
       token,
-      `/safety-reports?page=1&limit=50`, // ✅ FIX
       { cache: "no-store" }
     );
 

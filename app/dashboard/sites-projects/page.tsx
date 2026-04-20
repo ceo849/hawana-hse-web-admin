@@ -60,19 +60,20 @@ function formatDate(value: string): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   }).format(d);
 }
 
+// ===== Status Badge (Refined) =====
 function style(bg: string, color: string, border: string) {
   return {
     background: bg,
     color,
     border: `1px solid ${border}`,
-    padding: "4px 8px",
-    borderRadius: 8,
+    padding: "4px 10px",
+    borderRadius: 999,
     fontSize: 12,
+    fontWeight: 600,
+    whiteSpace: "nowrap" as const,
   };
 }
 
@@ -95,17 +96,33 @@ export default async function SitesProjectsPage() {
   const canManage =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
-  // ✅ SSR flow الصحيح
-  const res = await serverSafeFetch(
-    "/sites-projects?page=1&limit=20",
-    token,
-    { cache: "no-store" }
-  );
+  let res;
 
-  // ⚠️ نحافظ فقط على business logic (403)
+  try {
+    res = await serverSafeFetch(
+      "/sites-projects?page=1&limit=20",
+      token,
+      { cache: "no-store" }
+    );
+  } catch (err) {
+    console.error("Sites Projects Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 16 }}>
+        <PageHeader
+          title="Sites / Projects"
+          subtitle="Operational sites management"
+        />
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load sites/projects (network/server error)
+        </div>
+      </div>
+    );
+  }
+
   if (res.status === 403) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: 16 }}>
         <PageHeader
           title="Sites / Projects"
           subtitle="Operational sites management"
@@ -119,9 +136,11 @@ export default async function SitesProjectsPage() {
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: 16 }}>
         <PageHeader title="Sites / Projects" subtitle="Error" />
-        Failed to load
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load sites/projects
+        </div>
       </div>
     );
   }
@@ -130,7 +149,7 @@ export default async function SitesProjectsPage() {
   const items = parseSiteProjects(json);
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui" }}>
+    <div style={{ padding: 16, fontFamily: "system-ui" }}>
       <PageHeader
         title="Sites / Projects Administration"
         subtitle="Operational sites management"
@@ -143,39 +162,107 @@ export default async function SitesProjectsPage() {
         }
       />
 
-      <div>Total: {items.length}</div>
+      <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
 
-      <table>
-        <tbody>
-          {items.map((i) => {
-            const s = getStatusStyle(i.status);
+      {/* ===== Desktop Table ===== */}
+      <div className="desktop-only">
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ minWidth: 600, width: "100%" }}>
+            <tbody>
+              {items.map((i) => {
+                const s = getStatusStyle(i.status);
 
-            return (
-              <tr key={i.id}>
-                <td>
-                  <Link href={`/dashboard/sites-projects/${i.id}`}>
-                    {i.name}
-                  </Link>
-                </td>
+                return (
+                  <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
+                    <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                      <Link href={`/dashboard/sites-projects/${i.id}`}>
+                        {i.name}
+                      </Link>
+                    </td>
 
-                <td>
-                  <span style={s}>{i.status}</span>
-                </td>
+                    <td style={{ padding: 8 }}>
+                      <span style={s}>{i.status}</span>
+                    </td>
 
-                <td>{i.id}</td>
-                <td>{formatDate(i.createdAt)}</td>
-                <td>{formatDate(i.updatedAt)}</td>
+                    <td
+                      style={{
+                        padding: 8,
+                        maxWidth: 140,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {i.id}
+                    </td>
 
-                <td>
-                  <Link href={`/dashboard/sites-projects/${i.id}`}>
-                    Open
-                  </Link>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                      {formatDate(i.createdAt)}
+                    </td>
+
+                    <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                      {formatDate(i.updatedAt)}
+                    </td>
+
+                    <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                      <Link href={`/dashboard/sites-projects/${i.id}`}>
+                        Open
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ===== Mobile Cards ===== */}
+      <div className="mobile-only" style={{ marginTop: 12 }}>
+        {items.map((i) => {
+          const s = getStatusStyle(i.status);
+
+          return (
+            <Link
+              key={i.id}
+              href={`/dashboard/sites-projects/${i.id}`}
+              style={{
+                display: "block",
+                padding: 16,
+                borderRadius: 14,
+                border: "1px solid #e5e7eb",
+                marginBottom: 12,
+                textDecoration: "none",
+                color: "inherit",
+                background: "#ffffff",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                {i.name}
+              </div>
+
+              <div style={{ marginBottom: 6 }}>
+                <span style={s}>{i.status}</span>
+              </div>
+
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#6b7280",
+                  marginBottom: 4,
+                }}
+              >
+                {i.location ?? "-"}
+              </div>
+
+              <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                {formatDate(i.createdAt)}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

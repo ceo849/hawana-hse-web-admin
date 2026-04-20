@@ -1,4 +1,7 @@
+'use client';
+
 import React from "react";
+import Link from "next/link";
 
 type ActionButtonProps = {
   href: string;
@@ -14,38 +17,48 @@ export default function ActionButton({
   const primary = variant === "primary";
 
   return (
-    <a
+    <Link
       href={href}
+      className="action-btn"
       style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
 
-        height: 52,
+        height: 54, // ✅ أفضل للمس
         width: "100%",
 
-        borderRadius: 14,
+        borderRadius: 16,
 
         fontSize: 15,
         fontWeight: 600,
-        letterSpacing: "-0.2px", // ✔ تحسين قراءة
+        letterSpacing: "-0.2px",
 
         textDecoration: "none",
 
-        border: primary ? "1px solid #111" : "1px solid #e5e7eb",
-        background: primary ? "#111" : "#fff",
-        color: primary ? "#fff" : "#111",
+        border: primary ? "1px solid #111827" : "1px solid #e5e7eb",
+        background: primary ? "#111827" : "#ffffff",
+        color: primary ? "#ffffff" : "#111827",
 
+        // ✅ Elevation أفضل
         boxShadow: primary
-          ? "0 2px 6px rgba(0,0,0,0.12)"
-          : "0 1px 2px rgba(0,0,0,0.04)", // ✔ حتى secondary له depth خفيف
+          ? "0 8px 20px rgba(0,0,0,0.12)"
+          : "0 4px 10px rgba(0,0,0,0.05)",
 
-        WebkitTapHighlightColor: "transparent", // ✔ تحسين موبايل
+        WebkitTapHighlightColor: "transparent",
 
-        transition: "all 0.15s ease",
+        transition: "transform 0.12s ease, box-shadow 0.12s ease",
       }}
     >
+      {/* Active / Touch feedback */}
+      <style>{`
+        .action-btn:active {
+          transform: scale(0.97);
+          box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+        }
+      `}</style>
+
       {children}
-    </a>
+    </Link>
   );
 }

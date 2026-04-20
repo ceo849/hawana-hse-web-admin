@@ -31,8 +31,11 @@ async function refreshAccessToken(
     const res = await fetch(`${CORE_API}/v1/auth/refresh`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${refreshToken}`,
+        "Content-Type": "application/json", // ✅ ADDITIVE
       },
+      body: JSON.stringify({
+        refreshToken, // ✅ ROOT FIX
+      }),
       cache: "no-store",
     });
 

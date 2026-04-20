@@ -4,6 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import DashboardShell from "@/components/layout/dashboard-shell";
+import MobileContainer from "@/components/ui/mobile-container";
+
+// ✅ NEW
+import MobileBottomNav from "@/components/ui/mobile-bottom-nav";
+
 import { type SidebarNavItem } from "@/components/layout/sidebar";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 
@@ -28,7 +33,6 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  // ✅ Next 16 → cookies async
   const cookieStore = await cookies();
 
   const accessToken = cookieStore.get("access_token")?.value ?? null;
@@ -54,11 +58,22 @@ export default async function DashboardLayout({
         display: "flex",
         minHeight: "100vh",
         fontFamily: "system-ui",
-        background: "#f9fafb",
+        background: "#f3f4f6",
       }}
     >
+      {/* ❗ لا نلمس DashboardShell */}
       <DashboardShell role={role} email={email} navItems={navItems}>
-        <Suspense fallback={null}>{children}</Suspense>
+        
+        {/* ✅ Mobile Layer */}
+        <MobileContainer>
+          <Suspense fallback={null}>{children}</Suspense>
+        </MobileContainer>
+
+        {/* ✅ FIX: عزل BottomNav لمنع crash على الموبايل */}
+        <Suspense fallback={null}>
+          <MobileBottomNav />
+        </Suspense>
+
       </DashboardShell>
     </div>
   );

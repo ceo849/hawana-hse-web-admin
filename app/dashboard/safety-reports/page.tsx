@@ -103,7 +103,6 @@ function StatusBadge({ status }: { status: string | null }) {
 export default async function SafetyReportsPage() {
   const token = await requireAccessToken();
 
-  // ✅ Parallel calls مع flow سليم
   const [reportsRes, sitesRes] = await Promise.all([
     serverSafeFetch("/safety-reports?page=1&limit=20", token, {
       cache: "no-store",
@@ -116,13 +115,11 @@ export default async function SafetyReportsPage() {
   let items: SafetyReport[] = [];
   let sitesMap: Record<string, string> = {};
 
-  // REPORTS
   if (reportsRes.ok) {
     const json = await reportsRes.json();
     items = parseReports(json);
   }
 
-  // SITES
   if (sitesRes.ok) {
     const sitesJson = await sitesRes.json();
     const sites = parseSites(sitesJson);
@@ -133,7 +130,7 @@ export default async function SafetyReportsPage() {
   }
 
   return (
-    <div style={{ fontFamily: "system-ui", padding: 24 }}>
+    <div style={{ fontFamily: "system-ui", padding: 16 }}>
       <PageHeader title="Safety Reports" subtitle="Operational reports" />
 
       <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
@@ -141,42 +138,94 @@ export default async function SafetyReportsPage() {
       {items.length === 0 ? (
         <div>No reports found</div>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th align="left" style={{ padding: "8px 12px" }}>Title</th>
-              <th align="left" style={{ padding: "8px 12px" }}>Status</th>
-              <th align="left" style={{ padding: "8px 12px" }}>Site</th>
-              <th align="left" style={{ padding: "8px 12px" }}>Created At</th>
-            </tr>
-          </thead>
+        <>
+          {/* ===== Desktop Table ===== */}
+          <div className="desktop-only">
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  minWidth: 600,
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th align="left" style={{ padding: "8px 12px" }}>Title</th>
+                    <th align="left" style={{ padding: "8px 12px" }}>Status</th>
+                    <th align="left" style={{ padding: "8px 12px" }}>Site</th>
+                    <th align="left" style={{ padding: "8px 12px" }}>Created At</th>
+                  </tr>
+                </thead>
 
-          <tbody>
+                <tbody>
+                  {items.map((r) => (
+                    <tr key={r.id} style={{ borderTop: "1px solid #e5e7eb" }}>
+                      <td style={{ padding: "8px 12px" }}>
+                        <Link href={`/dashboard/safety-reports/${r.id}`}>
+                          {r.title ?? "-"}
+                        </Link>
+                      </td>
+
+                      <td style={{ padding: "8px 12px" }}>
+                        <StatusBadge status={r.status} />
+                      </td>
+
+                      <td style={{ padding: "8px 12px" }}>
+                        {r.siteProjectId
+                          ? sitesMap[r.siteProjectId] ?? r.siteProjectId
+                          : "-"}
+                      </td>
+
+                      <td style={{ padding: "8px 12px" }}>
+                        {r.createdAt ?? "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ===== Mobile Cards ===== */}
+          <div className="mobile-only" style={{ marginTop: 12 }}>
             {items.map((r) => (
-              <tr key={r.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                <td style={{ padding: "8px 12px" }}>
-                  <Link href={`/dashboard/safety-reports/${r.id}`}>
-                    {r.title ?? "-"}
-                  </Link>
-                </td>
+              <Link
+                key={r.id}
+                href={`/dashboard/safety-reports/${r.id}`}
+                style={{
+                  display: "block",
+                  padding: 16,
+                  borderRadius: 14,
+                  border: "1px solid #e5e7eb",
+                  marginBottom: 12,
+                  textDecoration: "none",
+                  color: "inherit",
+                  background: "#ffffff",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  {r.title ?? "-"}
+                </div>
 
-                <td style={{ padding: "8px 12px" }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
                   <StatusBadge status={r.status} />
-                </td>
+                </div>
 
-                <td style={{ padding: "8px 12px" }}>
+                <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
                   {r.siteProjectId
                     ? sitesMap[r.siteProjectId] ?? r.siteProjectId
                     : "-"}
-                </td>
+                </div>
 
-                <td style={{ padding: "8px 12px" }}>
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>
                   {r.createdAt ?? "-"}
-                </td>
-              </tr>
+                </div>
+              </Link>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </>
       )}
     </div>
   );

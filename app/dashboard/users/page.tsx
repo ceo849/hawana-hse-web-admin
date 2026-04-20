@@ -72,6 +72,39 @@ function parseUsers(value: unknown): UsersResponse {
   return { data: [], meta: { total: 0 } };
 }
 
+// ===== Role Badge (Additive) =====
+function RoleBadge({ role }: { role: string }) {
+  let bg = "#e5e7eb";
+  let color = "#111827";
+
+  if (role === "OWNER") {
+    bg = "#fef3c7";
+    color = "#92400e";
+  } else if (role === "ADMIN") {
+    bg = "#dbeafe";
+    color = "#1e40af";
+  } else if (role === "MANAGER") {
+    bg = "#dcfce7";
+    color = "#166534";
+  }
+
+  return (
+    <span
+      style={{
+        padding: "4px 10px",
+        borderRadius: "999px",
+        fontSize: 12,
+        fontWeight: 600,
+        background: bg,
+        color,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {role}
+    </span>
+  );
+}
+
 // ===== PAGE =====
 export default async function UsersPage() {
   const token = await requireAccessToken();
@@ -81,15 +114,36 @@ export default async function UsersPage() {
 
   const canManage = role === "OWNER" || role === "ADMIN";
 
-  // ✅ SSR fetch عبر الطبقة الصحيحة
-  const res = await serverSafeFetch(
-    "/users?page=1&limit=20",
-    token,
-    { cache: "no-store" }
-  );
+  let res;
+
+  try {
+    res = await serverSafeFetch(
+      "/users?page=1&limit=20",
+      token,
+      { cache: "no-store" }
+    );
+  } catch (err) {
+    console.error("Users Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 24 }}>
+        <PageHeader title="Users" subtitle="User management" />
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load users (network/server error)
+        </div>
+      </div>
+    );
+  }
 
   if (!res.ok) {
-    return <div>Failed to load users</div>;
+    return (
+      <div style={{ padding: 24 }}>
+        <PageHeader title="Users" subtitle="User management" />
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load users
+        </div>
+      </div>
+    );
   }
 
   const json = await res.json();
@@ -99,7 +153,7 @@ export default async function UsersPage() {
   const total = parsed.meta?.total ?? users.length;
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui" }}>
+    <div style={{ padding: 16, fontFamily: "system-ui" }}>
       <PageHeader
         title="Users"
         subtitle="User management"
@@ -110,29 +164,106 @@ export default async function UsersPage() {
         }
       />
 
-      <div>Total users: {total}</div>
+      <div style={{ marginBottom: 12 }}>Total users: {total}</div>
 
-      <table>
-        <thead>
-          <tr>
-            <th align="left">Name</th>
-            <th align="left">Email</th>
-            <th align="left">Role</th>
-            <th align="left">Company</th>
-          </tr>
-        </thead>
+      {/* ===== Desktop Table ===== */}
+      <div className="desktop-only">
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              minWidth: 600,
+              width: "100%",
+              borderCollapse: "collapse",
+            }}
+          >
+            <thead>
+              <tr>
+                <th align="left">Name</th>
+                <th align="left">Email</th>
+                <th align="left">Role</th>
+                <th align="left">Company</th>
+              </tr>
+            </thead>
 
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.fullName}</td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>{u.companyId}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} style={{ borderTop: "1px solid #eee" }}>
+                  <td style={{ padding: "8px 6px", whiteSpace: "nowrap" }}>
+                    {u.fullName}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: "8px 6px",
+                      maxWidth: 160,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {u.email}
+                  </td>
+
+                  <td style={{ padding: "8px 6px" }}>
+                    <RoleBadge role={u.role} />
+                  </td>
+
+                  <td
+                    style={{
+                      padding: "8px 6px",
+                      maxWidth: 180,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {u.companyId}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ===== Mobile Cards ===== */}
+      <div className="mobile-only" style={{ marginTop: 12 }}>
+        {users.map((u) => (
+          <Link
+            key={u.id}
+            href={`/dashboard/users/${u.id}`}
+            style={{
+              display: "block",
+              padding: 16,
+              borderRadius: 14,
+              border: "1px solid #e5e7eb",
+              marginBottom: 12,
+              textDecoration: "none",
+              color: "inherit",
+              background: "#ffffff",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+              {u.fullName}
+            </div>
+
+            <div
+              style={{
+                fontSize: 13,
+                color: "#6b7280",
+                marginBottom: 6,
+              }}
+            >
+              {u.email}
+            </div>
+
+            <div style={{ marginBottom: 4 }}>
+              <RoleBadge role={u.role} />
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

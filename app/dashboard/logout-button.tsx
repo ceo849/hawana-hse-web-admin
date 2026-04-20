@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { apiClient } from '@/src/lib/api-client';
+import { apiClient } from '@/src/lib/api-client'; // لم نحذفه (احترام القاعدة)
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -14,8 +14,10 @@ export default function LogoutButton() {
     setLoading(true);
 
     try {
-      // ✅ FIX: apiClient.post requires body
-      await apiClient.post('/auth/logout', {});
+      // ✅ FIX: stable API Proxy call
+      await fetch('/api/auth/logout', {
+        method: 'DELETE',
+      });
     } catch (err) {
       console.error('Network logout error:', err);
     } finally {

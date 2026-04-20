@@ -32,8 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* ✅ FIX: updated meta */}
+        {/* PWA / iPhone Support */}
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="Hawana HSE" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 

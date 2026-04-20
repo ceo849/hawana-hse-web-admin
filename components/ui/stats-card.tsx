@@ -1,4 +1,7 @@
+'use client';
+
 import React from "react";
+import Link from "next/link";
 
 type StatsCardProps = {
   label: string;
@@ -10,30 +13,34 @@ type StatsCardProps = {
 function cardStyle() {
   return {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column" as const,
 
     justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
+    alignItems: "flex-start", // ✅ بدل center → Mobile natural
 
     border: "1px solid #e5e7eb",
-    borderRadius: 12,
+    borderRadius: 16, // ✅ زيادة الاحترافية
 
-    padding: "12px 14px",
-    background: "#fff",
+    padding: "14px 16px",
+    background: "#ffffff",
 
     textDecoration: "none",
-    color: "#111",
+    color: "#111827",
 
-    minHeight: 72, // ✅ مستطيل مش مربع
+    minHeight: 80,
 
-    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+    // ✅ Elevation أفضل
+    boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
 
-    gap: 4,
+    gap: 6,
 
     cursor: "pointer",
-    transition: "all 0.2s ease",
-  } as const;
+
+    // ✅ Touch optimization
+    WebkitTapHighlightColor: "transparent",
+
+    transition: "transform 0.15s ease, box-shadow 0.15s ease",
+  };
 }
 
 export default function StatsCard({
@@ -44,18 +51,18 @@ export default function StatsCard({
 }: StatsCardProps) {
   const content = (
     <>
-      {/* Hover مرة واحدة */}
+      {/* Active / Touch feedback */}
       <style>{`
-        .stats-card:hover {
-          transform: translateY(-2px) scale(1.01);
-          box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+        .stats-card:active {
+          transform: scale(0.98);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.08);
         }
       `}</style>
 
       {/* Label */}
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "#6b7280",
           fontWeight: 500,
         }}
@@ -66,15 +73,16 @@ export default function StatsCard({
       {/* Value */}
       <div
         style={{
-          fontSize: 22,
+          fontSize: 26, // ✅ أوضح للموبايل
           fontWeight: 700,
           color: "#111827",
+          lineHeight: 1.2,
         }}
       >
         {value}
       </div>
 
-      {/* Helper (اختياري) */}
+      {/* Helper */}
       {helper && (
         <div
           style={{
@@ -90,9 +98,9 @@ export default function StatsCard({
 
   if (href) {
     return (
-      <a href={href} style={cardStyle()} className="stats-card">
+      <Link href={href} style={cardStyle()} className="stats-card">
         {content}
-      </a>
+      </Link>
     );
   }
 

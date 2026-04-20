@@ -1,3 +1,5 @@
+'use client';
+
 import React from "react";
 
 type PageHeaderProps = {
@@ -12,35 +14,70 @@ export default function PageHeader({
   action,
 }: PageHeaderProps) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      {/* Title */}
-      <h1
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+        background: "#ffffff",
+
+        // subtle separation
+        borderBottom: "1px solid #f1f5f9",
+
+        // spacing system
+        paddingTop: 12,
+        paddingBottom: 10,
+        marginBottom: 12,
+      }}
+    >
+      {/* Top Row */}
+      <div
         style={{
-          fontSize: 22,
-          fontWeight: 700,
-          margin: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
         }}
       >
-        {title}
-      </h1>
+        {/* Title */}
+        <h1
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            margin: 0,
+            color: "#111827",
+            lineHeight: 1.3,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {title}
+        </h1>
+
+        {/* Action */}
+        {action && (
+          <div
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {action}
+          </div>
+        )}
+      </div>
 
       {/* Subtitle */}
       {subtitle && (
-        <p
+        <div
           style={{
             marginTop: 4,
-            fontSize: 13,
+            fontSize: 12,
             color: "#6b7280",
+            lineHeight: 1.4,
           }}
         >
           {subtitle}
-        </p>
-      )}
-
-      {/* Actions */}
-      {action && (
-        <div style={{ marginTop: 12 }}>
-          {action}
         </div>
       )}
     </div>

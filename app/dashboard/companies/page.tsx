@@ -120,6 +120,25 @@ function buildDashboardCompaniesUrl(page: number) {
   return `/dashboard/companies?page=${page}`;
 }
 
+// ===== Company Badge (Additive) =====
+function IndustryBadge({ industry }: { industry: string | null }) {
+  return (
+    <span
+      style={{
+        padding: "4px 10px",
+        borderRadius: "999px",
+        fontSize: 12,
+        fontWeight: 600,
+        background: "#f3f4f6",
+        color: "#111827",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {industry ?? "-"}
+    </span>
+  );
+}
+
 // ===== PAGE =====
 export default async function CompaniesPage({
   searchParams,
@@ -142,19 +161,35 @@ export default async function CompaniesPage({
   const search = resolvedSearchParams.search ?? "";
   const limit = 10;
 
-  // ✅ SSR flow الصحيح
-  const res = await serverSafeFetch(
-    `/companies?page=${page}&limit=${limit}` +
-      (search ? `&search=${encodeURIComponent(search)}` : ""),
-    token,
-    { cache: "no-store" }
-  );
+  let res;
+
+  try {
+    res = await serverSafeFetch(
+      `/companies?page=${page}&limit=${limit}` +
+        (search ? `&search=${encodeURIComponent(search)}` : ""),
+      token,
+      { cache: "no-store" }
+    );
+  } catch (err) {
+    console.error("Companies Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 24 }}>
+        <PageHeader title="Companies Administration" subtitle="Error" />
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load companies (network/server error)
+        </div>
+      </div>
+    );
+  }
 
   if (!res.ok) {
     return (
       <div style={{ padding: 24 }}>
         <PageHeader title="Companies Administration" subtitle="Error" />
-        Failed to load companies
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load companies
+        </div>
       </div>
     );
   }
@@ -174,7 +209,7 @@ export default async function CompaniesPage({
   const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui" }}>
+    <div style={{ padding: 16, fontFamily: "system-ui" }}>
       <PageHeader
         title="Companies Administration"
         subtitle="Tenant company administration"
@@ -185,23 +220,95 @@ export default async function CompaniesPage({
         }
       />
 
-      <div>Total companies: {meta.total}</div>
+      <div style={{ marginBottom: 12 }}>
+        Total companies: {meta.total}
+      </div>
 
-      <table>
-        <tbody>
-          {companies.map((c) => (
-            <tr key={c.id}>
-              <td>{c.name}</td>
-              <td>{c.country ?? "-"}</td>
-              <td>{c.industry ?? "-"}</td>
-              <td>{c.id}</td>
-              <td>{formatDate(c.createdAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* ===== Desktop Table ===== */}
+      <div className="desktop-only">
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ minWidth: 650, width: "100%" }}>
+            <tbody>
+              {companies.map((c) => (
+                <tr key={c.id} style={{ borderTop: "1px solid #eee" }}>
+                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                    {c.name}
+                  </td>
 
-      <div>
+                  <td style={{ padding: 8 }}>
+                    {c.country ?? "-"}
+                  </td>
+
+                  <td style={{ padding: 8 }}>
+                    <IndustryBadge industry={c.industry} />
+                  </td>
+
+                  <td
+                    style={{
+                      padding: 8,
+                      maxWidth: 160,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {c.id}
+                  </td>
+
+                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                    {formatDate(c.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ===== Mobile Cards ===== */}
+      <div className="mobile-only" style={{ marginTop: 12 }}>
+        {companies.map((c) => (
+          <Link
+            key={c.id}
+            href={`/dashboard/companies/${c.id}`}
+            style={{
+              display: "block",
+              padding: 16,
+              borderRadius: 14,
+              border: "1px solid #e5e7eb",
+              marginBottom: 12,
+              textDecoration: "none",
+              color: "inherit",
+              background: "#ffffff",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+              {c.name}
+            </div>
+
+            <div
+              style={{
+                fontSize: 13,
+                color: "#6b7280",
+                marginBottom: 6,
+              }}
+            >
+              {c.country ?? "-"}
+            </div>
+
+            <div style={{ marginBottom: 4 }}>
+              <IndustryBadge industry={c.industry} />
+            </div>
+
+            <div style={{ fontSize: 12, color: "#9ca3af" }}>
+              {formatDate(c.createdAt)}
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 12 }}>
         <Link href={buildDashboardCompaniesUrl(prevPage)}>Prev</Link> |{" "}
         <Link href={buildDashboardCompaniesUrl(nextPage)}>Next</Link>
       </div>

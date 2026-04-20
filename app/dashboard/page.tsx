@@ -9,17 +9,25 @@ import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
 export default async function DashboardPage() {
   const token = await requireAccessToken();
 
-  // ❗ NO try/catch هنا
-  const [usersRes, reportsRes, plansRes] = await Promise.all([
-    serverSafeFetch("/users?page=1&limit=100", token),
-    serverSafeFetch("/safety-reports?page=1&limit=100", token),
-    serverSafeFetch("/action-plans?page=1&limit=100", token),
+  const [usersRes, reportsRes, plansRes, dashboardRes] = await Promise.all([
+    serverSafeFetch("/users?page=1&limit=100", token, { cache: "no-store" }),
+    serverSafeFetch("/safety-reports?page=1&limit=100", token, {
+      cache: "no-store",
+    }),
+    serverSafeFetch("/action-plans?page=1&limit=100", token, {
+      cache: "no-store",
+    }),
+    serverSafeFetch("/dashboard", token, { cache: "no-store" }),
   ]);
 
   let usersCount = 0;
   let reports: any[] = [];
   let reportsCount = 0;
   let plansCount = 0;
+
+  let dashboardUsers = 0;
+  let dashboardCompanies = 0;
+  let dashboardPlans = 0;
 
   // USERS
   if (usersRes.ok) {
@@ -46,18 +54,12 @@ export default async function DashboardPage() {
       : 0;
   }
 
-  // ===== Dashboard API =====
-  const dashboardRes = await serverSafeFetch("/dashboard", token);
-
-  let dashboardUsers = 0;
-  let dashboardCompanies = 0;
-  let dashboardPlans = 0;
-
+  // DASHBOARD API
   if (dashboardRes.ok) {
     const data = await dashboardRes.json();
-    dashboardUsers = data.users ?? 0;
+    dashboardUsers = data.users ?? usersCount;
     dashboardCompanies = data.companies ?? 0;
-    dashboardPlans = data.actionPlans ?? 0;
+    dashboardPlans = data.actionPlans ?? plansCount;
   }
 
   const openCount = reports.filter((r) => r.status === "OPEN").length;

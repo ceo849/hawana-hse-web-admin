@@ -1,3 +1,5 @@
+// app/login/page.tsx
+
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -42,18 +44,20 @@ function LoginPageInner() {
     checkHealth();
   }, []);
 
-  function normalizeLoginError(
-    data: LoginErrorPayload,
-    status: number,
-  ): string {
-    if (Array.isArray(data?.message)) return data.message.join(' | ');
-    if (typeof data?.message === 'string' && data.message.trim()) {
-      return data.message;
+  function extractErrorMessage(err: any): string {
+    // ✅ axios-like error
+    if (err?.response?.data) {
+      const data: LoginErrorPayload = err.response.data;
+
+      if (Array.isArray(data.message)) return data.message.join(' | ');
+      if (typeof data.message === 'string') return data.message;
+      if (typeof data.error === 'string') return data.error;
     }
-    if (typeof data?.error === 'string' && data.error.trim()) {
-      return data.error;
-    }
-    return `Login failed (${status})`;
+
+    // ✅ fallback
+    if (err?.message) return err.message;
+
+    return 'unknown error';
   }
 
   async function doLogin() {
@@ -63,14 +67,13 @@ function LoginPageInner() {
     setResult('');
 
     try {
-      // ✅ استخدام apiClient بدل fetch المباشر
       await apiClient.post('/auth/login', { email, password });
 
+      // ✅ redirect آمن
       window.location.assign(nextPath);
       return;
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'unknown error';
+      const message = extractErrorMessage(err);
       setResult(`ERROR: ${message}`);
       setLoading(false);
     }

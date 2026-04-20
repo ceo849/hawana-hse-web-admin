@@ -1,8 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
-
+import SubmitButton from "@/components/ui/submit-button";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -82,7 +84,14 @@ export default async function NewSafetyReportPage({
     const tokenInner = await requireAccessToken();
 
     const title = String(formData.get("title") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
+
+    // ✅ FIX: description parsing (root fix)
+    const rawDescription = formData.get("description");
+    const description =
+      typeof rawDescription === "string"
+        ? rawDescription.trim()
+        : "";
+
     const siteProjectId = String(formData.get("siteProjectId") ?? "").trim();
 
     if (!title) {
@@ -206,17 +215,7 @@ export default async function NewSafetyReportPage({
           />
         </div>
 
-        <button
-          type="submit"
-          style={{
-            padding: 12,
-            background: "#111",
-            color: "#fff",
-            borderRadius: 10,
-          }}
-        >
-          Create
-        </button>
+        <SubmitButton />
       </form>
     </div>
   );

@@ -24,3 +24,45 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ===== Responsive Visibility (Additive) ===== */
+
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+}
+
+/* ===== Mobile UX Hardening (Additive) ===== */
+
+@media (max-width: 768px) {
+  body {
+    padding: 8px;
+  }
+
+  button {
+    min-height: 44px; /* Touch target */
+  }
+
+  input {
+    min-height: 44px;
+  }
+
+  a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
