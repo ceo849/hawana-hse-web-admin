@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 // ===== ARCH GUARD =====
 function enforceServerArchitecture(path: string) {
@@ -31,6 +32,11 @@ function getWebBaseUrl(): string {
     process.env.NEXT_PUBLIC_BASE_URL ||
     "http://localhost:3000"
   ).replace(/\/$/, "");
+}
+
+// ===== Central Session Handling =====
+function handleSessionExpired(): never {
+  redirect("/login");
 }
 
 // ===== Refresh via API Proxy =====
@@ -94,11 +100,11 @@ export async function serverAppFetch(
   const refreshToken = cookieStore.get("refresh_token")?.value;
 
   if (!token) {
-    throw new Error("SESSION_EXPIRED");
+    handleSessionExpired();
   }
 
   // ================================
-  // ✅ NEW: API PROXY MODE
+  // ✅ API PROXY MODE
   // ================================
   if (isApiRoute(path)) {
     const baseUrl = getWebBaseUrl();
@@ -125,13 +131,13 @@ export async function serverAppFetch(
 
     if (res.status === 401) {
       if (!refreshToken) {
-        throw new Error("SESSION_EXPIRED");
+        handleSessionExpired();
       }
 
       const newToken = await refreshAccessTokenViaProxy(refreshToken, token);
 
       if (!newToken) {
-        throw new Error("SESSION_EXPIRED");
+        handleSessionExpired();
       }
 
       res = await fetch(finalUrl, {
@@ -141,7 +147,7 @@ export async function serverAppFetch(
       });
 
       if (res.status === 401) {
-        throw new Error("SESSION_EXPIRED");
+        handleSessionExpired();
       }
     }
 
@@ -183,13 +189,13 @@ export async function serverAppFetch(
 
   if (res.status === 401) {
     if (!refreshToken) {
-      throw new Error("SESSION_EXPIRED");
+      handleSessionExpired();
     }
 
     const newToken = await refreshAccessTokenViaProxy(refreshToken, token);
 
     if (!newToken) {
-      throw new Error("SESSION_EXPIRED");
+      handleSessionExpired();
     }
 
     res = await fetch(finalUrl, {
@@ -199,7 +205,7 @@ export async function serverAppFetch(
     });
 
     if (res.status === 401) {
-      throw new Error("SESSION_EXPIRED");
+      handleSessionExpired();
     }
   }
 
