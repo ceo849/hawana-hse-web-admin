@@ -1,7 +1,6 @@
-// app/dashboard/page.tsx
-
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
@@ -11,16 +10,41 @@ import { serverAppFetch } from "@/src/lib/server-app-fetch";
 export default async function DashboardPage() {
   await requireAccessToken();
 
-  const [usersRes, reportsRes, plansRes, dashboardRes] = await Promise.all([
-    serverAppFetch("/api/users?page=1&limit=100", { cache: "no-store" }),
-    serverAppFetch("/api/safety-reports?page=1&limit=100", {
-      cache: "no-store",
-    }),
-    serverAppFetch("/api/action-plans?page=1&limit=100", {
-      cache: "no-store",
-    }),
-    serverAppFetch("/api/dashboard", { cache: "no-store" }),
-  ]);
+  let usersRes: Response;
+  let reportsRes: Response;
+  let plansRes: Response;
+  let dashboardRes: Response;
+
+  try {
+    [usersRes, reportsRes, plansRes, dashboardRes] = await Promise.all([
+      serverAppFetch("/api/users?page=1&limit=100", { cache: "no-store" }),
+      serverAppFetch("/api/safety-reports?page=1&limit=100", {
+        cache: "no-store",
+      }),
+      serverAppFetch("/api/action-plans?page=1&limit=100", {
+        cache: "no-store",
+      }),
+      serverAppFetch("/api/dashboard", { cache: "no-store" }),
+    ]);
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
+    console.error("Dashboard Fetch Error:", err);
+
+    return (
+      <div style={container}>
+        <PageHeader
+          title="Dashboard"
+          subtitle="Platform and HSE operational overview"
+        />
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load dashboard data (network/server error)
+        </div>
+      </div>
+    );
+  }
 
   let usersCount = 0;
   let reports: any[] = [];
@@ -31,32 +55,22 @@ export default async function DashboardPage() {
   let dashboardCompanies = 0;
   let dashboardPlans = 0;
 
-  // USERS
   if (usersRes.ok) {
     const usersJson = await usersRes.json();
-    usersCount = Array.isArray(usersJson?.data)
-      ? usersJson.data.length
-      : 0;
+    usersCount = Array.isArray(usersJson?.data) ? usersJson.data.length : 0;
   }
 
-  // REPORTS
   if (reportsRes.ok) {
     const reportsJson = await reportsRes.json();
-    reports = Array.isArray(reportsJson?.data)
-      ? reportsJson.data
-      : [];
+    reports = Array.isArray(reportsJson?.data) ? reportsJson.data : [];
     reportsCount = reports.length;
   }
 
-  // PLANS
   if (plansRes.ok) {
     const plansJson = await plansRes.json();
-    plansCount = Array.isArray(plansJson?.data)
-      ? plansJson.data.length
-      : 0;
+    plansCount = Array.isArray(plansJson?.data) ? plansJson.data.length : 0;
   }
 
-  // DASHBOARD API
   if (dashboardRes.ok) {
     const data = await dashboardRes.json();
     dashboardUsers = data.users ?? usersCount;
@@ -68,9 +82,7 @@ export default async function DashboardPage() {
   const inProgressCount = reports.filter(
     (r) => r.status === "IN_PROGRESS"
   ).length;
-  const closedCount = reports.filter(
-    (r) => r.status === "CLOSED"
-  ).length;
+  const closedCount = reports.filter((r) => r.status === "CLOSED").length;
 
   return (
     <div style={container}>

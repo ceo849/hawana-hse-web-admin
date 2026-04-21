@@ -12,7 +12,6 @@ export default async function AdminPage() {
   const payload = decodeJwtPayload(token);
   const role = String(payload?.role ?? "UNKNOWN").toUpperCase();
 
-  // 🔐 RBAC
   if (role !== "OWNER") {
     redirect("/dashboard");
   }
