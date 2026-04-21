@@ -1,3 +1,11 @@
+/**
+ * ⚠️ DEPRECATED — DO NOT USE IN NEW CODE
+ *
+ * This helper is deprecated in favor of `serverAppFetch`.
+ * It is intentionally kept for backward safety during Phase 4.3
+ * until final verification confirms safe removal in a separate step.
+ */
+
 import { redirect } from "next/navigation";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
