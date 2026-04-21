@@ -1,9 +1,11 @@
+// app/dashboard/safety-reports/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
-import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type SafetyReport = {
   id: string;
@@ -101,13 +103,13 @@ function StatusBadge({ status }: { status: string | null }) {
 
 // ===== PAGE =====
 export default async function SafetyReportsPage() {
-  const token = await requireAccessToken();
+  await requireAccessToken();
 
   const [reportsRes, sitesRes] = await Promise.all([
-    serverSafeFetch("/safety-reports?page=1&limit=20", token, {
+    serverAppFetch("/api/safety-reports?page=1&limit=20", {
       cache: "no-store",
     }),
-    serverSafeFetch("/sites-projects", token, {
+    serverAppFetch("/api/sites-projects", {
       cache: "no-store",
     }),
   ]);
@@ -124,9 +126,7 @@ export default async function SafetyReportsPage() {
     const sitesJson = await sitesRes.json();
     const sites = parseSites(sitesJson);
 
-    sitesMap = Object.fromEntries(
-      sites.map((s) => [s.id, s.name ?? s.id])
-    );
+    sitesMap = Object.fromEntries(sites.map((s) => [s.id, s.name ?? s.id]));
   }
 
   return (
@@ -139,7 +139,6 @@ export default async function SafetyReportsPage() {
         <div>No reports found</div>
       ) : (
         <>
-          {/* ===== Desktop Table ===== */}
           <div className="desktop-only">
             <div style={{ overflowX: "auto" }}>
               <table
@@ -151,10 +150,18 @@ export default async function SafetyReportsPage() {
               >
                 <thead>
                   <tr>
-                    <th align="left" style={{ padding: "8px 12px" }}>Title</th>
-                    <th align="left" style={{ padding: "8px 12px" }}>Status</th>
-                    <th align="left" style={{ padding: "8px 12px" }}>Site</th>
-                    <th align="left" style={{ padding: "8px 12px" }}>Created At</th>
+                    <th align="left" style={{ padding: "8px 12px" }}>
+                      Title
+                    </th>
+                    <th align="left" style={{ padding: "8px 12px" }}>
+                      Status
+                    </th>
+                    <th align="left" style={{ padding: "8px 12px" }}>
+                      Site
+                    </th>
+                    <th align="left" style={{ padding: "8px 12px" }}>
+                      Created At
+                    </th>
                   </tr>
                 </thead>
 
@@ -187,7 +194,6 @@ export default async function SafetyReportsPage() {
             </div>
           </div>
 
-          {/* ===== Mobile Cards ===== */}
           <div className="mobile-only" style={{ marginTop: 12 }}>
             {items.map((r) => (
               <Link
@@ -213,7 +219,13 @@ export default async function SafetyReportsPage() {
                   <StatusBadge status={r.status} />
                 </div>
 
-                <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#6b7280",
+                    marginBottom: 4,
+                  }}
+                >
                   {r.siteProjectId
                     ? sitesMap[r.siteProjectId] ?? r.siteProjectId
                     : "-"}
