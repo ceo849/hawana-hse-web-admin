@@ -1,10 +1,12 @@
+// app/dashboard/sites-projects/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -63,7 +65,6 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
-// ===== Status Badge (Refined) =====
 function style(bg: string, color: string, border: string) {
   return {
     background: bg,
@@ -99,11 +100,9 @@ export default async function SitesProjectsPage() {
   let res;
 
   try {
-    res = await serverSafeFetch(
-      "/sites-projects?page=1&limit=20",
-      token,
-      { cache: "no-store" }
-    );
+    res = await serverAppFetch("/api/sites-projects?page=1&limit=20", {
+      cache: "no-store",
+    });
   } catch (err) {
     console.error("Sites Projects Fetch Error:", err);
 
@@ -164,7 +163,6 @@ export default async function SitesProjectsPage() {
 
       <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
 
-      {/* ===== Desktop Table ===== */}
       <div className="desktop-only">
         <div style={{ overflowX: "auto" }}>
           <table style={{ minWidth: 600, width: "100%" }}>
@@ -217,7 +215,6 @@ export default async function SitesProjectsPage() {
         </div>
       </div>
 
-      {/* ===== Mobile Cards ===== */}
       <div className="mobile-only" style={{ marginTop: 12 }}>
         {items.map((i) => {
           const s = getStatusStyle(i.status);
