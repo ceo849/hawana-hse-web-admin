@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { serverAppFetch } from "@/src/lib/server-app-fetch"; // ✅ استخدام الصحيح
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import FormSubmitButton from "@/components/ui/form-submit-button";
 
 type SiteProjectStatus = "ACTIVE" | "INACTIVE" | string;
 
@@ -52,14 +53,26 @@ function getStatusStyle(status?: string | null) {
   const s = String(status ?? "").toUpperCase();
 
   if (s === "ACTIVE") {
-    return { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" };
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+    };
   }
 
   if (s === "INACTIVE") {
-    return { background: "#f3f4f6", color: "#111827", border: "1px solid #d1d5db" };
+    return {
+      background: "#f3f4f6",
+      color: "#111827",
+      border: "1px solid #d1d5db",
+    };
   }
 
-  return { background: "#f3f4f6", color: "#111827", border: "1px solid #d1d5db" };
+  return {
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+  };
 }
 
 export default async function SiteProjectOverviewPage({
@@ -75,7 +88,6 @@ export default async function SiteProjectOverviewPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  // ✅ FIX: استخدام /api
   const r = await serverAppFetch(
     token,
     `/api/sites-projects/${encodeURIComponent(id)}`
@@ -93,9 +105,6 @@ export default async function SiteProjectOverviewPage({
   const site = json;
   const statusStyle = getStatusStyle(site.status);
 
-  // =========================
-  // UPDATE
-  // =========================
   async function updateSiteProject(formData: FormData) {
     "use server";
 
@@ -125,15 +134,16 @@ export default async function SiteProjectOverviewPage({
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      redirect(`/dashboard/sites-projects/${id}?error=${encodeURIComponent(`Update failed (${res.status}) ${text}`)}`);
+      redirect(
+        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
+          `Update failed (${res.status}) ${text}`
+        )}`
+      );
     }
 
     redirect(`/dashboard/sites-projects/${id}`);
   }
 
-  // =========================
-  // DELETE
-  // =========================
   async function deleteSiteProject() {
     "use server";
 
@@ -149,39 +159,83 @@ export default async function SiteProjectOverviewPage({
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      redirect(`/dashboard/sites-projects/${id}?error=${encodeURIComponent(`Delete failed (${res.status}) ${text}`)}`);
+      redirect(
+        `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
+          `Delete failed (${res.status}) ${text}`
+        )}`
+      );
     }
 
     redirect("/dashboard/sites-projects");
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 960 }}>
+    <div
+      style={{
+        padding: 24,
+        maxWidth: 760,
+        margin: "0 auto",
+        fontFamily: "system-ui",
+      }}
+    >
       <PageHeader
         title="Site / Project Overview"
         subtitle="Site insight & control"
       />
 
       {error && (
-        <div style={{ marginBottom: 16, padding: 12, background: "#fef2f2" }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#fef2f2",
+            borderRadius: 10,
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+          }}
+        >
           {error}
         </div>
       )}
 
       <div style={{ marginBottom: 16 }}>
-        <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
+        <span
+          style={{
+            padding: "6px 12px",
+            borderRadius: 999,
+            ...statusStyle,
+          }}
+        >
           {site.status}
         </span>
       </div>
 
-      <div style={{ border: "1px solid #eee", padding: 16, marginBottom: 16 }}>
-        <div><b>ID:</b> {site.id}</div>
-        <div><b>Name:</b> {site.name}</div>
-        <div><b>Location:</b> {site.location ?? "-"}</div>
-        <div><b>Created:</b> {formatDate(site.createdAt)}</div>
+      <div
+        style={{
+          border: "1px solid #eee",
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 20,
+          background: "#fff",
+          display: "grid",
+          gap: 8,
+        }}
+      >
+        <div>
+          <b>Name:</b> {site.name}
+        </div>
+        <div>
+          <b>Location:</b> {site.location ?? "-"}
+        </div>
+        <div>
+          <b>Created:</b> {formatDate(site.createdAt)}
+        </div>
+        <div>
+          <b>Updated:</b> {formatDate(site.updatedAt)}
+        </div>
       </div>
 
-      <form action={updateSiteProject}>
+      <form action={updateSiteProject} style={{ display: "grid", gap: 12 }}>
         <input name="name" defaultValue={site.name} />
         <input name="location" defaultValue={site.location ?? ""} />
 
@@ -190,14 +244,22 @@ export default async function SiteProjectOverviewPage({
           <option value="INACTIVE">INACTIVE</option>
         </select>
 
-        <button type="submit">Update</button>
+        <FormSubmitButton
+          idleText="Update Site / Project"
+          pendingText="Updating..."
+        />
       </form>
 
-      <form action={deleteSiteProject} style={{ marginTop: 10 }}>
-        <button type="submit">Delete</button>
+      <form action={deleteSiteProject} style={{ marginTop: 12 }}>
+        <FormSubmitButton
+          idleText="Delete Site / Project"
+          pendingText="Deleting..."
+        />
       </form>
 
-      <Link href="/dashboard/sites-projects">Back</Link>
+      <div style={{ marginTop: 16 }}>
+        <Link href="/dashboard/sites-projects">Back to Sites / Projects</Link>
+      </div>
     </div>
   );
 }
