@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 // ===== ARCH GUARD =====
 function enforceServerArchitecture(path: string) {
@@ -34,9 +33,9 @@ function getWebBaseUrl(): string {
   ).replace(/\/$/, "");
 }
 
-// ===== Central Session Handling =====
-function handleSessionExpired(): never {
-  redirect("/login");
+// ===== Central Session Signal =====
+function throwSessionExpired(): never {
+  throw new Error("SESSION_EXPIRED");
 }
 
 // ===== Refresh via API Proxy =====
@@ -100,7 +99,7 @@ export async function serverAppFetch(
   const refreshToken = cookieStore.get("refresh_token")?.value;
 
   if (!token) {
-    handleSessionExpired();
+    throwSessionExpired();
   }
 
   // ================================
@@ -131,13 +130,13 @@ export async function serverAppFetch(
 
     if (res.status === 401) {
       if (!refreshToken) {
-        handleSessionExpired();
+        throwSessionExpired();
       }
 
       const newToken = await refreshAccessTokenViaProxy(refreshToken, token);
 
       if (!newToken) {
-        handleSessionExpired();
+        throwSessionExpired();
       }
 
       res = await fetch(finalUrl, {
@@ -147,7 +146,7 @@ export async function serverAppFetch(
       });
 
       if (res.status === 401) {
-        handleSessionExpired();
+        throwSessionExpired();
       }
     }
 
@@ -189,13 +188,13 @@ export async function serverAppFetch(
 
   if (res.status === 401) {
     if (!refreshToken) {
-      handleSessionExpired();
+      throwSessionExpired();
     }
 
     const newToken = await refreshAccessTokenViaProxy(refreshToken, token);
 
     if (!newToken) {
-      handleSessionExpired();
+      throwSessionExpired();
     }
 
     res = await fetch(finalUrl, {
@@ -205,7 +204,7 @@ export async function serverAppFetch(
     });
 
     if (res.status === 401) {
-      handleSessionExpired();
+      throwSessionExpired();
     }
   }
 
