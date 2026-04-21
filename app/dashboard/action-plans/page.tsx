@@ -1,5 +1,3 @@
-// app/dashboard/action-plans/page.tsx
-
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
@@ -50,7 +48,6 @@ function parse(value: unknown): ActionPlan[] {
   return [];
 }
 
-// ===== Status Badge =====
 function StatusBadge({ status }: { status: string }) {
   let bg = "#e5e7eb";
   let color = "#111827";
@@ -98,9 +95,10 @@ export default async function ActionPlansPage() {
   let res;
 
   try {
-    res = await serverAppFetch("/api/action-plans?page=1&limit=20", {
-      cache: "no-store",
-    });
+    res = await serverAppFetch(
+      "/api/action-plans?page=1&limit=20",
+      { cache: "no-store" }
+    );
   } catch (err) {
     console.error("Action Plans Fetch Error:", err);
 
@@ -156,34 +154,15 @@ export default async function ActionPlansPage() {
             <tbody>
               {items.map((i) => (
                 <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td
-                    style={{
-                      padding: 8,
-                      maxWidth: 160,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <td style={{ padding: 8, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {i.title}
                   </td>
-
                   <td style={{ padding: 8 }}>
                     <StatusBadge status={i.status} />
                   </td>
-
-                  <td
-                    style={{
-                      padding: 8,
-                      maxWidth: 200,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <td style={{ padding: 8, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {i.description ?? "-"}
                   </td>
-
                   <td style={{ padding: 8, whiteSpace: "nowrap" }}>
                     <Link href={`/dashboard/action-plans/${i.id}`}>
                       Open
@@ -216,17 +195,9 @@ export default async function ActionPlansPage() {
             <div style={{ fontWeight: 600, marginBottom: 6 }}>
               {i.title}
             </div>
-
-            <div
-              style={{
-                fontSize: 13,
-                color: "#6b7280",
-                marginBottom: 6,
-              }}
-            >
+            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>
               {i.description ?? "-"}
             </div>
-
             <div style={{ marginBottom: 4 }}>
               <StatusBadge status={i.status} />
             </div>
