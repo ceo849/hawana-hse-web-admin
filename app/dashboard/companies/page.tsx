@@ -4,7 +4,7 @@ import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -77,9 +77,7 @@ function parseCompaniesResponse(
 
   const c = value as Record<string, unknown>;
 
-  const data = Array.isArray(c.data)
-    ? c.data.filter(isCompanyDto)
-    : [];
+  const data = Array.isArray(c.data) ? c.data.filter(isCompanyDto) : [];
 
   const metaRaw =
     typeof c.meta === "object" && c.meta !== null
@@ -89,16 +87,11 @@ function parseCompaniesResponse(
   return {
     data,
     meta: {
-      page:
-        typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
-      limit:
-        typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
-      total:
-        typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
+      page: typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
+      limit: typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
+      total: typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
       totalPages:
-        typeof metaRaw?.totalPages === "number"
-          ? metaRaw.totalPages
-          : 1,
+        typeof metaRaw?.totalPages === "number" ? metaRaw.totalPages : 1,
     },
   };
 }
@@ -120,7 +113,7 @@ function buildDashboardCompaniesUrl(page: number) {
   return `/dashboard/companies?page=${page}`;
 }
 
-// ===== Company Badge (Additive) =====
+// ===== Company Badge =====
 function IndustryBadge({ industry }: { industry: string | null }) {
   return (
     <span
@@ -164,10 +157,9 @@ export default async function CompaniesPage({
   let res;
 
   try {
-    res = await serverSafeFetch(
-      `/companies?page=${page}&limit=${limit}` +
+    res = await serverAppFetch(
+      `/api/companies?page=${page}&limit=${limit}` +
         (search ? `&search=${encodeURIComponent(search)}` : ""),
-      token,
       { cache: "no-store" }
     );
   } catch (err) {
@@ -220,24 +212,17 @@ export default async function CompaniesPage({
         }
       />
 
-      <div style={{ marginBottom: 12 }}>
-        Total companies: {meta.total}
-      </div>
+      <div style={{ marginBottom: 12 }}>Total companies: {meta.total}</div>
 
-      {/* ===== Desktop Table ===== */}
       <div className="desktop-only">
         <div style={{ overflowX: "auto" }}>
           <table style={{ minWidth: 650, width: "100%" }}>
             <tbody>
               {companies.map((c) => (
                 <tr key={c.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                    {c.name}
-                  </td>
+                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>{c.name}</td>
 
-                  <td style={{ padding: 8 }}>
-                    {c.country ?? "-"}
-                  </td>
+                  <td style={{ padding: 8 }}>{c.country ?? "-"}</td>
 
                   <td style={{ padding: 8 }}>
                     <IndustryBadge industry={c.industry} />
@@ -265,7 +250,6 @@ export default async function CompaniesPage({
         </div>
       </div>
 
-      {/* ===== Mobile Cards ===== */}
       <div className="mobile-only" style={{ marginTop: 12 }}>
         {companies.map((c) => (
           <Link
@@ -283,9 +267,7 @@ export default async function CompaniesPage({
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>
-              {c.name}
-            </div>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>{c.name}</div>
 
             <div
               style={{
