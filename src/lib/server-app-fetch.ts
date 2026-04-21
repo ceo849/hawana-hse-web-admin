@@ -16,126 +16,70 @@ function enforceServerArchitecture(path: string) {
 
 // ===== Normalize Path =====
 function normalizePath(path: string): string {
-  const clean = path.startsWith("/") ? path : `/${path}`;
-  return clean;
+  return path.startsWith("/") ? path : `/${path}`;
 }
 
-// ===== Refresh Token =====
-async function refreshAccessToken(
-  refreshToken: string
-): Promise<string | null> {
-  try {
-    const CORE_API =
-      (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
-
-    const res = await fetch(`${CORE_API}/v1/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json", // ✅ ADDITIVE
-      },
-      body: JSON.stringify({
-        refreshToken, // ✅ ROOT FIX
-      }),
-      cache: "no-store",
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json().catch(() => ({}));
-
-    return data?.access_token || data?.accessToken || null;
-  } catch {
-    return null;
-  }
+// ===== Detect API Proxy =====
+function isApiRoute(path: string): boolean {
+  return path.startsWith("/api/");
 }
 
 // ===== MAIN FETCH =====
 export async function serverAppFetch(
   path: string,
-  arg2?: RequestInit | string,
-  arg3?: RequestInit
+  options: RequestInit = {}
 ): Promise<Response> {
-  let token: string | undefined;
-  let options: RequestInit = {};
-
-  // overload
-  if (typeof arg2 === "string" && arg3) {
-    token = arg2;
-    options = arg3;
-  } else if (typeof arg2 === "string") {
-    token = arg2;
-  } else if (typeof arg2 === "object") {
-    options = arg2 || {};
-  }
+  enforceServerArchitecture(path);
 
   const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
 
-  if (!token) {
-    token = cookieStore.get("access_token")?.value;
-  }
-
-  const refreshToken = cookieStore.get("refresh_token")?.value;
-
-  // ❌ No token
   if (!token) {
     throw new Error("SESSION_EXPIRED");
   }
 
-  enforceServerArchitecture(path);
+  // ================================
+  // ✅ NEW: API PROXY MODE
+  // ================================
+  if (isApiRoute(path)) {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
-  const CORE_API =
-    (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
-
-  const finalUrl = `${CORE_API}/v1${normalizePath(path)}`;
-
-  const buildHeaders = (t: string): Record<string, string> => {
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string>),
-      Authorization: `Bearer ${t}`,
-    };
-
-    if (
-      options.method &&
-      options.method !== "GET" &&
-      options.method !== "DELETE"
-    ) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    return headers;
-  };
-
-  // ===== FIRST REQUEST =====
-  let res = await fetch(finalUrl, {
-    ...options,
-    headers: buildHeaders(token),
-    cache: "no-store",
-  });
-
-  // ===== AUTO REFRESH =====
-  if (res.status === 401) {
-    console.warn("[AUTO_REFRESH_TRIGGERED]");
-
-    if (!refreshToken) {
-      throw new Error("SESSION_EXPIRED");
-    }
-
-    const newToken = await refreshAccessToken(refreshToken);
-
-    if (!newToken) {
-      throw new Error("SESSION_EXPIRED");
-    }
-
-    // 🔁 Retry (مرة واحدة فقط)
-    res = await fetch(finalUrl, {
+    const res = await fetch(`${baseUrl}${normalizePath(path)}`, {
       ...options,
-      headers: buildHeaders(newToken),
+      headers: {
+        ...(options.headers || {}),
+        cookie: `access_token=${token}`,
+      },
       cache: "no-store",
     });
 
     if (res.status === 401) {
       throw new Error("SESSION_EXPIRED");
     }
+
+    return res;
+  }
+
+  // ================================
+  // 🟡 LEGACY: DIRECT CORE MODE
+  // ================================
+  const CORE_API =
+    (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+
+  const finalUrl = `${CORE_API}/v1${normalizePath(path)}`;
+
+  const res = await fetch(finalUrl, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (res.status === 401) {
+    throw new Error("SESSION_EXPIRED");
   }
 
   return res;
