@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import PageHeader from "@/components/ui/page-header";
-import { serverAppFetch } from "@/src/lib/server-app-fetch"; // ✅ ADDITIVE
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -38,28 +38,50 @@ export default async function NewUserPage({ searchParams }: PageProps) {
       role: String(formData.get("role") ?? "").trim(),
     };
 
-    try {
-      // ❌ تم حذف fetch المباشر
-      // ✅ استخدام serverAppFetch
-      const res = await serverAppFetch(
-        tokenInner,
-        "/users",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+    if (!payload.fullName || !payload.email || !payload.password || !payload.role) {
+      redirect(
+        "/dashboard/users/new?error=" +
+          encodeURIComponent("All fields are required")
       );
+    }
+
+    try {
+      const res = await serverAppFetch("/api/users", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
 
       if (res.status === 401) {
         redirect("/login");
       }
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Create user failed");
+        const contentType = res.headers.get("content-type") ?? "";
+        const isJson = contentType.includes("application/json");
+
+        let message = "Create user failed";
+
+        if (isJson) {
+          const data = await res.json().catch(() => ({}));
+          if (Array.isArray((data as any)?.message)) {
+            message = (data as any).message.join(" | ");
+          } else if (typeof (data as any)?.message === "string") {
+            message = (data as any).message;
+          } else if (typeof (data as any)?.error === "string") {
+            message = (data as any).error;
+          }
+        } else {
+          const text = await res.text().catch(() => "");
+          if (text.trim()) {
+            message = text;
+          }
+        }
+
+        throw new Error(message);
       }
     } catch (error) {
       const message =
