@@ -1,10 +1,12 @@
+// app/dashboard/action-plans/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -48,7 +50,7 @@ function parse(value: unknown): ActionPlan[] {
   return [];
 }
 
-// ===== Status Badge (Additive) =====
+// ===== Status Badge =====
 function StatusBadge({ status }: { status: string }) {
   let bg = "#e5e7eb";
   let color = "#111827";
@@ -96,11 +98,9 @@ export default async function ActionPlansPage() {
   let res;
 
   try {
-    res = await serverSafeFetch(
-      "/action-plans?page=1&limit=20",
-      token,
-      { cache: "no-store" }
-    );
+    res = await serverAppFetch("/api/action-plans?page=1&limit=20", {
+      cache: "no-store",
+    });
   } catch (err) {
     console.error("Action Plans Fetch Error:", err);
 
@@ -150,7 +150,6 @@ export default async function ActionPlansPage() {
 
       <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
 
-      {/* ===== Desktop Table ===== */}
       <div className="desktop-only">
         <div style={{ overflowX: "auto" }}>
           <table style={{ minWidth: 550, width: "100%" }}>
@@ -197,7 +196,6 @@ export default async function ActionPlansPage() {
         </div>
       </div>
 
-      {/* ===== Mobile Cards ===== */}
       <div className="mobile-only" style={{ marginTop: 12 }}>
         {items.map((i) => (
           <Link
