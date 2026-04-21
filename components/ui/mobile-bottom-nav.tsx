@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-// ✅ ADDITIVE
 import LogoutButton from "@/app/dashboard/logout-button";
 
 import {
@@ -38,22 +37,11 @@ const QUICK_ACTIONS = [
   { href: "/dashboard/sites-projects", label: "Site" },
 ];
 
-// ✅ ADDITIVE
-function stopAll(e: React.MouseEvent) {
-  e.stopPropagation();
-}
-
 export default function MobileBottomNav() {
   const pathname = usePathname();
 
   const [open, setOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
-
-  // ✅ ADDITIVE
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
     <>
@@ -111,6 +99,7 @@ export default function MobileBottomNav() {
           );
         })}
 
+        {/* More */}
         <button
           onClick={() => {
             setOpen(true);
@@ -202,10 +191,7 @@ export default function MobileBottomNav() {
           }}
         >
           <div
-            onClick={(e) => {
-              e.stopPropagation();
-              stopAll(e); // ✅ ADDITIVE
-            }}
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: "absolute",
               bottom: 0,
@@ -246,28 +232,18 @@ export default function MobileBottomNav() {
               );
             })}
 
-            {/* ✅ LOGOUT FIX */}
-            {mounted && (
-              <div
-                onClick={(e) => e.stopPropagation()} // ✅ ADDITIVE
-                style={{
-                  marginTop: 12,
-                  paddingTop: 12,
-                  borderTop: "1px solid #e5e7eb",
-                }}
-              >
-                <LogoutButton key={`logout-${open}`} />
-              </div>
-            )}
+            {/* Logout — Single Source of Truth */}
+            <div
+              style={{
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: "1px solid #e5e7eb",
+              }}
+            >
+              <LogoutButton />
+            </div>
 
           </div>
-        </div>
-      )}
-
-      {/* ROOT SAFE */}
-      {mounted && (
-        <div style={{ position: "fixed", bottom: -9999 }}>
-          <LogoutButton key={`logout-root-${open}`} />
         </div>
       )}
     </>

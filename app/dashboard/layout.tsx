@@ -6,11 +6,13 @@ import { redirect } from "next/navigation";
 import DashboardShell from "@/components/layout/dashboard-shell";
 import MobileContainer from "@/components/ui/mobile-container";
 
-// ✅ NEW
 import MobileBottomNav from "@/components/ui/mobile-bottom-nav";
 
 import { type SidebarNavItem } from "@/components/layout/sidebar";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+
+// ✅ ADDITIVE
+import Script from "next/script";
 
 type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
@@ -61,6 +63,24 @@ export default async function DashboardLayout({
         background: "#f3f4f6",
       }}
     >
+      {/* =============================== */}
+      {/* ✅ ADDITIVE: MOBILE CSS ISOLATION */}
+      {/* =============================== */}
+      <style>{`
+        @media (max-width: 768px) {
+          aside { display: none !important; }
+          [data-sidebar] { display: none !important; }
+          button[aria-label="Toggle Menu"] { display: none !important; }
+
+          /* =============================== */
+          /* ✅ FIX: HIDE TOP LOGOUT BUTTON */
+          /* =============================== */
+          header button {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* ❗ لا نلمس DashboardShell */}
       <DashboardShell role={role} email={email} navItems={navItems}>
         
@@ -69,7 +89,7 @@ export default async function DashboardLayout({
           <Suspense fallback={null}>{children}</Suspense>
         </MobileContainer>
 
-        {/* ✅ FIX: عزل BottomNav لمنع crash على الموبايل */}
+        {/* ✅ BottomNav */}
         <Suspense fallback={null}>
           <MobileBottomNav />
         </Suspense>
