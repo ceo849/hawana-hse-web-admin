@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import FormSubmitButton from "@/components/ui/form-submit-button"; // ✅ NEW
 
 type PageProps = {
   searchParams?: { err?: string } | Promise<{ err?: string }>;
@@ -51,29 +52,11 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
       }
 
       if (!res.ok) {
-        const contentType = res.headers.get("content-type") ?? "";
-        const isJson = contentType.includes("application/json");
-
-        let message = `Failed to create Site / Project (${res.status})`;
-
-        if (isJson) {
-          const data = await res.json().catch(() => ({}));
-          if (Array.isArray((data as any)?.message)) {
-            message = (data as any).message.join(" | ");
-          } else if (typeof (data as any)?.message === "string") {
-            message = (data as any).message;
-          } else if (typeof (data as any)?.error === "string") {
-            message = (data as any).error;
-          }
-        } else {
-          const text = await res.text().catch(() => "");
-          if (text.trim()) {
-            message = `${message} ${text}`;
-          }
-        }
-
+        const text = await res.text().catch(() => "");
         redirect(
-          `/dashboard/sites-projects/new?err=${encodeURIComponent(message)}`
+          `/dashboard/sites-projects/new?err=${encodeURIComponent(
+            `Failed to create Site / Project (${res.status}) ${text}`
+          )}`
         );
       }
     } catch (error: any) {
@@ -136,85 +119,22 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
           }}
         >
           <div style={{ display: "grid", gap: 6 }}>
-            <label
-              htmlFor="name"
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#111827",
-              }}
-            >
-              Name
-            </label>
+            <label>Name</label>
             <input
-              id="name"
               name="name"
               placeholder="Enter site or project name"
               required
-              style={{
-                height: 42,
-                padding: "0 12px",
-                borderRadius: 10,
-                border: "1px solid #d1d5db",
-                background: "#fff",
-                fontSize: 14,
-              }}
-            />
-            <div style={{ fontSize: 12, color: "#6b7280" }}>
-              Required. Use a clear operational name.
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gap: 6 }}>
-            <label
-              htmlFor="location"
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#111827",
-              }}
-            >
-              Location
-            </label>
-            <input
-              id="location"
-              name="location"
-              placeholder="Enter location"
-              style={{
-                height: 42,
-                padding: "0 12px",
-                borderRadius: 10,
-                border: "1px solid #d1d5db",
-                background: "#fff",
-                fontSize: 14,
-              }}
             />
           </div>
 
           <div style={{ display: "grid", gap: 6 }}>
-            <label
-              htmlFor="status"
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#111827",
-              }}
-            >
-              Status
-            </label>
-            <select
-              id="status"
-              name="status"
-              defaultValue="ACTIVE"
-              style={{
-                height: 42,
-                padding: "0 12px",
-                borderRadius: 10,
-                border: "1px solid #d1d5db",
-                background: "#fff",
-                fontSize: 14,
-              }}
-            >
+            <label>Location</label>
+            <input name="location" placeholder="Enter location" />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Status</label>
+            <select name="status" defaultValue="ACTIVE">
               <option value="ACTIVE">ACTIVE</option>
               <option value="INACTIVE">INACTIVE</option>
             </select>
@@ -222,37 +142,13 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
         </div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button
-            type="submit"
-            style={{
-              height: 42,
-              padding: "0 16px",
-              borderRadius: 10,
-              border: "none",
-              background: "#111827",
-              color: "#ffffff",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Create Site / Project
-          </button>
+          {/* ✅ NEW UX */}
+          <FormSubmitButton
+            idleText="Create Site / Project"
+            pendingText="Creating..."
+          />
 
-          <Link
-            href="/dashboard/sites-projects"
-            style={{
-              height: 42,
-              padding: "0 16px",
-              borderRadius: 10,
-              border: "1px solid #d1d5db",
-              color: "#111827",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              fontWeight: 500,
-              background: "#fff",
-            }}
-          >
+          <Link href="/dashboard/sites-projects">
             Cancel
           </Link>
         </div>
