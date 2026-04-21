@@ -250,6 +250,7 @@ export default async function SitesProjectsPage() {
                     color: "inherit",
                     background: "#ffffff",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                    cursor: "pointer",
                   }}
                 >
                   <div style={{ fontWeight: 600, marginBottom: 6 }}>
