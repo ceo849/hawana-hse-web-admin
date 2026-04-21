@@ -1,23 +1,25 @@
+// app/dashboard/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
-import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 export default async function DashboardPage() {
-  const token = await requireAccessToken();
+  await requireAccessToken();
 
   const [usersRes, reportsRes, plansRes, dashboardRes] = await Promise.all([
-    serverSafeFetch("/users?page=1&limit=100", token, { cache: "no-store" }),
-    serverSafeFetch("/safety-reports?page=1&limit=100", token, {
+    serverAppFetch("/api/users?page=1&limit=100", { cache: "no-store" }),
+    serverAppFetch("/api/safety-reports?page=1&limit=100", {
       cache: "no-store",
     }),
-    serverSafeFetch("/action-plans?page=1&limit=100", token, {
+    serverAppFetch("/api/action-plans?page=1&limit=100", {
       cache: "no-store",
     }),
-    serverSafeFetch("/dashboard", token, { cache: "no-store" }),
+    serverAppFetch("/api/dashboard", { cache: "no-store" }),
   ]);
 
   let usersCount = 0;
