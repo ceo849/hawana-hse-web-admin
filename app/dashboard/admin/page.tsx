@@ -17,7 +17,9 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  let u, r, p;
+  let u: Response;
+  let r: Response;
+  let p: Response;
 
   try {
     [u, r, p] = await Promise.all([
@@ -31,7 +33,11 @@ export default async function AdminPage() {
         cache: "no-store",
       }),
     ]);
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
     console.error("Admin Fetch Error:", err);
 
     return (
