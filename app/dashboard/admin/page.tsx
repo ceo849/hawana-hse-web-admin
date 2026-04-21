@@ -1,5 +1,3 @@
-// app/dashboard/admin/page.tsx
-
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
@@ -14,6 +12,7 @@ export default async function AdminPage() {
   const payload = decodeJwtPayload(token);
   const role = String(payload?.role ?? "UNKNOWN").toUpperCase();
 
+  // 🔐 RBAC
   if (role !== "OWNER") {
     redirect("/dashboard");
   }
@@ -22,7 +21,9 @@ export default async function AdminPage() {
 
   try {
     [u, r, p] = await Promise.all([
-      serverAppFetch("/api/users?page=1&limit=1", { cache: "no-store" }),
+      serverAppFetch("/api/users?page=1&limit=1", {
+        cache: "no-store",
+      }),
       serverAppFetch("/api/safety-reports?page=1&limit=1", {
         cache: "no-store",
       }),
