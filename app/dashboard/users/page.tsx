@@ -1,10 +1,12 @@
+// app/dashboard/users/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
-import { serverSafeFetch } from "@/src/lib/server-safe-fetch";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type Role =
   | "OWNER"
@@ -72,7 +74,7 @@ function parseUsers(value: unknown): UsersResponse {
   return { data: [], meta: { total: 0 } };
 }
 
-// ===== Role Badge (Additive) =====
+// ===== Role Badge =====
 function RoleBadge({ role }: { role: string }) {
   let bg = "#e5e7eb";
   let color = "#111827";
@@ -117,11 +119,9 @@ export default async function UsersPage() {
   let res;
 
   try {
-    res = await serverSafeFetch(
-      "/users?page=1&limit=20",
-      token,
-      { cache: "no-store" }
-    );
+    res = await serverAppFetch("/api/users?page=1&limit=20", {
+      cache: "no-store",
+    });
   } catch (err) {
     console.error("Users Fetch Error:", err);
 
@@ -166,7 +166,6 @@ export default async function UsersPage() {
 
       <div style={{ marginBottom: 12 }}>Total users: {total}</div>
 
-      {/* ===== Desktop Table ===== */}
       <div className="desktop-only">
         <div style={{ overflowX: "auto" }}>
           <table
@@ -226,7 +225,6 @@ export default async function UsersPage() {
         </div>
       </div>
 
-      {/* ===== Mobile Cards ===== */}
       <div className="mobile-only" style={{ marginTop: 12 }}>
         {users.map((u) => (
           <Link
