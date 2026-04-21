@@ -80,7 +80,10 @@ export async function POST() {
       );
     }
 
-    const res = NextResponse.json({ ok: true });
+    const res = NextResponse.json({
+      ok: true,
+      access_token: String(accessToken),
+    });
 
     const isProd = process.env.NODE_ENV === "production";
 
