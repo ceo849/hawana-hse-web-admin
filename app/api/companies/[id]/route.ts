@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const CORE_API = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://hawana-core:3001"
+  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
 ).replace(/\/$/, "");
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: RouteContext
 ) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value ?? null;
@@ -18,7 +22,7 @@ export async function GET(
 
   const { id } = await params;
 
-  const r = await fetch(`${CORE_API}/v1/companies/${id}`, {
+  const r = await fetch(`${CORE_API}/v1/companies/${encodeURIComponent(id)}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -39,7 +43,7 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: RouteContext
 ) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value ?? null;
@@ -51,7 +55,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const r = await fetch(`${CORE_API}/v1/companies/${id}`, {
+  const r = await fetch(`${CORE_API}/v1/companies/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -75,7 +79,7 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: RouteContext
 ) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value ?? null;
@@ -86,7 +90,7 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const r = await fetch(`${CORE_API}/v1/companies/${id}`, {
+  const r = await fetch(`${CORE_API}/v1/companies/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
