@@ -1,99 +1,69 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
-const CORE_API =
-  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+const CORE_BASE_URL = (
+  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+).replace(/\/$/, "");
 
-async function getToken() {
-  const cookieStore = await cookies();
-  return cookieStore.get("access_token")?.value ?? null;
+// ✅ Contract ثابت
+const API_PREFIX = "/v1";
+
+export async function GET(req: NextRequest) {
+  const token = req.cookies.get("access_token")?.value;
+
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const search = req.nextUrl.searchParams.toString();
+  const url = search
+    ? `${CORE_BASE_URL}${API_PREFIX}/sites-projects?${search}`
+    : `${CORE_BASE_URL}${API_PREFIX}/sites-projects`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  const text = await res.text();
+
+  return new NextResponse(text, {
+    status: res.status,
+    headers: {
+      "Content-Type":
+        res.headers.get("content-type") || "application/json",
+    },
+  });
 }
 
-// =========================
-// GET
-// =========================
-export async function GET(req: Request) {
-  try {
-    const token = await getToken();
+export async function POST(req: NextRequest) {
+  const token = req.cookies.get("access_token")?.value;
 
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const url = new URL(req.url);
-    const qs = url.search ?? "";
-
-    const upstream = await fetch(`${CORE_API}/v1/sites-projects${qs}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    });
-
-    const contentType =
-      upstream.headers.get("content-type") ??
-      "application/json; charset=utf-8";
-
-    const body = await upstream.text();
-
-    return new NextResponse(body, {
-      status: upstream.status,
-      headers: {
-        "content-type": contentType,
-      },
-    });
-  } catch (error) {
-    console.error("API PROXY ERROR (GET /sites-projects):", error);
-
-    return NextResponse.json(
-      { message: "Upstream service unavailable" },
-      { status: 503 }
-    );
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-}
 
-// =========================
-// POST
-// =========================
-export async function POST(req: Request) {
-  try {
-    const token = await getToken();
+  const body = await req.text();
 
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+  const res = await fetch(`${CORE_BASE_URL}${API_PREFIX}/sites-projects`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body,
+    cache: "no-store",
+  });
 
-    const body = await req.text();
+  const text = await res.text();
 
-    const upstream = await fetch(`${CORE_API}/v1/sites-projects`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "content-type": "application/json",
-      },
-      body,
-      cache: "no-store",
-    });
-
-    const contentType =
-      upstream.headers.get("content-type") ??
-      "application/json; charset=utf-8";
-
-    const responseBody = await upstream.text();
-
-    return new NextResponse(responseBody, {
-      status: upstream.status,
-      headers: {
-        "content-type": contentType,
-      },
-    });
-  } catch (error) {
-    console.error("API PROXY ERROR (POST /sites-projects):", error);
-
-    return NextResponse.json(
-      { message: "Upstream service unavailable" },
-      { status: 503 }
-    );
-  }
+  return new NextResponse(text, {
+    status: res.status,
+    headers: {
+      "Content-Type":
+        res.headers.get("content-type") || "application/json",
+    },
+  });
 }
