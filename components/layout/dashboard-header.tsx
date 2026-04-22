@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import LogoutButton from '@/app/dashboard/logout-button';
 
 type DashboardHeaderProps = {
@@ -8,7 +8,37 @@ type DashboardHeaderProps = {
   onMenuClick: () => void;
 };
 
-export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderProps) {
+export default function DashboardHeader({
+  title,
+  onMenuClick,
+}: DashboardHeaderProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!menuRef.current) return;
+
+      if (!menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
   return (
     <header
       style={{
@@ -22,8 +52,6 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
         position: 'sticky',
         top: 0,
         zIndex: 20,
-
-        // ✅ ADDITIVE: better mobile layout
         gap: 8,
       }}
     >
@@ -33,6 +61,7 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
           display: 'flex',
           alignItems: 'center',
           gap: 10,
+          minWidth: 0,
         }}
       >
         <button
@@ -45,12 +74,10 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
             background: '#fff',
             cursor: 'pointer',
             fontSize: 20,
-
-            // ✅ ADDITIVE: touch-friendly
             minWidth: 44,
             minHeight: 44,
           }}
-          aria-label="Open menu" // ✅ ADDITIVE
+          aria-label="Open menu"
         >
           ☰
         </button>
@@ -59,12 +86,10 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
           style={{
             fontWeight: 600,
             fontSize: 18,
-
-            // ✅ ADDITIVE: prevent overflow on small screens
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: 160,
+            maxWidth: 180,
           }}
         >
           {title}
@@ -73,15 +98,115 @@ export default function DashboardHeader({ title, onMenuClick }: DashboardHeaderP
 
       {/* Right */}
       <div
+        ref={menuRef}
         style={{
+          position: 'relative',
           display: 'flex',
           alignItems: 'center',
-
-          // ✅ ADDITIVE: prevent overflow
           flexShrink: 0,
         }}
       >
-        <LogoutButton />
+        <div
+          onClick={() => setMenuOpen((prev) => !prev)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setMenuOpen((prev) => !prev);
+            }
+          }}
+          aria-label="Open account menu"
+          style={{
+            minWidth: 44,
+            minHeight: 44,
+            padding: '0 12px',
+            borderRadius: 12,
+            border: '1px solid #e5e7eb',
+            background: '#fff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: '#111827',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            U
+          </div>
+
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#111827',
+            }}
+          >
+            Account
+          </span>
+        </div>
+
+        {menuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              width: 220,
+              background: '#fff',
+              border: '1px solid #e5e7eb',
+              borderRadius: 14,
+              boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+              padding: 10,
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                padding: '6px 8px 10px',
+                borderBottom: '1px solid #f3f4f6',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  color: '#6b7280',
+                  marginBottom: 4,
+                }}
+              >
+                Session
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: '#111827',
+                }}
+              >
+                Signed in
+              </div>
+            </div>
+
+            <div style={{ padding: '4px 2px 2px' }}>
+              <LogoutButton />
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
