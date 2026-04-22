@@ -55,7 +55,6 @@ export default function DashboardHeader({
         gap: 8,
       }}
     >
-      {/* Left */}
       <div
         style={{
           display: 'flex',
@@ -96,7 +95,6 @@ export default function DashboardHeader({
         </div>
       </div>
 
-      {/* Right */}
       <div
         ref={menuRef}
         style={{
@@ -172,39 +170,9 @@ export default function DashboardHeader({
               borderRadius: 14,
               boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
               padding: 10,
-              display: 'grid',
-              gap: 8,
             }}
           >
-            <div
-              style={{
-                padding: '6px 8px 10px',
-                borderBottom: '1px solid #f3f4f6',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  color: '#6b7280',
-                  marginBottom: 4,
-                }}
-              >
-                Session
-              </div>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: '#111827',
-                }}
-              >
-                Signed in
-              </div>
-            </div>
-
-            <div style={{ padding: '4px 2px 2px' }}>
-              <LogoutButton />
-            </div>
+            <LogoutButton />
           </div>
         )}
       </div>
