@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { apiClient } from '@/src/lib/api-client'; // لم نحذفه (احترام القاعدة)
+import { apiClient } from '@/src/lib/api-client'; // لم نحذفه
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -14,7 +14,6 @@ export default function LogoutButton() {
     setLoading(true);
 
     try {
-      // ✅ FIX: stable API Proxy call
       await fetch('/api/auth/logout', {
         method: 'DELETE',
       });
@@ -36,6 +35,7 @@ export default function LogoutButton() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%',
         height: 40,
         padding: '0 14px',
         borderRadius: 10,
