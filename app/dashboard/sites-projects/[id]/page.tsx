@@ -79,7 +79,7 @@ export default async function SiteProjectOverviewPage({
   params,
   searchParams,
 }: PageProps) {
-  const token = await requireAccessToken();
+  await requireAccessToken();
   const { id } = await params;
 
   const resolvedSearchParams = searchParams
@@ -88,18 +88,149 @@ export default async function SiteProjectOverviewPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  const r = await serverAppFetch(
-    token,
-    `/api/sites-projects/${encodeURIComponent(id)}`
-  );
+  let r: Response;
 
-  if (r.status === 401) redirect("/login");
-  if (!r.ok) redirect("/dashboard/sites-projects");
+  try {
+    r = await serverAppFetch(
+      `/api/sites-projects/${encodeURIComponent(id)}`,
+      {
+        cache: "no-store",
+      }
+    );
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
+    return (
+      <div
+        style={{
+          padding: 24,
+          maxWidth: 760,
+          margin: "0 auto",
+          fontFamily: "system-ui",
+        }}
+      >
+        <PageHeader
+          title="Failed to load Site / Project"
+          subtitle="Details page diagnostic output"
+        />
+
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#fef2f2",
+            borderRadius: 10,
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {err instanceof Error ? err.message : "Unknown error"}
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <Link href="/dashboard/sites-projects">Back to Sites / Projects</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (r.status === 401) {
+    redirect("/login");
+  }
+
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+
+    return (
+      <div
+        style={{
+          padding: 24,
+          maxWidth: 760,
+          margin: "0 auto",
+          fontFamily: "system-ui",
+        }}
+      >
+        <PageHeader
+          title="Failed to load Site / Project"
+          subtitle="Details page diagnostic output"
+        />
+
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#fef2f2",
+            borderRadius: 10,
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          Status: {r.status}
+          {"\n"}
+          {text || "No response body"}
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <Link href="/dashboard/sites-projects">Back to Sites / Projects</Link>
+        </div>
+      </div>
+    );
+  }
 
   const json = await r.json();
 
   if (!isSiteProject(json)) {
-    redirect("/dashboard/sites-projects");
+    return (
+      <div
+        style={{
+          padding: 24,
+          maxWidth: 760,
+          margin: "0 auto",
+          fontFamily: "system-ui",
+        }}
+      >
+        <PageHeader
+          title="Invalid Site / Project payload"
+          subtitle="Details page diagnostic output"
+        />
+
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#fef2f2",
+            borderRadius: 10,
+            color: "#991b1b",
+            border: "1px solid #fecaca",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          API returned a payload that does not match the expected Site / Project shape.
+        </div>
+
+        <pre
+          style={{
+            padding: 12,
+            borderRadius: 10,
+            background: "#f9fafb",
+            border: "1px solid #e5e7eb",
+            overflowX: "auto",
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          {JSON.stringify(json, null, 2)}
+        </pre>
+
+        <div style={{ marginTop: 16 }}>
+          <Link href="/dashboard/sites-projects">Back to Sites / Projects</Link>
+        </div>
+      </div>
+    );
   }
 
   const site = json;
@@ -108,7 +239,7 @@ export default async function SiteProjectOverviewPage({
   async function updateSiteProject(formData: FormData) {
     "use server";
 
-    const tokenInner = await requireAccessToken();
+    await requireAccessToken();
 
     const name = String(formData.get("name") ?? "").trim();
     const location = String(formData.get("location") ?? "").trim();
@@ -120,23 +251,35 @@ export default async function SiteProjectOverviewPage({
     payload.location = location;
     if (status) payload.status = status;
 
-    const res = await serverAppFetch(
-      tokenInner,
-      `/api/sites-projects/${encodeURIComponent(id)}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    try {
+      const res = await serverAppFetch(
+        `/api/sites-projects/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        }
+      );
+
+      if (res.status === 401) redirect("/login");
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        redirect(
+          `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
+            `Update failed (${res.status}) ${text}`
+          )}`
+        );
       }
-    );
+    } catch (err: any) {
+      if (err?.message === "SESSION_EXPIRED") {
+        redirect("/login");
+      }
 
-    if (res.status === 401) redirect("/login");
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
       redirect(
         `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
-          `Update failed (${res.status}) ${text}`
+          err instanceof Error ? err.message : "Update failed"
         )}`
       );
     }
@@ -147,21 +290,35 @@ export default async function SiteProjectOverviewPage({
   async function deleteSiteProject() {
     "use server";
 
-    const tokenInner = await requireAccessToken();
+    await requireAccessToken();
 
-    const res = await serverAppFetch(
-      tokenInner,
-      `/api/sites-projects/${encodeURIComponent(id)}`,
-      { method: "DELETE" }
-    );
+    try {
+      const res = await serverAppFetch(
+        `/api/sites-projects/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          cache: "no-store",
+        }
+      );
 
-    if (res.status === 401) redirect("/login");
+      if (res.status === 401) redirect("/login");
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        redirect(
+          `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
+            `Delete failed (${res.status}) ${text}`
+          )}`
+        );
+      }
+    } catch (err: any) {
+      if (err?.message === "SESSION_EXPIRED") {
+        redirect("/login");
+      }
+
       redirect(
         `/dashboard/sites-projects/${id}?error=${encodeURIComponent(
-          `Delete failed (${res.status}) ${text}`
+          err instanceof Error ? err.message : "Delete failed"
         )}`
       );
     }
