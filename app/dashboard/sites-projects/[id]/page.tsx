@@ -91,12 +91,9 @@ export default async function SiteProjectOverviewPage({
   let r: Response;
 
   try {
-    r = await serverAppFetch(
-      `/api/sites-projects/${encodeURIComponent(id)}`,
-      {
-        cache: "no-store",
-      }
-    );
+    r = await serverAppFetch(`/api/sites-projects/${encodeURIComponent(id)}`, {
+      cache: "no-store",
+    });
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");

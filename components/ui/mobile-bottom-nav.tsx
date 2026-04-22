@@ -61,7 +61,7 @@ export default function MobileBottomNav() {
           display: "flex",
           alignItems: "center",
           zIndex: 10,
-          pointerEvents: "auto",
+          pointerEvents: "none",
         }}
       >
         {MAIN_NAV.map((item) => {
@@ -85,6 +85,7 @@ export default function MobileBottomNav() {
                 color: active ? "#111827" : "#9ca3af",
                 position: "relative",
                 textDecoration: "none",
+                pointerEvents: "auto",
               }}
             >
               {active && (
@@ -123,6 +124,7 @@ export default function MobileBottomNav() {
             fontSize: 12,
             color: "#9ca3af",
             cursor: "pointer",
+            pointerEvents: "auto",
           }}
         >
           <MoreHorizontal size={26} />
@@ -168,6 +170,7 @@ export default function MobileBottomNav() {
             flexDirection: "column",
             gap: 10,
             zIndex: 30,
+            pointerEvents: "none",
           }}
         >
           {QUICK_ACTIONS.map((item) => (
@@ -183,6 +186,7 @@ export default function MobileBottomNav() {
                 textDecoration: "none",
                 color: "#111",
                 fontSize: 13,
+                pointerEvents: "auto",
               }}
             >
               + {item.label}
@@ -200,6 +204,7 @@ export default function MobileBottomNav() {
             inset: 0,
             background: "rgba(0,0,0,0.3)",
             zIndex: 40,
+            pointerEvents: "auto",
           }}
         >
           <div

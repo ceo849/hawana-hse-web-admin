@@ -1,137 +1,137 @@
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 
-type SafetyReport = {
+type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
+
+type AssignedUserLite = {
   id: string;
-  title?: string | null;
+  fullName?: string | null;
+  email?: string | null;
+};
+
+type ActionPlan = {
+  id: string;
+  title: string;
   description?: string | null;
-  status?: string | null;
+  status: ActionPlanStatus;
+  dueDate?: string | null;
+  safetyReportId?: string | null;
+  assignedToUserId?: string | null;
+  assignedTo?: AssignedUserLite | null;
   createdAt?: string | null;
 };
 
 type PageProps = {
-  params: Promise<{ id: string }>;
+  params: { id: string } | Promise<{ id: string }>;
+  searchParams?: { err?: string } | Promise<{ err?: string }>;
 };
 
-function isSafetyReport(value: unknown): value is SafetyReport {
-  if (typeof value !== "object" || value === null) return false;
-
-  const c = value as Record<string, unknown>;
-
-  return (
-    typeof c.id === "string" &&
-    (typeof c.title === "string" || c.title === null || typeof c.title === "undefined") &&
-    (typeof c.description === "string" ||
-      c.description === null ||
-      typeof c.description === "undefined") &&
-    (typeof c.status === "string" || c.status === null || typeof c.status === "undefined") &&
-    (typeof c.createdAt === "string" ||
-      c.createdAt === null ||
-      typeof c.createdAt === "undefined")
-  );
+function normalizeId(raw: unknown): string {
+  return String(raw ?? "").trim();
 }
 
-function formatDate(value?: string | null): string {
-  if (!value) return "-";
+function actionPlanEditPath(id: string) {
+  return `/dashboard/action-plans/${encodeURIComponent(id)}/edit`;
+}
 
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
+function allowedNextStatuses(current: ActionPlanStatus): ActionPlanStatus[] {
+  switch (current) {
+    case "OPEN":
+      return ["IN_PROGRESS"];
+    case "IN_PROGRESS":
+      return ["COMPLETED"];
+    case "COMPLETED":
+      return ["VERIFIED"];
+    default:
+      return [];
+  }
+}
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
+function formatDateDisplay(iso?: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-GB").format(d);
 }
 
 function getStatusStyle(status?: string | null) {
-  const s = String(status ?? "UNKNOWN").toUpperCase();
+  const s = String(status ?? "").toUpperCase();
 
-  if (s === "OPEN") {
-    return { background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" };
-  }
+  if (s === "OPEN") return { background: "#f3f4f6", color: "#111" };
+  if (s === "IN_PROGRESS") return { background: "#dbeafe", color: "#1d4ed8" };
+  if (s === "COMPLETED") return { background: "#dcfce7", color: "#166534" };
+  if (s === "VERIFIED") return { background: "#bbf7d0", color: "#14532d" };
 
-  if (s === "IN_PROGRESS") {
-    return { background: "#dbeafe", color: "#1e40af", border: "1px solid #93c5fd" };
-  }
-
-  if (s === "COMPLETED" || s === "VERIFIED" || s === "CLOSED") {
-    return { background: "#dcfce7", color: "#166534", border: "1px solid #86efac" };
-  }
-
-  return { background: "#f3f4f6", color: "#111827", border: "1px solid #d1d5db" };
+  return { background: "#f3f4f6", color: "#111" };
 }
 
-export default async function SafetyReportDetailsPage({
-  params,
-}: PageProps) {
-  await requireAccessToken();
-
-  const { id } = await params;
-  const reportId = String(id ?? "").trim();
-
-  if (!reportId) {
-    redirect("/dashboard/safety-reports");
+function formatAssignedUser(
+  user?: AssignedUserLite | null,
+  fallbackId?: string | null,
+) {
+  if (user?.fullName || user?.email) {
+    return `${user.fullName ?? "—"} — ${user.email ?? "—"}`;
   }
+  return fallbackId ?? "—";
+}
+
+function metricCard(label: string, value: string | number) {
+  return (
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 16 }}>
+      <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
+    </div>
+  );
+}
+
+export default async function ActionPlanPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const resolvedParams = await Promise.resolve(params);
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
+  const id = normalizeId(resolvedParams?.id);
+
+  if (!id) redirect("/dashboard/action-plans");
+
+  await requireAccessToken();
 
   let res: Response;
 
   try {
     res = await serverAppFetch(
-      `/api/safety-reports/${encodeURIComponent(reportId)}`,
-      {
-        cache: "no-store",
-      }
+      `/api/action-plans/${encodeURIComponent(id)}`,
+      { cache: "no-store" }
     );
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
     }
 
-    console.error("Safety Report Details Fetch Error:", err);
+    console.error("Action Plan Details Fetch Error:", err);
 
     return (
-      <div
-        style={{
-          padding: 24,
-          fontFamily: "system-ui",
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        <PageHeader title="Safety Report" subtitle="Error" />
+      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+        <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
         <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load safety report (network/server error)
+          Failed to load action plan (network/server error)
         </div>
       </div>
     );
   }
 
-  if (res.status === 401) {
-    redirect("/login");
-  }
+  if (res.status === 401) redirect("/login");
 
   if (res.status === 404) {
     return (
-      <div
-        style={{
-          padding: 24,
-          fontFamily: "system-ui",
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        <PageHeader title="Safety Report" subtitle="Report details" />
-        <div style={{ marginTop: 12 }}>Report not found</div>
-        <div style={{ marginTop: 16 }}>
-          <Link href="/dashboard/safety-reports">Back to list</Link>
+      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+        <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
+        <div style={{ marginTop: 12 }}>Action plan not found</div>
+        <div style={{ marginTop: 20 }}>
+          <Link href="/dashboard/action-plans">Back</Link>
         </div>
       </div>
     );
@@ -139,109 +139,60 @@ export default async function SafetyReportDetailsPage({
 
   if (!res.ok) {
     return (
-      <div
-        style={{
-          padding: 24,
-          fontFamily: "system-ui",
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        <PageHeader title="Safety Report" subtitle="Error" />
+      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+        <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
         <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load safety report
-        </div>
-        <div style={{ marginTop: 16 }}>
-          <Link href="/dashboard/safety-reports">Back to list</Link>
+          Failed to load action plan
         </div>
       </div>
     );
   }
 
-  const json = await res.json();
+  const ap = (await res.json()) as ActionPlan;
 
-  if (!isSafetyReport(json)) {
-    return (
-      <div
-        style={{
-          padding: 24,
-          fontFamily: "system-ui",
-          maxWidth: 760,
-          margin: "0 auto",
-        }}
-      >
-        <PageHeader title="Safety Report" subtitle="Invalid payload" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Safety report payload shape is invalid
-        </div>
-        <div style={{ marginTop: 16 }}>
-          <Link href="/dashboard/safety-reports">Back to list</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const report = json;
-  const statusStyle = getStatusStyle(report.status);
+  const nextStatuses = allowedNextStatuses(ap.status);
+  const err = normalizeId(resolvedSearchParams?.err);
+  const statusStyle = getStatusStyle(ap.status);
 
   return (
-    <div
-      style={{
-        padding: 24,
-        fontFamily: "system-ui",
-        maxWidth: 760,
-        margin: "0 auto",
-      }}
-    >
-      <PageHeader
-        title={report.title ?? "Safety Report"}
-        subtitle="Report details"
-      />
+    <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+      <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
 
-      <div style={{ marginBottom: 16 }}>
-        <span
+      {err && (
+        <div
           style={{
-            padding: "6px 12px",
-            borderRadius: 999,
-            ...statusStyle,
+            marginBottom: 16,
+            padding: 12,
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
           }}
         >
-          {report.status ?? "UNKNOWN"}
+          {err}
+        </div>
+      )}
+
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
+          {ap.status}
         </span>
       </div>
 
-      <div
-        style={{
-          border: "1px solid #eee",
-          borderRadius: 12,
-          padding: 16,
-          background: "#fff",
-          display: "grid",
-          gap: 12,
-        }}
-      >
-        <div>
-          <strong>Title:</strong> {report.title ?? "-"}
-        </div>
-        <div>
-          <strong>Description:</strong> {report.description ?? "-"}
-        </div>
-        <div>
-          <strong>Status:</strong> {report.status ?? "-"}
-        </div>
-        <div>
-          <strong>Created At:</strong> {formatDate(report.createdAt)}
-        </div>
+      <div style={{ border: "1px solid #e5e7eb", padding: 16, marginBottom: 16 }}>
+        <div><b>ID:</b> {ap.id}</div>
+        <div><b>Title:</b> {ap.title}</div>
+        <div><b>Assigned:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}</div>
+        <div><b>Due:</b> {formatDateDisplay(ap.dueDate)}</div>
       </div>
 
-      <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
-        <Link href={`/dashboard/safety-reports/${reportId}/edit`}>
-          Edit
-        </Link>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        {metricCard("Status", ap.status)}
+        {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
+        {metricCard("Next Steps", nextStatuses.length)}
+      </div>
 
-        <Link href="/dashboard/safety-reports">
-          Back to list
-        </Link>
+      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+        <Link href={actionPlanEditPath(ap.id)}>Edit</Link>
+        <Link href="/dashboard/action-plans">Back</Link>
       </div>
     </div>
   );
