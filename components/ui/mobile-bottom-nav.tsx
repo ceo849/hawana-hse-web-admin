@@ -46,21 +46,24 @@ export default function MobileBottomNav() {
   return (
     <>
       {/* Bottom Nav */}
-      <div style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 76,
-        padding: "10px 16px",
-        background: "rgba(255,255,255,0.95)",
-        backdropFilter: "blur(12px)",
-        borderTop: "1px solid rgba(229,231,235,0.8)",
-        boxShadow: "0 -6px 20px rgba(0,0,0,0.06)",
-        display: "flex",
-        alignItems: "center",
-        zIndex: 1000,
-      }}>
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 76,
+          padding: "10px 16px",
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(12px)",
+          borderTop: "1px solid rgba(229,231,235,0.8)",
+          boxShadow: "0 -6px 20px rgba(0,0,0,0.06)",
+          display: "flex",
+          alignItems: "center",
+          zIndex: 10,
+          pointerEvents: "auto",
+        }}
+      >
         {MAIN_NAV.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -81,16 +84,19 @@ export default function MobileBottomNav() {
                 fontWeight: active ? 700 : 500,
                 color: active ? "#111827" : "#9ca3af",
                 position: "relative",
+                textDecoration: "none",
               }}
             >
               {active && (
-                <div style={{
-                  position: "absolute",
-                  top: -6,
-                  width: 32,
-                  height: 3,
-                  background: "#111827",
-                }} />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    width: 32,
+                    height: 3,
+                    background: "#111827",
+                  }}
+                />
               )}
 
               <Icon size={26} strokeWidth={active ? 2.8 : 2} />
@@ -116,6 +122,7 @@ export default function MobileBottomNav() {
             gap: 6,
             fontSize: 12,
             color: "#9ca3af",
+            cursor: "pointer",
           }}
         >
           <MoreHorizontal size={26} />
@@ -141,7 +148,10 @@ export default function MobileBottomNav() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          zIndex: 1500,
+          zIndex: 20,
+          cursor: "pointer",
+          pointerEvents: "auto",
+          boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
         }}
       >
         <Plus size={24} color="#fff" />
@@ -149,15 +159,17 @@ export default function MobileBottomNav() {
 
       {/* FAB MENU */}
       {fabOpen && (
-        <div style={{
-          position: "fixed",
-          bottom: 160,
-          right: 20,
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          zIndex: 1600,
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 160,
+            right: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            zIndex: 30,
+          }}
+        >
           {QUICK_ACTIONS.map((item) => (
             <Link
               key={item.href}
@@ -187,7 +199,7 @@ export default function MobileBottomNav() {
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.3)",
-            zIndex: 2000,
+            zIndex: 40,
           }}
         >
           <div
@@ -232,7 +244,6 @@ export default function MobileBottomNav() {
               );
             })}
 
-            {/* Logout — Single Source of Truth */}
             <div
               style={{
                 marginTop: 12,
@@ -242,7 +253,6 @@ export default function MobileBottomNav() {
             >
               <LogoutButton />
             </div>
-
           </div>
         </div>
       )}
