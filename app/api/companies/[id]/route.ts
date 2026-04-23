@@ -5,107 +5,163 @@ const CORE_API = (
   process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
 ).replace(/\/$/, "");
 
+const API_PREFIX = "/v1";
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(
-  _req: Request,
-  { params }: RouteContext
-) {
+async function getToken() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
+  return cookieStore.get("access_token")?.value ?? null;
+}
 
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+function buildUpstreamUrl(id: string) {
+  return `${CORE_API}${API_PREFIX}/companies/${encodeURIComponent(id)}`;
+}
 
-  const { id } = await params;
+async function buildProxyResponse(upstream: Response) {
+  const contentType =
+    upstream.headers.get("content-type") ??
+    "application/json; charset=utf-8";
 
-  const r = await fetch(`${CORE_API}/v1/companies/${encodeURIComponent(id)}`, {
+  const bodyText = await upstream.text();
+
+  return new NextResponse(bodyText, {
+    status: upstream.status,
     headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  const text = await r.text();
-
-  return new NextResponse(text, {
-    status: r.status,
-    headers: {
-      "content-type":
-        r.headers.get("content-type") ??
-        "application/json; charset=utf-8",
+      "content-type": contentType,
     },
   });
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: RouteContext
-) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
+async function resolveId(params: RouteContext["params"]) {
+  const { id } = await params;
 
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!id || !String(id).trim()) {
+    return null;
   }
 
-  const { id } = await params;
-  const body = await req.json();
-
-  const r = await fetch(`${CORE_API}/v1/companies/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  const text = await r.text();
-
-  return new NextResponse(text, {
-    status: r.status,
-    headers: {
-      "content-type":
-        r.headers.get("content-type") ??
-        "application/json; charset=utf-8",
-    },
-  });
+  return String(id).trim();
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: RouteContext
-) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value ?? null;
+export async function GET(_req: Request, { params }: RouteContext) {
+  try {
+    const token = await getToken();
 
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = await resolveId(params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing company id" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (GET /companies/[id]):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
   }
+}
 
-  const { id } = await params;
+export async function PATCH(req: Request, { params }: RouteContext) {
+  try {
+    const token = await getToken();
 
-  const r = await fetch(`${CORE_API}/v1/companies/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
-  const text = await r.text();
+    const id = await resolveId(params);
 
-  return new NextResponse(text, {
-    status: r.status,
-    headers: {
-      "content-type":
-        r.headers.get("content-type") ??
-        "application/json; charset=utf-8",
-    },
-  });
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing company id" },
+        { status: 400 }
+      );
+    }
+
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (PATCH /companies/[id]):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
+}
+
+export async function DELETE(_req: Request, { params }: RouteContext) {
+  try {
+    const token = await getToken();
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = await resolveId(params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing company id" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (DELETE /companies/[id]):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
 }
