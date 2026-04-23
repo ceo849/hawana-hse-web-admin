@@ -99,9 +99,8 @@ export default async function ActionPlanPage({
 
   const token = await requireAccessToken();
 
-  // ✅ FIX النهائي
   const res = await serverAppFetch(
-    `/action-plans/${encodeURIComponent(id)}`,
+    `/api/action-plans/${encodeURIComponent(id)}`,
     token,
     { cache: "no-store" }
   );
