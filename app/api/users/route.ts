@@ -1,19 +1,14 @@
-// app/api/users/route.ts
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const CORE_API =
-  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
-// ===== Token Extraction =====
 async function getToken() {
   const cookieStore = await cookies();
   return cookieStore.get("access_token")?.value ?? null;
 }
 
-// ===== Response Builder =====
-async function buildResponse(upstream: Response) {
+async function buildProxyResponse(upstream: Response) {
   const contentType =
     upstream.headers.get("content-type") ??
     "application/json; charset=utf-8";
@@ -42,17 +37,17 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ?? "";
 
-    const upstream = await fetch(`${CORE_API}/v1/users${qs}`, {
+    const upstream = await serverAppFetch(`/api/users${qs}`, token, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
       cache: "no-store",
     });
 
-    return buildResponse(upstream);
-
+    return buildProxyResponse(upstream);
   } catch (error) {
+    if (error instanceof Error && error.message === "SESSION_EXPIRED") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     console.error("API PROXY ERROR (GET /users):", error);
 
     return NextResponse.json(
@@ -75,19 +70,21 @@ export async function POST(req: Request) {
 
     const body = await req.text();
 
-    const upstream = await fetch(`${CORE_API}/v1/users`, {
+    const upstream = await serverAppFetch("/api/users", token, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
       body,
       cache: "no-store",
     });
 
-    return buildResponse(upstream);
-
+    return buildProxyResponse(upstream);
   } catch (error) {
+    if (error instanceof Error && error.message === "SESSION_EXPIRED") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     console.error("API PROXY ERROR (POST /users):", error);
 
     return NextResponse.json(
