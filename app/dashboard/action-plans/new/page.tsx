@@ -71,8 +71,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
   let users: UserLite[] = [];
 
   try {
-    // ✅ FIX
-    const r = await serverAppFetch("/users", token);
+    const r = await serverAppFetch("/api/users", token);
 
     if (r.status === 401) redirect("/login");
 
@@ -126,8 +125,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       payload.assignedToUserId = assignedToUserId;
     }
 
-    // ✅ FIX
-    const res = await serverAppFetch("/action-plans", tokenInner, {
+    const res = await serverAppFetch("/api/action-plans", tokenInner, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -186,7 +184,10 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           }}
         >
           <div>
-            <label htmlFor="title" style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+            <label
+              htmlFor="title"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
               Title
             </label>
             <input
@@ -204,7 +205,10 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <label htmlFor="assignedToUserId" style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+            <label
+              htmlFor="assignedToUserId"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
               Assigned To
             </label>
 
@@ -244,7 +248,10 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <label htmlFor="description" style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+            <label
+              htmlFor="description"
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
               Description
             </label>
             <textarea
