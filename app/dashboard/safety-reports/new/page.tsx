@@ -64,7 +64,7 @@ export default async function NewSafetyReportPage({
   let siteProjects: SiteProject[] = [];
 
   try {
-    const res = await serverAppFetch("/sites-projects", token);
+    const res = await serverAppFetch("/api/sites-projects", token);
 
     if (res.status === 401) redirect("/login");
 
@@ -85,20 +85,17 @@ export default async function NewSafetyReportPage({
 
     const title = String(formData.get("title") ?? "").trim();
 
-    // ✅ FIX: description parsing (root fix)
     const rawDescription = formData.get("description");
     const description =
-      typeof rawDescription === "string"
-        ? rawDescription.trim()
-        : "";
+      typeof rawDescription === "string" ? rawDescription.trim() : "";
 
     const siteProjectId = String(formData.get("siteProjectId") ?? "").trim();
 
     if (!title) {
       redirect(
         `/dashboard/safety-reports/new?error=${encodeURIComponent(
-          "Title is required",
-        )}`,
+          "Title is required"
+        )}`
       );
     }
 
@@ -107,7 +104,7 @@ export default async function NewSafetyReportPage({
     if (description) payload.description = description;
     if (siteProjectId) payload.siteProjectId = siteProjectId;
 
-    const res = await serverAppFetch("/safety-reports", tokenInner, {
+    const res = await serverAppFetch("/api/safety-reports", tokenInner, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -121,8 +118,8 @@ export default async function NewSafetyReportPage({
       const text = await res.text().catch(() => "");
       redirect(
         `/dashboard/safety-reports/new?error=${encodeURIComponent(
-          `Create safety report failed (${res.status}) ${text}`,
-        )}`,
+          `Create safety report failed (${res.status}) ${text}`
+        )}`
       );
     }
 
@@ -164,7 +161,9 @@ export default async function NewSafetyReportPage({
           }}
         >
           <div>
-            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+            <label
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
               Title
             </label>
             <input
@@ -180,7 +179,9 @@ export default async function NewSafetyReportPage({
           </div>
 
           <div>
-            <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+            <label
+              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
+            >
               Site / Project
             </label>
             <select
