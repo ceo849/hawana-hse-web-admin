@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 
+type ServerAppFetchOptions = RequestInit;
+
 // ===== ARCH GUARD =====
 function enforceServerArchitecture(path: string) {
   if (
@@ -10,7 +12,14 @@ function enforceServerArchitecture(path: string) {
     console.error("🚨 SERVER ARCH VIOLATION");
     console.error("Blocked path:", path);
 
-    throw new Error("ARCH VIOLATION: Invalid path usage");
+    throw new Error("ARCH_VIOLATION: ABSOLUTE_OR_CORE_URL_BLOCKED");
+  }
+
+  if (!path.startsWith("/api/")) {
+    console.error("🚨 SERVER ARCH VIOLATION");
+    console.error("Proxy-only path required. Blocked path:", path);
+
+    throw new Error("ARCH_VIOLATION: PROXY_ONLY_PATH_REQUIRED");
   }
 }
 
@@ -19,23 +28,87 @@ function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-// ===== Detect API Proxy =====
-function isApiRoute(path: string): boolean {
-  return path.startsWith("/api/");
-}
-
 // ===== Base URL for internal Web SSR → /api =====
 function getWebBaseUrl(): string {
-  return (
+  const baseUrl =
     process.env.APP_BASE_URL ||
     process.env.NEXT_PUBLIC_BASE_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
+    "http://localhost:3000";
+
+  return baseUrl.replace(/\/$/, "");
 }
 
 // ===== Central Session Signal =====
 function throwSessionExpired(): never {
   throw new Error("SESSION_EXPIRED");
+}
+
+// ===== Body Normalization =====
+function normalizeRequestBody(
+  options: ServerAppFetchOptions
+): ServerAppFetchOptions {
+  if (!options.body) {
+    return options;
+  }
+
+  const isStringBody =
+    typeof options.body === "string" ||
+    options.body instanceof FormData ||
+    options.body instanceof URLSearchParams ||
+    options.body instanceof Blob ||
+    options.body instanceof ArrayBuffer;
+
+  if (isStringBody) {
+    return options;
+  }
+
+  const headers = new Headers(options.headers || {});
+  const hasContentType =
+    headers.has("Content-Type") || headers.has("content-type");
+
+  if (!hasContentType) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return {
+    ...options,
+    headers,
+    body: JSON.stringify(options.body),
+  };
+}
+
+// ===== Cookie Header Builder =====
+function buildCookieHeader(
+  accessToken?: string,
+  refreshToken?: string
+): string | null {
+  const cookieParts: string[] = [];
+
+  if (accessToken) {
+    cookieParts.push(`access_token=${accessToken}`);
+  }
+
+  if (refreshToken) {
+    cookieParts.push(`refresh_token=${refreshToken}`);
+  }
+
+  return cookieParts.length > 0 ? cookieParts.join("; ") : null;
+}
+
+// ===== Proxy Headers =====
+function buildProxyHeaders(
+  options: ServerAppFetchOptions,
+  accessToken?: string,
+  refreshToken?: string
+): Headers {
+  const headers = new Headers(options.headers || {});
+  const cookieHeader = buildCookieHeader(accessToken, refreshToken);
+
+  if (cookieHeader) {
+    headers.set("cookie", cookieHeader);
+  }
+
+  return headers;
 }
 
 // ===== Refresh via API Proxy =====
@@ -45,21 +118,17 @@ async function refreshAccessTokenViaProxy(
 ): Promise<string | null> {
   try {
     const baseUrl = getWebBaseUrl();
-
-    const cookieParts = [`refresh_token=${refreshToken}`];
-    if (accessToken) {
-      cookieParts.push(`access_token=${accessToken}`);
-    }
+    const cookieHeader = buildCookieHeader(accessToken, refreshToken);
 
     const res = await fetch(`${baseUrl}/api/auth/refresh`, {
       method: "POST",
-      headers: {
-        cookie: cookieParts.join("; "),
-      },
+      headers: cookieHeader ? { cookie: cookieHeader } : {},
       cache: "no-store",
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
 
     const data = await res.json().catch(() => ({}));
 
@@ -72,11 +141,11 @@ async function refreshAccessTokenViaProxy(
 // ===== MAIN FETCH =====
 export async function serverAppFetch(
   path: string,
-  arg2?: RequestInit | string,
-  arg3?: RequestInit
+  arg2?: ServerAppFetchOptions | string,
+  arg3?: ServerAppFetchOptions
 ): Promise<Response> {
   let token: string | undefined;
-  let options: RequestInit = {};
+  let options: ServerAppFetchOptions = {};
 
   // ===== Backward-compatible overload support =====
   if (typeof arg2 === "string" && arg3) {
@@ -92,97 +161,35 @@ export async function serverAppFetch(
 
   const cookieStore = await cookies();
 
+  const accessTokenFromCookie = cookieStore.get("access_token")?.value;
+  const refreshToken = cookieStore.get("refresh_token")?.value;
+
   if (!token) {
-    token = cookieStore.get("access_token")?.value;
+    token = accessTokenFromCookie;
   }
 
-  const refreshToken = cookieStore.get("refresh_token")?.value;
+  // ===== IMPORTANT FIX =====
+  // If access token is missing but refresh token exists,
+  // try refresh first instead of killing session immediately.
+  if (!token && refreshToken) {
+    const refreshedToken = await refreshAccessTokenViaProxy(refreshToken);
+
+    if (refreshedToken) {
+      token = refreshedToken;
+    }
+  }
 
   if (!token) {
     throwSessionExpired();
   }
 
-  // ================================
-  // ✅ API PROXY MODE
-  // ================================
-  if (isApiRoute(path)) {
-    const baseUrl = getWebBaseUrl();
-    const finalUrl = `${baseUrl}${normalizePath(path)}`;
-
-    const buildProxyHeaders = (accessToken: string): HeadersInit => {
-      const cookieParts = [`access_token=${accessToken}`];
-
-      if (refreshToken) {
-        cookieParts.push(`refresh_token=${refreshToken}`);
-      }
-
-      return {
-        ...(options.headers || {}),
-        cookie: cookieParts.join("; "),
-      };
-    };
-
-    let res = await fetch(finalUrl, {
-      ...options,
-      headers: buildProxyHeaders(token),
-      cache: "no-store",
-    });
-
-    if (res.status === 401) {
-      if (!refreshToken) {
-        throwSessionExpired();
-      }
-
-      const newToken = await refreshAccessTokenViaProxy(refreshToken, token);
-
-      if (!newToken) {
-        throwSessionExpired();
-      }
-
-      res = await fetch(finalUrl, {
-        ...options,
-        headers: buildProxyHeaders(newToken),
-        cache: "no-store",
-      });
-
-      if (res.status === 401) {
-        throwSessionExpired();
-      }
-    }
-
-    return res;
-  }
-
-  // ================================
-  // 🟡 LEGACY: DIRECT CORE MODE
-  // ================================
-  const CORE_API =
-    (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
-
-  const finalUrl = `${CORE_API}/v1${normalizePath(path)}`;
-
-  const buildCoreHeaders = (accessToken: string): HeadersInit => {
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string>),
-      Authorization: `Bearer ${accessToken}`,
-    };
-
-    if (
-      options.method &&
-      options.method !== "GET" &&
-      options.method !== "DELETE" &&
-      !headers["Content-Type"] &&
-      !headers["content-type"]
-    ) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    return headers;
-  };
+  const normalizedOptions = normalizeRequestBody(options);
+  const baseUrl = getWebBaseUrl();
+  const finalUrl = `${baseUrl}${normalizePath(path)}`;
 
   let res = await fetch(finalUrl, {
-    ...options,
-    headers: buildCoreHeaders(token),
+    ...normalizedOptions,
+    headers: buildProxyHeaders(normalizedOptions, token, refreshToken),
     cache: "no-store",
   });
 
@@ -198,8 +205,8 @@ export async function serverAppFetch(
     }
 
     res = await fetch(finalUrl, {
-      ...options,
-      headers: buildCoreHeaders(newToken),
+      ...normalizedOptions,
+      headers: buildProxyHeaders(normalizedOptions, newToken, refreshToken),
       cache: "no-store",
     });
 

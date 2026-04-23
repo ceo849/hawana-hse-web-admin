@@ -17,13 +17,41 @@ type NavItem = SidebarNavItem & {
 };
 
 const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
-  { href: "/dashboard/users", label: "Users", roles: ["OWNER", "ADMIN"] },
-  { href: "/dashboard/companies", label: "Companies", roles: ["OWNER"] },
-  { href: "/dashboard/sites-projects", label: "Sites / Projects", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
-  { href: "/dashboard/safety-reports", label: "Safety Reports", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
-  { href: "/dashboard/action-plans", label: "Action Plans", roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"] },
-  { href: "/dashboard/admin", label: "Admin Panel", roles: ["OWNER"] },
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
+  },
+  {
+    href: "/dashboard/users",
+    label: "Users",
+    roles: ["OWNER", "ADMIN"],
+  },
+  {
+    href: "/dashboard/companies",
+    label: "Companies",
+    roles: ["OWNER"],
+  },
+  {
+    href: "/dashboard/sites-projects",
+    label: "Sites / Projects",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
+  },
+  {
+    href: "/dashboard/safety-reports",
+    label: "Safety Reports",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
+  },
+  {
+    href: "/dashboard/action-plans",
+    label: "Action Plans",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
+  },
+  {
+    href: "/dashboard/admin",
+    label: "Admin Panel",
+    roles: ["OWNER"],
+  },
 ];
 
 export default async function DashboardLayout({
@@ -42,12 +70,12 @@ export default async function DashboardLayout({
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
   const email = payload?.email ?? undefined;
 
-  const navItems: SidebarNavItem[] = NAV
-    .filter((item) => item.roles.includes(role))
-    .map(({ href, label }) => ({
-      href,
-      label,
-    }));
+  const navItems: SidebarNavItem[] = NAV.filter((item) =>
+    item.roles.includes(role),
+  ).map(({ href, label }) => ({
+    href,
+    label,
+  }));
 
   return (
     <div
@@ -62,6 +90,9 @@ export default async function DashboardLayout({
         @media (max-width: 768px) {
           aside { display: none !important; }
           [data-sidebar] { display: none !important; }
+
+          button[aria-label="Toggle Menu"] { display: none !important; }
+          button[aria-label="Open menu"] { display: none !important; }
         }
       `}</style>
 
