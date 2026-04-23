@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
@@ -7,13 +7,30 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
-export default async function NewUserPage({ searchParams }: PageProps) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-
-  if (!token) {
-    redirect("/login");
+function extractErrorMessage(data: unknown): string {
+  if (typeof data !== "object" || data === null) {
+    return "Create user failed";
   }
+
+  const candidate = data as Record<string, unknown>;
+
+  if (Array.isArray(candidate.message)) {
+    return candidate.message.map(String).join(" | ");
+  }
+
+  if (typeof candidate.message === "string" && candidate.message.trim()) {
+    return candidate.message;
+  }
+
+  if (typeof candidate.error === "string" && candidate.error.trim()) {
+    return candidate.error;
+  }
+
+  return "Create user failed";
+}
+
+export default async function NewUserPage({ searchParams }: PageProps) {
+  await requireAccessToken();
 
   const resolvedSearchParams = searchParams
     ? await Promise.resolve(searchParams)
@@ -24,12 +41,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
   async function createUser(formData: FormData) {
     "use server";
 
-    const cookieStoreInner = await cookies();
-    const tokenInner = cookieStoreInner.get("access_token")?.value;
-
-    if (!tokenInner) {
-      redirect("/login");
-    }
+    await requireAccessToken();
 
     const payload = {
       fullName: String(formData.get("fullName") ?? "").trim(),
@@ -40,8 +52,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
 
     if (!payload.fullName || !payload.email || !payload.password || !payload.role) {
       redirect(
-        "/dashboard/users/new?error=" +
-          encodeURIComponent("All fields are required")
+        `/dashboard/users/new?error=${encodeURIComponent("All fields are required")}`
       );
     }
 
@@ -67,13 +78,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
 
         if (isJson) {
           const data = await res.json().catch(() => ({}));
-          if (Array.isArray((data as any)?.message)) {
-            message = (data as any).message.join(" | ");
-          } else if (typeof (data as any)?.message === "string") {
-            message = (data as any).message;
-          } else if (typeof (data as any)?.error === "string") {
-            message = (data as any).error;
-          }
+          message = extractErrorMessage(data);
         } else {
           const text = await res.text().catch(() => "");
           if (text.trim()) {
@@ -87,9 +92,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
       const message =
         error instanceof Error ? error.message : "Create user failed";
 
-      redirect(
-        `/dashboard/users/new?error=${encodeURIComponent(message)}`
-      );
+      redirect(`/dashboard/users/new?error=${encodeURIComponent(message)}`);
     }
 
     redirect("/dashboard/users");
