@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
+const CORE_API = (
+  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+).replace(/\/$/, "");
+
+const API_PREFIX = "/v1";
 
 async function getToken() {
   const cookieStore = await cookies();
   return cookieStore.get("access_token")?.value ?? null;
+}
+
+function buildUpstreamUrl(search: string = "") {
+  return `${CORE_API}${API_PREFIX}/users${search}`;
 }
 
 async function buildProxyResponse(upstream: Response) {
@@ -37,17 +45,16 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ?? "";
 
-    const upstream = await serverAppFetch(`/api/users${qs}`, token, {
+    const upstream = await fetch(buildUpstreamUrl(qs), {
       method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       cache: "no-store",
     });
 
     return buildProxyResponse(upstream);
   } catch (error) {
-    if (error instanceof Error && error.message === "SESSION_EXPIRED") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
     console.error("API PROXY ERROR (GET /users):", error);
 
     return NextResponse.json(
@@ -68,23 +75,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.text();
+    let body: unknown;
 
-    const upstream = await serverAppFetch("/api/users", token, {
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(), {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body,
+      body: JSON.stringify(body),
       cache: "no-store",
     });
 
     return buildProxyResponse(upstream);
   } catch (error) {
-    if (error instanceof Error && error.message === "SESSION_EXPIRED") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
     console.error("API PROXY ERROR (POST /users):", error);
 
     return NextResponse.json(
