@@ -1,13 +1,34 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-// ✅ Server-only (Correct)
-const CORE_API =
-  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+const CORE_API = (
+  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+).replace(/\/$/, "");
+
+const API_PREFIX = "/v1";
 
 async function getToken() {
   const cookieStore = await cookies();
   return cookieStore.get("access_token")?.value ?? null;
+}
+
+function buildUpstreamUrl(search: string = "") {
+  return `${CORE_API}${API_PREFIX}/action-plans${search}`;
+}
+
+async function buildProxyResponse(upstream: Response) {
+  const contentType =
+    upstream.headers.get("content-type") ??
+    "application/json; charset=utf-8";
+
+  const bodyText = await upstream.text();
+
+  return new NextResponse(bodyText, {
+    status: upstream.status,
+    headers: {
+      "content-type": contentType,
+    },
+  });
 }
 
 // =========================
@@ -24,7 +45,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const qs = url.search ?? "";
 
-    const upstream = await fetch(`${CORE_API}/v1/action-plans${qs}`, {
+    const upstream = await fetch(buildUpstreamUrl(qs), {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -32,16 +53,7 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
 
-    const bodyText = await upstream.text();
-
-    return new NextResponse(bodyText, {
-      status: upstream.status,
-      headers: {
-        "content-type":
-          upstream.headers.get("content-type") ??
-          "application/json; charset=utf-8",
-      },
-    });
+    return buildProxyResponse(upstream);
   } catch (error) {
     console.error("API PROXY ERROR (GET /action-plans):", error);
 
@@ -63,28 +75,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.text();
+    let body: unknown;
 
-    const upstream = await fetch(`${CORE_API}/v1/action-plans`, {
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body,
+      body: JSON.stringify(body),
       cache: "no-store",
     });
 
-    const bodyText = await upstream.text();
-
-    return new NextResponse(bodyText, {
-      status: upstream.status,
-      headers: {
-        "content-type":
-          upstream.headers.get("content-type") ??
-          "application/json; charset=utf-8",
-      },
-    });
+    return buildProxyResponse(upstream);
   } catch (error) {
     console.error("API PROXY ERROR (POST /action-plans):", error);
 
