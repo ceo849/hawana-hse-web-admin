@@ -4,112 +4,157 @@ const CORE_BASE_URL = (
   process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
 ).replace(/\/$/, "");
 
-// ✅ FIX: contract ثابت
 const API_PREFIX = "/v1";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(
-  req: NextRequest,
-  context: RouteContext
-) {
-  const { id } = await context.params;
-  const token = req.cookies.get("access_token")?.value;
+function buildUpstreamUrl(id: string) {
+  return `${CORE_BASE_URL}${API_PREFIX}/sites-projects/${encodeURIComponent(id)}`;
+}
 
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+async function buildProxyResponse(upstream: Response) {
+  const contentType =
+    upstream.headers.get("content-type") ?? "application/json; charset=utf-8";
+
+  const bodyText = await upstream.text();
+
+  return new NextResponse(bodyText, {
+    status: upstream.status,
+    headers: {
+      "content-type": contentType,
+    },
+  });
+}
+
+async function resolveId(params: RouteContext["params"]) {
+  const { id } = await params;
+
+  if (!id || !String(id).trim()) {
+    return null;
   }
 
-  const res = await fetch(
-    `${CORE_BASE_URL}${API_PREFIX}/sites-projects/${encodeURIComponent(id)}`,
-    {
+  return String(id).trim();
+}
+
+export async function GET(req: NextRequest, context: RouteContext) {
+  try {
+    const token = req.cookies.get("access_token")?.value ?? null;
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = await resolveId(context.params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing site project id" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       cache: "no-store",
-    }
-  );
+    });
 
-  const text = await res.text();
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (GET /sites-projects/[id]):", error);
 
-  return new NextResponse(text, {
-    status: res.status,
-    headers: {
-      "Content-Type":
-        res.headers.get("content-type") || "application/json",
-    },
-  });
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  context: RouteContext
-) {
-  const { id } = await context.params;
-  const token = req.cookies.get("access_token")?.value;
+export async function PATCH(req: NextRequest, context: RouteContext) {
+  try {
+    const token = req.cookies.get("access_token")?.value ?? null;
 
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
-  const body = await req.text();
+    const id = await resolveId(context.params);
 
-  const res = await fetch(
-    `${CORE_BASE_URL}${API_PREFIX}/sites-projects/${encodeURIComponent(id)}`,
-    {
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing site project id" },
+        { status: 400 }
+      );
+    }
+
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        "content-type": "application/json",
       },
-      body,
+      body: JSON.stringify(body),
       cache: "no-store",
-    }
-  );
+    });
 
-  const text = await res.text();
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (PATCH /sites-projects/[id]):", error);
 
-  return new NextResponse(text, {
-    status: res.status,
-    headers: {
-      "Content-Type":
-        res.headers.get("content-type") || "application/json",
-    },
-  });
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: RouteContext
-) {
-  const { id } = await context.params;
-  const token = req.cookies.get("access_token")?.value;
+export async function DELETE(req: NextRequest, context: RouteContext) {
+  try {
+    const token = req.cookies.get("access_token")?.value ?? null;
 
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
-  const res = await fetch(
-    `${CORE_BASE_URL}${API_PREFIX}/sites-projects/${encodeURIComponent(id)}`,
-    {
+    const id = await resolveId(context.params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing site project id" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       cache: "no-store",
-    }
-  );
+    });
 
-  const text = await res.text();
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (DELETE /sites-projects/[id]):", error);
 
-  return new NextResponse(text, {
-    status: res.status,
-    headers: {
-      "Content-Type":
-        res.headers.get("content-type") || "application/json",
-    },
-  });
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
 }
