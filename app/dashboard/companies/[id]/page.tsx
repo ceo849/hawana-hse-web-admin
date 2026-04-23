@@ -100,14 +100,13 @@ export default async function CompanyOverviewPage({
   const sp = searchParams ? await Promise.resolve(searchParams) : {};
   const error = String(sp?.error ?? "").trim();
 
-  // ✅ FIX: كل requests بـ serverAppFetch + parallel
   const [companyRes, usersRes, sitesRes, reportsRes, plansRes] =
     await Promise.all([
-      serverAppFetch(`/companies/${id}`, token),
-      serverAppFetch("/users?page=1&limit=100", token),
-      serverAppFetch("/sites-projects", token),
-      serverAppFetch("/safety-reports?page=1&limit=100", token),
-      serverAppFetch("/action-plans", token),
+      serverAppFetch(`/api/companies/${encodeURIComponent(id)}`, token),
+      serverAppFetch("/api/users?page=1&limit=100", token),
+      serverAppFetch("/api/sites-projects", token),
+      serverAppFetch("/api/safety-reports?page=1&limit=100", token),
+      serverAppFetch("/api/action-plans", token),
     ]);
 
   if (
@@ -131,11 +130,7 @@ export default async function CompanyOverviewPage({
   const plansJson = await plansRes.json().catch(() => []);
 
   const count = (v: any) =>
-    Array.isArray(v?.data)
-      ? v.data.length
-      : Array.isArray(v)
-      ? v.length
-      : 0;
+    Array.isArray(v?.data) ? v.data.length : Array.isArray(v) ? v.length : 0;
 
   const counts = {
     users: count(usersJson),
@@ -156,7 +151,7 @@ export default async function CompanyOverviewPage({
     };
 
     const res = await serverAppFetch(
-      `/companies/${id}`,
+      `/api/companies/${encodeURIComponent(id)}`,
       tokenInner,
       {
         method: "PATCH",
@@ -176,9 +171,13 @@ export default async function CompanyOverviewPage({
 
     const tokenInner = await requireAccessToken();
 
-    const res = await serverAppFetch(`/companies/${id}`, tokenInner, {
-      method: "DELETE",
-    });
+    const res = await serverAppFetch(
+      `/api/companies/${encodeURIComponent(id)}`,
+      tokenInner,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (res.status === 401) redirect("/login");
     if (!res.ok) redirect(`/dashboard/companies/${id}`);
@@ -193,14 +192,30 @@ export default async function CompanyOverviewPage({
       {error && <div style={{ color: "red" }}>{error}</div>}
 
       <div style={{ marginBottom: 16 }}>
-        <div><b>ID:</b> {company.id}</div>
-        <div><b>Name:</b> {company.name}</div>
-        <div><b>Country:</b> {company.country ?? "-"}</div>
-        <div><b>Industry:</b> {company.industry ?? "-"}</div>
-        <div><b>Created:</b> {formatDate(company.createdAt)}</div>
+        <div>
+          <b>ID:</b> {company.id}
+        </div>
+        <div>
+          <b>Name:</b> {company.name}
+        </div>
+        <div>
+          <b>Country:</b> {company.country ?? "-"}
+        </div>
+        <div>
+          <b>Industry:</b> {company.industry ?? "-"}
+        </div>
+        <div>
+          <b>Created:</b> {formatDate(company.createdAt)}
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4,1fr)",
+          gap: 12,
+        }}
+      >
         {metricCard("Users", counts.users)}
         {metricCard("Sites", counts.sitesProjects)}
         {metricCard("Reports", counts.safetyReports)}
