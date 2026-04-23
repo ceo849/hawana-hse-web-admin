@@ -62,9 +62,8 @@ export default async function EditSafetyReportPage({
   const sp = searchParams ? await searchParams : undefined;
   const error = String(sp?.error ?? "").trim();
 
-  // ✅ FIX: serverAppFetch
   const reportRes = await serverAppFetch(
-    `/safety-reports/${encodeURIComponent(id)}`,
+    `/api/safety-reports/${encodeURIComponent(id)}`,
     token
   );
 
@@ -78,8 +77,7 @@ export default async function EditSafetyReportPage({
 
   const report = reportJson;
 
-  // ✅ FIX: serverAppFetch
-  const sitesRes = await serverAppFetch("/sites-projects", token);
+  const sitesRes = await serverAppFetch("/api/sites-projects", token);
 
   if (sitesRes.status === 401) redirect("/login");
 
@@ -105,9 +103,8 @@ export default async function EditSafetyReportPage({
     if (status) payload.status = status;
     payload.siteProjectId = siteProjectId || null;
 
-    // ✅ FIX: serverAppFetch
     const res = await serverAppFetch(
-      `/safety-reports/${encodeURIComponent(id)}`,
+      `/api/safety-reports/${encodeURIComponent(id)}`,
       tokenInner,
       {
         method: "PATCH",
@@ -124,8 +121,8 @@ export default async function EditSafetyReportPage({
       const text = await res.text().catch(() => "");
       redirect(
         `/dashboard/safety-reports/${id}/edit?error=${encodeURIComponent(
-          `Update failed (${res.status}) ${text}`,
-        )}`,
+          `Update failed (${res.status}) ${text}`
+        )}`
       );
     }
 
