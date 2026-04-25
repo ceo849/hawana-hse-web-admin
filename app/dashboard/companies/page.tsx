@@ -29,70 +29,23 @@ type CompaniesResponse = {
   meta?: CompaniesMeta;
 };
 
-// ===== Guards =====
-function isCompanyDto(value: unknown): value is CompanyDto {
-  if (typeof value !== "object" || value === null) return false;
+function parseCompaniesResponse(value: unknown): CompaniesResponse {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { data?: unknown }).data)
+  ) {
+    const raw = value as CompaniesResponse;
 
-  const c = value as Record<string, unknown>;
-
-  return (
-    typeof c.id === "string" &&
-    typeof c.name === "string" &&
-    (typeof c.country === "string" || c.country === null) &&
-    (typeof c.industry === "string" || c.industry === null) &&
-    typeof c.createdAt === "string" &&
-    typeof c.updatedAt === "string"
-  );
-}
-
-function parseCompaniesResponse(
-  value: unknown,
-  fallbackPage: number,
-  fallbackLimit: number
-): CompaniesResponse {
-  if (Array.isArray(value)) {
-    const data = value.filter(isCompanyDto);
     return {
-      data,
-      meta: {
-        page: fallbackPage,
-        limit: fallbackLimit,
-        total: data.length,
-        totalPages: 1,
-      },
+      data: raw.data,
+      meta: raw.meta,
     };
   }
-
-  if (typeof value !== "object" || value === null) {
-    return {
-      data: [],
-      meta: {
-        page: fallbackPage,
-        limit: fallbackLimit,
-        total: 0,
-        totalPages: 1,
-      },
-    };
-  }
-
-  const c = value as Record<string, unknown>;
-
-  const data = Array.isArray(c.data) ? c.data.filter(isCompanyDto) : [];
-
-  const metaRaw =
-    typeof c.meta === "object" && c.meta !== null
-      ? (c.meta as Record<string, unknown>)
-      : null;
 
   return {
-    data,
-    meta: {
-      page: typeof metaRaw?.page === "number" ? metaRaw.page : fallbackPage,
-      limit: typeof metaRaw?.limit === "number" ? metaRaw.limit : fallbackLimit,
-      total: typeof metaRaw?.total === "number" ? metaRaw.total : data.length,
-      totalPages:
-        typeof metaRaw?.totalPages === "number" ? metaRaw.totalPages : 1,
-    },
+    data: [],
+    meta: undefined,
   };
 }
 
@@ -113,7 +66,6 @@ function buildDashboardCompaniesUrl(page: number) {
   return `/dashboard/companies?page=${page}`;
 }
 
-// ===== Company Badge =====
 function IndustryBadge({ industry }: { industry: string | null }) {
   return (
     <span
@@ -132,7 +84,6 @@ function IndustryBadge({ industry }: { industry: string | null }) {
   );
 }
 
-// ===== PAGE =====
 export default async function CompaniesPage({
   searchParams,
 }: {
@@ -148,13 +99,13 @@ export default async function CompaniesPage({
 
   const payload = decodeJwtPayload(token);
   const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const canManageCompanies = currentRole === "OWNER";
+  const canShowCreateAction = currentRole === "OWNER";
 
   const page = Math.max(1, Number(resolvedSearchParams.page ?? "1") || 1);
   const search = resolvedSearchParams.search ?? "";
   const limit = 10;
 
-  let res;
+  let res: Response;
 
   try {
     res = await serverAppFetch(
@@ -187,13 +138,13 @@ export default async function CompaniesPage({
   }
 
   const raw = await res.json();
-  const json = parseCompaniesResponse(raw, page, limit);
+  const json = parseCompaniesResponse(raw);
 
   const companies = json.data;
   const meta = json.meta ?? {
     page,
     limit,
-    total: companies.length,
+    total: 0,
     totalPages: 1,
   };
 
@@ -206,7 +157,7 @@ export default async function CompaniesPage({
         title="Companies Administration"
         subtitle="Tenant company administration"
         action={
-          canManageCompanies ? (
+          canShowCreateAction ? (
             <Link href="/dashboard/companies/new">+ New Company</Link>
           ) : undefined
         }
