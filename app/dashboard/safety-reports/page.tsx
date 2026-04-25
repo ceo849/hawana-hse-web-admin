@@ -15,12 +15,13 @@ type SafetyReport = {
   siteProjectId?: string | null;
 };
 
-type SiteProject = {
-  id: string;
-  name: string | null;
+type SafetyReportsResponse = {
+  data: SafetyReport[];
+  meta?: {
+    total?: number;
+  };
 };
 
-// ===== Parsers =====
 function isSafetyReport(value: unknown): value is SafetyReport {
   if (typeof value !== "object" || value === null) return false;
 
@@ -35,35 +36,31 @@ function isSafetyReport(value: unknown): value is SafetyReport {
   );
 }
 
-function parseReports(value: unknown): SafetyReport[] {
-  if (Array.isArray(value)) return value.filter(isSafetyReport);
-
+function parseReports(value: unknown): SafetyReportsResponse {
   if (
     typeof value === "object" &&
     value !== null &&
-    Array.isArray((value as any).data)
+    Array.isArray((value as { data?: unknown }).data)
   ) {
-    return (value as any).data.filter(isSafetyReport);
+    const raw = value as {
+      data: unknown[];
+      meta?: {
+        total?: unknown;
+      };
+    };
+
+    return {
+      data: raw.data.filter(isSafetyReport),
+      meta: {
+        total:
+          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
+      },
+    };
   }
 
-  return [];
+  return { data: [], meta: { total: undefined } };
 }
 
-function parseSites(value: unknown): SiteProject[] {
-  if (Array.isArray(value)) return value as SiteProject[];
-
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as any).data)
-  ) {
-    return (value as any).data as SiteProject[];
-  }
-
-  return [];
-}
-
-// ===== Status Badge =====
 function StatusBadge({ status }: { status: string | null }) {
   const s = status ?? "UNKNOWN";
 
@@ -103,22 +100,15 @@ function StatusBadge({ status }: { status: string | null }) {
   );
 }
 
-// ===== PAGE =====
 export default async function SafetyReportsPage() {
   await requireAccessToken();
 
-  let reportsRes: Response;
-  let sitesRes: Response;
+  let res: Response;
 
   try {
-    [reportsRes, sitesRes] = await Promise.all([
-      serverAppFetch("/api/safety-reports?page=1&limit=20", {
-        cache: "no-store",
-      }),
-      serverAppFetch("/api/sites-projects", {
-        cache: "no-store",
-      }),
-    ]);
+    res = await serverAppFetch("/api/safety-reports?page=1&limit=20", {
+      cache: "no-store",
+    });
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
@@ -136,30 +126,35 @@ export default async function SafetyReportsPage() {
     );
   }
 
-  let items: SafetyReport[] = [];
-  let sitesMap: Record<string, string> = {};
-
-  if (reportsRes.ok) {
-    const json = await reportsRes.json();
-    items = parseReports(json);
+  if (!res.ok) {
+    return (
+      <div style={{ fontFamily: "system-ui", padding: 16 }}>
+        <PageHeader title="Safety Reports" subtitle="Operational reports" />
+        <div style={{ color: "red", marginTop: 12 }}>
+          Failed to load safety reports
+        </div>
+      </div>
+    );
   }
 
-  if (sitesRes.ok) {
-    const sitesJson = await sitesRes.json();
-    const sites = parseSites(sitesJson);
-
-    sitesMap = Object.fromEntries(sites.map((s) => [s.id, s.name ?? s.id]));
-  }
+  const json = await res.json();
+  const parsed = parseReports(json);
+  const items = parsed.data;
+  const total = parsed.meta?.total ?? 0;
 
   return (
     <div style={{ fontFamily: "system-ui", padding: 16 }}>
       <PageHeader
         title="Safety Reports"
         subtitle="Operational reports"
-        action={<Link href="/dashboard/safety-reports/new">+ New Safety Report</Link>}
+        action={
+          <Link href="/dashboard/safety-reports/new">
+            + New Safety Report
+          </Link>
+        }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
+      <div style={{ marginBottom: 12 }}>Total: {total}</div>
 
       {items.length === 0 ? (
         <div
@@ -175,7 +170,6 @@ export default async function SafetyReportsPage() {
         </div>
       ) : (
         <>
-          {/* ===== Desktop Table ===== */}
           <div className="desktop-only">
             <div style={{ overflowX: "auto" }}>
               <table
@@ -194,7 +188,7 @@ export default async function SafetyReportsPage() {
                       Status
                     </th>
                     <th align="left" style={{ padding: "8px 12px" }}>
-                      Site
+                      Site / Project
                     </th>
                     <th align="left" style={{ padding: "8px 12px" }}>
                       Created At
@@ -216,9 +210,7 @@ export default async function SafetyReportsPage() {
                       </td>
 
                       <td style={{ padding: "8px 12px" }}>
-                        {r.siteProjectId
-                          ? sitesMap[r.siteProjectId] ?? r.siteProjectId
-                          : "-"}
+                        {r.siteProjectId ?? "-"}
                       </td>
 
                       <td style={{ padding: "8px 12px" }}>
@@ -231,7 +223,6 @@ export default async function SafetyReportsPage() {
             </div>
           </div>
 
-          {/* ===== Mobile Cards ===== */}
           <div className="mobile-only" style={{ marginTop: 12 }}>
             {items.map((r) => (
               <Link
@@ -264,9 +255,7 @@ export default async function SafetyReportsPage() {
                     marginBottom: 4,
                   }}
                 >
-                  {r.siteProjectId
-                    ? sitesMap[r.siteProjectId] ?? r.siteProjectId
-                    : "-"}
+                  {r.siteProjectId ?? "-"}
                 </div>
 
                 <div style={{ fontSize: 12, color: "#9ca3af" }}>
