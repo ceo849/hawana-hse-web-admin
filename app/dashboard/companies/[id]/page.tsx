@@ -100,44 +100,24 @@ export default async function CompanyOverviewPage({
   const sp = searchParams ? await Promise.resolve(searchParams) : {};
   const error = String(sp?.error ?? "").trim();
 
-  const [companyRes, usersRes, sitesRes, reportsRes, plansRes] =
-    await Promise.all([
-      serverAppFetch(`/api/companies/${encodeURIComponent(id)}`, token),
-      serverAppFetch("/api/users?page=1&limit=100", token),
-      serverAppFetch("/api/sites-projects", token),
-      serverAppFetch("/api/safety-reports?page=1&limit=100", token),
-      serverAppFetch("/api/action-plans", token),
-    ]);
+  const companyRes = await serverAppFetch(
+    `/api/companies/${encodeURIComponent(id)}`,
+    token
+  );
 
-  if (
-    companyRes.status === 401 ||
-    usersRes.status === 401 ||
-    sitesRes.status === 401 ||
-    reportsRes.status === 401 ||
-    plansRes.status === 401
-  ) {
+  if (companyRes.status === 401) {
     redirect("/login");
   }
 
-  if (!companyRes.ok) redirect("/dashboard/companies");
+  if (!companyRes.ok) {
+    redirect("/dashboard/companies");
+  }
 
   const company = parseCompany(await companyRes.json());
-  if (!company) redirect("/dashboard/companies");
 
-  const usersJson = await usersRes.json().catch(() => []);
-  const sitesJson = await sitesRes.json().catch(() => []);
-  const reportsJson = await reportsRes.json().catch(() => []);
-  const plansJson = await plansRes.json().catch(() => []);
-
-  const count = (v: any) =>
-    Array.isArray(v?.data) ? v.data.length : Array.isArray(v) ? v.length : 0;
-
-  const counts = {
-    users: count(usersJson),
-    sitesProjects: count(sitesJson),
-    safetyReports: count(reportsJson),
-    actionPlans: count(plansJson),
-  };
+  if (!company) {
+    redirect("/dashboard/companies");
+  }
 
   async function updateCompany(formData: FormData) {
     "use server";
@@ -216,10 +196,10 @@ export default async function CompanyOverviewPage({
           gap: 12,
         }}
       >
-        {metricCard("Users", counts.users)}
-        {metricCard("Sites", counts.sitesProjects)}
-        {metricCard("Reports", counts.safetyReports)}
-        {metricCard("Plans", counts.actionPlans)}
+        {metricCard("Users", company._count.users)}
+        {metricCard("Sites", company._count.sitesProjects)}
+        {metricCard("Reports", company._count.safetyReports)}
+        {metricCard("Plans", company._count.actionPlans)}
       </div>
 
       <form action={updateCompany} style={{ marginTop: 20 }}>
