@@ -1,5 +1,17 @@
 // src/auth/storage.ts
 
+/**
+ * @deprecated
+ * DO NOT USE.
+ *
+ * ⚠️ SECURITY & ARCHITECTURE POLICY:
+ * - Tokens MUST be handled via HttpOnly cookies ONLY.
+ * - localStorage usage is FORBIDDEN in Hawana HSE.
+ * - This file is kept temporarily for backward compatibility ONLY.
+ *
+ * Status: DISABLED (SAFE NO-OP IMPLEMENTATION)
+ */
+
 const ACCESS_TOKEN_KEY = 'hawana_access_token';
 const REFRESH_TOKEN_KEY = 'hawana_refresh_token';
 const ACCESS_TOKEN_COOKIE = 'access_token';
@@ -8,56 +20,49 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined';
 }
 
-function setAccessTokenCookie(token: string) {
-  document.cookie = `${ACCESS_TOKEN_COOKIE}=${encodeURIComponent(
-    token
-  )}; Path=/; SameSite=Lax`;
+// ⚠️ DISABLED — DO NOT USE
+function setAccessTokenCookie(_token: string) {
+  // intentionally disabled
 }
 
+// ⚠️ DISABLED — DO NOT USE
 function clearAccessTokenCookie() {
-  document.cookie = `${ACCESS_TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  // intentionally disabled
 }
 
 export const authStorage = {
+  // ❌ DISABLED
   getAccessToken(): string | null {
-    if (!isBrowser()) return null;
-    return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+    return null;
   },
 
-  setAccessToken(token: string): void {
-    if (!isBrowser()) return;
-
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    setAccessTokenCookie(token); // Required for Next.js middleware
+  // ❌ DISABLED
+  setAccessToken(_token: string): void {
+    // no-op
   },
 
+  // ❌ DISABLED
   clearAccessToken(): void {
-    if (!isBrowser()) return;
-
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-    clearAccessTokenCookie();
+    // no-op
   },
 
+  // ❌ DISABLED
   getRefreshToken(): string | null {
-    if (!isBrowser()) return null;
-    return window.localStorage.getItem(REFRESH_TOKEN_KEY);
+    return null;
   },
 
-  setRefreshToken(token: string): void {
-    if (!isBrowser()) return;
-    window.localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  // ❌ DISABLED
+  setRefreshToken(_token: string): void {
+    // no-op
   },
 
+  // ❌ DISABLED
   clearRefreshToken(): void {
-    if (!isBrowser()) return;
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+    // no-op
   },
 
+  // ❌ DISABLED
   clearAll(): void {
-    if (!isBrowser()) return;
-
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-    clearAccessTokenCookie();
+    // no-op
   },
 };
