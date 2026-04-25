@@ -32,20 +32,6 @@ type UsersResponse = {
   };
 };
 
-function isUserDto(v: unknown): v is UserDto {
-  if (typeof v !== "object" || v === null) return false;
-
-  const c = v as Record<string, unknown>;
-
-  return (
-    typeof c.id === "string" &&
-    typeof c.email === "string" &&
-    typeof c.fullName === "string" &&
-    typeof c.role === "string" &&
-    typeof c.companyId === "string"
-  );
-}
-
 function parseUsers(value: unknown): UsersResponse {
   if (
     typeof value === "object" &&
@@ -53,14 +39,14 @@ function parseUsers(value: unknown): UsersResponse {
     Array.isArray((value as { data?: unknown }).data)
   ) {
     const raw = value as {
-      data: unknown[];
+      data: UserDto[];
       meta?: {
         total?: unknown;
       };
     };
 
     return {
-      data: raw.data.filter(isUserDto),
+      data: raw.data,
       meta: {
         total:
           typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
