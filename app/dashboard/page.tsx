@@ -11,6 +11,12 @@ type DashboardDto = {
   users?: number;
   companies?: number;
   actionPlans?: number;
+  reports?: number;
+  reportStats?: {
+    open?: number;
+    inProgress?: number;
+    closed?: number;
+  };
 };
 
 export default async function DashboardPage() {
@@ -71,9 +77,7 @@ export default async function DashboardPage() {
         <ActionButton href="/dashboard/sites-projects/new">
           + Site / Project
         </ActionButton>
-        <ActionButton href="/dashboard/users/new">
-          + User
-        </ActionButton>
+        <ActionButton href="/dashboard/users/new">+ User</ActionButton>
       </div>
 
       <div style={sectionTitle}>Platform Metrics</div>
@@ -81,16 +85,19 @@ export default async function DashboardPage() {
       <div style={grid}>
         <StatsCard label="Companies" value={dashboard.companies ?? 0} />
         <StatsCard label="Users" value={dashboard.users ?? 0} />
+        <StatsCard label="Reports" value={dashboard.reports ?? 0} />
         <StatsCard label="Action Plans" value={dashboard.actionPlans ?? 0} />
       </div>
 
       <div style={sectionTitle}>HSE Operations</div>
 
       <div style={grid}>
-        <StatsCard label="Reports" value={0} />
-        <StatsCard label="Open" value={0} />
-        <StatsCard label="In Progress" value={0} />
-        <StatsCard label="Closed" value={0} />
+        <StatsCard label="Open" value={dashboard.reportStats?.open ?? 0} />
+        <StatsCard
+          label="In Progress"
+          value={dashboard.reportStats?.inProgress ?? 0}
+        />
+        <StatsCard label="Closed" value={dashboard.reportStats?.closed ?? 0} />
       </div>
     </div>
   );
