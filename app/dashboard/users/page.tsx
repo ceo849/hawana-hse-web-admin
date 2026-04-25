@@ -28,11 +28,10 @@ type UserDto = {
 type UsersResponse = {
   data: UserDto[];
   meta?: {
-    total: number;
+    total?: number;
   };
 };
 
-// ===== Parsers =====
 function isUserDto(v: unknown): v is UserDto {
   if (typeof v !== "object" || v === null) return false;
 
@@ -48,33 +47,30 @@ function isUserDto(v: unknown): v is UserDto {
 }
 
 function parseUsers(value: unknown): UsersResponse {
-  if (Array.isArray(value)) {
-    const data = value.filter(isUserDto);
-    return { data, meta: { total: data.length } };
-  }
-
   if (
     typeof value === "object" &&
     value !== null &&
-    Array.isArray((value as any).data)
+    Array.isArray((value as { data?: unknown }).data)
   ) {
-    const data = (value as any).data.filter(isUserDto);
+    const raw = value as {
+      data: unknown[];
+      meta?: {
+        total?: unknown;
+      };
+    };
 
     return {
-      data,
+      data: raw.data.filter(isUserDto),
       meta: {
         total:
-          typeof (value as any)?.meta?.total === "number"
-            ? (value as any).meta.total
-            : data.length,
+          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
       },
     };
   }
 
-  return { data: [], meta: { total: 0 } };
+  return { data: [], meta: { total: undefined } };
 }
 
-// ===== Role Badge =====
 function RoleBadge({ role }: { role: string }) {
   let bg = "#e5e7eb";
   let color = "#111827";
@@ -107,16 +103,15 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-// ===== PAGE =====
 export default async function UsersPage() {
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canManage = role === "OWNER" || role === "ADMIN";
+  const canShowCreateAction = role === "OWNER" || role === "ADMIN";
 
-  let res;
+  let res: Response;
 
   try {
     res = await serverAppFetch("/api/users?page=1&limit=20", {
@@ -150,7 +145,7 @@ export default async function UsersPage() {
   const parsed = parseUsers(json);
 
   const users = parsed.data;
-  const total = parsed.meta?.total ?? users.length;
+  const total = parsed.meta?.total ?? 0;
 
   return (
     <div style={{ padding: 16, fontFamily: "system-ui" }}>
@@ -158,7 +153,7 @@ export default async function UsersPage() {
         title="Users"
         subtitle="User management"
         action={
-          canManage ? (
+          canShowCreateAction ? (
             <Link href="/dashboard/users/new">+ New User</Link>
           ) : undefined
         }
