@@ -22,6 +22,13 @@ type ActionPlan = {
   status: string;
 };
 
+type ActionPlansResponse = {
+  data: ActionPlan[];
+  meta?: {
+    total?: number;
+  };
+};
+
 function isActionPlan(v: unknown): v is ActionPlan {
   if (typeof v !== "object" || v === null) return false;
 
@@ -35,21 +42,31 @@ function isActionPlan(v: unknown): v is ActionPlan {
   );
 }
 
-function parse(value: unknown): ActionPlan[] {
-  if (Array.isArray(value)) return value.filter(isActionPlan);
-
+function parseActionPlans(value: unknown): ActionPlansResponse {
   if (
     typeof value === "object" &&
     value !== null &&
-    Array.isArray((value as any).data)
+    Array.isArray((value as { data?: unknown }).data)
   ) {
-    return (value as any).data.filter(isActionPlan);
+    const raw = value as {
+      data: unknown[];
+      meta?: {
+        total?: unknown;
+      };
+    };
+
+    return {
+      data: raw.data.filter(isActionPlan),
+      meta: {
+        total:
+          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
+      },
+    };
   }
 
-  return [];
+  return { data: [], meta: { total: undefined } };
 }
 
-// ===== Status Badge =====
 function StatusBadge({ status }: { status: string }) {
   let bg = "#e5e7eb";
   let color = "#111827";
@@ -91,7 +108,7 @@ export default async function ActionPlansPage() {
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canManage =
+  const canShowCreateAction =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
   let res: Response;
@@ -135,7 +152,10 @@ export default async function ActionPlansPage() {
   }
 
   const json = await res.json();
-  const items = parse(json);
+  const parsed = parseActionPlans(json);
+
+  const items = parsed.data;
+  const total = parsed.meta?.total ?? 0;
 
   return (
     <div style={{ padding: 16, fontFamily: "system-ui" }}>
@@ -143,15 +163,13 @@ export default async function ActionPlansPage() {
         title="Action Plans"
         subtitle="Track execution and workflow"
         action={
-          canManage ? (
-            <Link href="/dashboard/action-plans/new">
-              + New Action Plan
-            </Link>
+          canShowCreateAction ? (
+            <Link href="/dashboard/action-plans/new">+ New Action Plan</Link>
           ) : undefined
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
+      <div style={{ marginBottom: 12 }}>Total: {total}</div>
 
       {items.length === 0 ? (
         <div
@@ -167,7 +185,6 @@ export default async function ActionPlansPage() {
         </div>
       ) : (
         <>
-          {/* ===== Desktop Table ===== */}
           <div className="desktop-only">
             <div style={{ overflowX: "auto" }}>
               <table style={{ minWidth: 550, width: "100%" }}>
@@ -214,7 +231,6 @@ export default async function ActionPlansPage() {
             </div>
           </div>
 
-          {/* ===== Mobile Cards ===== */}
           <div className="mobile-only" style={{ marginTop: 12 }}>
             {items.map((i) => (
               <Link
