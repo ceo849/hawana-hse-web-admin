@@ -24,6 +24,13 @@ type SiteProject = {
   updatedAt: string;
 };
 
+type SitesProjectsResponse = {
+  data: SiteProject[];
+  meta?: {
+    total?: number;
+  };
+};
+
 function isSiteProject(value: unknown): value is SiteProject {
   if (typeof value !== "object" || value === null) return false;
 
@@ -39,18 +46,29 @@ function isSiteProject(value: unknown): value is SiteProject {
   );
 }
 
-function parseSiteProjects(value: unknown): SiteProject[] {
-  if (Array.isArray(value)) return value.filter(isSiteProject);
-
+function parseSiteProjects(value: unknown): SitesProjectsResponse {
   if (
     typeof value === "object" &&
     value !== null &&
-    Array.isArray((value as any).data)
+    Array.isArray((value as { data?: unknown }).data)
   ) {
-    return (value as any).data.filter(isSiteProject);
+    const raw = value as {
+      data: unknown[];
+      meta?: {
+        total?: unknown;
+      };
+    };
+
+    return {
+      data: raw.data.filter(isSiteProject),
+      meta: {
+        total:
+          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
+      },
+    };
   }
 
-  return [];
+  return { data: [], meta: { total: undefined } };
 }
 
 function formatDate(value: string): string {
@@ -64,27 +82,30 @@ function formatDate(value: string): string {
   }).format(d);
 }
 
-function style(bg: string, color: string, border: string) {
+function statusStyle(status: string): React.CSSProperties {
+  if (status.toUpperCase() === "ACTIVE") {
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+      padding: "4px 10px",
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 600,
+      whiteSpace: "nowrap",
+    };
+  }
+
   return {
-    background: bg,
-    color,
-    border: `1px solid ${border}`,
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
     padding: "4px 10px",
     borderRadius: 999,
     fontSize: 12,
     fontWeight: 600,
-    whiteSpace: "nowrap" as const,
+    whiteSpace: "nowrap",
   };
-}
-
-function getStatusStyle(status: string) {
-  const s = status.toUpperCase();
-
-  if (s === "ACTIVE") {
-    return style("#dcfce7", "#166534", "#86efac");
-  }
-
-  return style("#f3f4f6", "#111827", "#d1d5db");
 }
 
 export default async function SitesProjectsPage() {
@@ -93,7 +114,7 @@ export default async function SitesProjectsPage() {
   const payload = decodeJwtPayload(token);
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
-  const canManage =
+  const canShowCreateAction =
     role === "OWNER" || role === "ADMIN" || role === "MANAGER";
 
   let res: Response;
@@ -148,7 +169,10 @@ export default async function SitesProjectsPage() {
   }
 
   const json = await res.json();
-  const items = parseSiteProjects(json);
+  const parsed = parseSiteProjects(json);
+
+  const items = parsed.data;
+  const total = parsed.meta?.total ?? 0;
 
   return (
     <div style={{ padding: 16, fontFamily: "system-ui" }}>
@@ -156,7 +180,7 @@ export default async function SitesProjectsPage() {
         title="Sites / Projects Administration"
         subtitle="Operational sites management"
         action={
-          canManage ? (
+          canShowCreateAction ? (
             <Link href="/dashboard/sites-projects/new">
               + New Site / Project
             </Link>
@@ -164,7 +188,7 @@ export default async function SitesProjectsPage() {
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {items.length}</div>
+      <div style={{ marginBottom: 12 }}>Total: {total}</div>
 
       {items.length === 0 ? (
         <div
@@ -184,99 +208,91 @@ export default async function SitesProjectsPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ minWidth: 600, width: "100%" }}>
                 <tbody>
-                  {items.map((i) => {
-                    const s = getStatusStyle(i.status);
+                  {items.map((i) => (
+                    <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
+                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                        <Link href={`/dashboard/sites-projects/${i.id}`}>
+                          {i.name}
+                        </Link>
+                      </td>
 
-                    return (
-                      <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
-                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                          <Link href={`/dashboard/sites-projects/${i.id}`}>
-                            {i.name}
-                          </Link>
-                        </td>
+                      <td style={{ padding: 8 }}>
+                        <span style={statusStyle(i.status)}>{i.status}</span>
+                      </td>
 
-                        <td style={{ padding: 8 }}>
-                          <span style={s}>{i.status}</span>
-                        </td>
+                      <td
+                        style={{
+                          padding: 8,
+                          maxWidth: 140,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {i.id}
+                      </td>
 
-                        <td
-                          style={{
-                            padding: 8,
-                            maxWidth: 140,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {i.id}
-                        </td>
+                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                        {formatDate(i.createdAt)}
+                      </td>
 
-                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                          {formatDate(i.createdAt)}
-                        </td>
+                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                        {formatDate(i.updatedAt)}
+                      </td>
 
-                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                          {formatDate(i.updatedAt)}
-                        </td>
-
-                        <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                          <Link href={`/dashboard/sites-projects/${i.id}`}>
-                            Open
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                        <Link href={`/dashboard/sites-projects/${i.id}`}>
+                          Open
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
 
           <div className="mobile-only" style={{ marginTop: 12 }}>
-            {items.map((i) => {
-              const s = getStatusStyle(i.status);
+            {items.map((i) => (
+              <Link
+                key={i.id}
+                href={`/dashboard/sites-projects/${i.id}`}
+                style={{
+                  display: "block",
+                  padding: 16,
+                  borderRadius: 14,
+                  border: "1px solid #e5e7eb",
+                  marginBottom: 12,
+                  textDecoration: "none",
+                  color: "inherit",
+                  background: "#ffffff",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  {i.name}
+                </div>
 
-              return (
-                <Link
-                  key={i.id}
-                  href={`/dashboard/sites-projects/${i.id}`}
+                <div style={{ marginBottom: 6 }}>
+                  <span style={statusStyle(i.status)}>{i.status}</span>
+                </div>
+
+                <div
                   style={{
-                    display: "block",
-                    padding: 16,
-                    borderRadius: 14,
-                    border: "1px solid #e5e7eb",
-                    marginBottom: 12,
-                    textDecoration: "none",
-                    color: "inherit",
-                    background: "#ffffff",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                    cursor: "pointer",
+                    fontSize: 13,
+                    color: "#6b7280",
+                    marginBottom: 4,
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                    {i.name}
-                  </div>
+                  {i.location ?? "-"}
+                </div>
 
-                  <div style={{ marginBottom: 6 }}>
-                    <span style={s}>{i.status}</span>
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "#6b7280",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {i.location ?? "-"}
-                  </div>
-
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                    {formatDate(i.createdAt)}
-                  </div>
-                </Link>
-              );
-            })}
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                  {formatDate(i.createdAt)}
+                </div>
+              </Link>
+            ))}
           </div>
         </>
       )}
