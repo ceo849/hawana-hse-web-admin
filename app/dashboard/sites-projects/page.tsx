@@ -91,7 +91,7 @@ function statusStyle(status: string): React.CSSProperties {
       padding: "4px 10px",
       borderRadius: 999,
       fontSize: 12,
-      fontWeight: 600,
+      fontWeight: 700,
       whiteSpace: "nowrap",
     };
   }
@@ -103,7 +103,7 @@ function statusStyle(status: string): React.CSSProperties {
     padding: "4px 10px",
     borderRadius: 999,
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     whiteSpace: "nowrap",
   };
 }
@@ -131,12 +131,12 @@ export default async function SitesProjectsPage() {
     console.error("Sites Projects Fetch Error:", err);
 
     return (
-      <div style={{ padding: 16, fontFamily: "system-ui" }}>
+      <div style={container}>
         <PageHeader
           title="Sites / Projects"
           subtitle="Operational sites management"
         />
-        <div style={{ color: "red", marginTop: 12 }}>
+        <div style={errorBox}>
           Failed to load sites/projects (network/server error)
         </div>
       </div>
@@ -145,12 +145,12 @@ export default async function SitesProjectsPage() {
 
   if (res.status === 403) {
     return (
-      <div style={{ padding: 16, fontFamily: "system-ui" }}>
+      <div style={container}>
         <PageHeader
           title="Sites / Projects"
           subtitle="Operational sites management"
         />
-        <div style={{ color: "#b91c1c", marginTop: 12 }}>
+        <div style={restrictedBox}>
           Access restricted — subscription inactive
         </div>
       </div>
@@ -159,11 +159,9 @@ export default async function SitesProjectsPage() {
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 16, fontFamily: "system-ui" }}>
-        <PageHeader title="Sites / Projects" subtitle="Error" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load sites/projects
-        </div>
+      <div style={container}>
+        <PageHeader title="Sites / Projects" subtitle="Operational sites management" />
+        <div style={errorBox}>Failed to load sites/projects</div>
       </div>
     );
   }
@@ -175,127 +173,244 @@ export default async function SitesProjectsPage() {
   const total = parsed.meta?.total ?? 0;
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui" }}>
+    <div style={container}>
       <PageHeader
-        title="Sites / Projects Administration"
+        title="Sites / Projects"
         subtitle="Operational sites management"
         action={
           canShowCreateAction ? (
-            <Link href="/dashboard/sites-projects/new">
+            <Link href="/dashboard/sites-projects/new" style={headerAction}>
               + New Site / Project
             </Link>
           ) : undefined
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {total}</div>
-
-      {items.length === 0 ? (
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 14,
-            background: "#ffffff",
-            padding: 16,
-            color: "#6b7280",
-          }}
-        >
-          No sites/projects found.
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div style={sectionTitle}>Sites Register</div>
+          <div style={sectionMeta}>Total: {total}</div>
         </div>
-      ) : (
-        <>
-          <div className="desktop-only">
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ minWidth: 600, width: "100%" }}>
-                <tbody>
-                  {items.map((i) => (
-                    <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
-                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                        <Link href={`/dashboard/sites-projects/${i.id}`}>
-                          {i.name}
-                        </Link>
-                      </td>
 
-                      <td style={{ padding: 8 }}>
-                        <span style={statusStyle(i.status)}>{i.status}</span>
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 8,
-                          maxWidth: 140,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {i.id}
-                      </td>
-
-                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                        {formatDate(i.createdAt)}
-                      </td>
-
-                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                        {formatDate(i.updatedAt)}
-                      </td>
-
-                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                        <Link href={`/dashboard/sites-projects/${i.id}`}>
-                          Open
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="mobile-only" style={{ marginTop: 12 }}>
-            {items.map((i) => (
-              <Link
-                key={i.id}
-                href={`/dashboard/sites-projects/${i.id}`}
-                style={{
-                  display: "block",
-                  padding: 16,
-                  borderRadius: 14,
-                  border: "1px solid #e5e7eb",
-                  marginBottom: 12,
-                  textDecoration: "none",
-                  color: "inherit",
-                  background: "#ffffff",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                  cursor: "pointer",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                  {i.name}
-                </div>
-
-                <div style={{ marginBottom: 6 }}>
-                  <span style={statusStyle(i.status)}>{i.status}</span>
-                </div>
-
-                <div
+        {items.length === 0 ? (
+          <div style={emptyBox}>No sites/projects found.</div>
+        ) : (
+          <>
+            <div className="desktop-only">
+              <div style={tableCard}>
+                <table
                   style={{
-                    fontSize: 13,
-                    color: "#6b7280",
-                    marginBottom: 4,
+                    minWidth: 600,
+                    width: "100%",
+                    borderCollapse: "collapse",
                   }}
                 >
-                  {i.location ?? "-"}
-                </div>
+                  <tbody>
+                    {items.map((i) => (
+                      <tr key={i.id} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={titleCell}>
+                          <Link
+                            href={`/dashboard/sites-projects/${i.id}`}
+                            style={rowLink}
+                          >
+                            {i.name}
+                          </Link>
+                        </td>
 
-                <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                  {formatDate(i.createdAt)}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+                        <td style={td}>
+                          <span style={statusStyle(i.status)}>{i.status}</span>
+                        </td>
+
+                        <td style={mutedCell}>{i.location ?? "-"}</td>
+
+                        <td style={td}>{formatDate(i.createdAt)}</td>
+
+                        <td style={td}>{formatDate(i.updatedAt)}</td>
+
+                        <td style={td}>
+                          <Link
+                            href={`/dashboard/sites-projects/${i.id}`}
+                            style={rowLink}
+                          >
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
+              {items.map((i) => (
+                <Link
+                  key={i.id}
+                  href={`/dashboard/sites-projects/${i.id}`}
+                  style={siteCard}
+                >
+                  <div style={siteTop}>
+                    <div style={siteName}>{i.name}</div>
+                    <span style={statusStyle(i.status)}>{i.status}</span>
+                  </div>
+
+                  <div style={siteLocation}>{i.location ?? "-"}</div>
+
+                  <div style={siteDate}>Created: {formatDate(i.createdAt)}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const sectionMeta: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+  whiteSpace: "nowrap",
+};
+
+const headerAction: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "8px 12px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#ffffff",
+  textDecoration: "none",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const tableCard: React.CSSProperties = {
+  overflowX: "auto",
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const td: React.CSSProperties = {
+  padding: "10px 8px",
+  whiteSpace: "nowrap",
+  fontSize: 13,
+};
+
+const titleCell: React.CSSProperties = {
+  ...td,
+  fontWeight: 700,
+};
+
+const mutedCell: React.CSSProperties = {
+  ...td,
+  color: "#6b7280",
+  maxWidth: 180,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const rowLink: React.CSSProperties = {
+  color: "#111827",
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
+const siteCard: React.CSSProperties = {
+  display: "block",
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  textDecoration: "none",
+  color: "inherit",
+  background: "#ffffff",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const siteTop: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const siteName: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+  color: "#111827",
+};
+
+const siteLocation: React.CSSProperties = {
+  marginTop: 10,
+  paddingTop: 10,
+  borderTop: "1px solid #f3f4f6",
+  fontSize: 12,
+  color: "#6b7280",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const siteDate: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#9ca3af",
+};
+
+const emptyBox: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "#ffffff",
+  padding: 14,
+  color: "#6b7280",
+  fontSize: 13,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
+};
+
+const restrictedBox: React.CSSProperties = {
+  color: "#92400e",
+  background: "#fffbeb",
+  border: "1px solid #fde68a",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
+};

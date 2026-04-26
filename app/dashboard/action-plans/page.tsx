@@ -91,7 +91,7 @@ function StatusBadge({ status }: { status: string }) {
         padding: "4px 10px",
         borderRadius: "999px",
         fontSize: 12,
-        fontWeight: 600,
+        fontWeight: 700,
         background: bg,
         color,
         whiteSpace: "nowrap",
@@ -125,12 +125,12 @@ export default async function ActionPlansPage() {
     console.error("Action Plans Fetch Error:", err);
 
     return (
-      <div style={{ padding: 16, fontFamily: "system-ui" }}>
+      <div style={container}>
         <PageHeader
           title="Action Plans"
           subtitle="Track execution and workflow"
         />
-        <div style={{ color: "red", marginTop: 12 }}>
+        <div style={errorBox}>
           Failed to load action plans (network/server error)
         </div>
       </div>
@@ -139,14 +139,12 @@ export default async function ActionPlansPage() {
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 16, fontFamily: "system-ui" }}>
+      <div style={container}>
         <PageHeader
           title="Action Plans"
           subtitle="Track execution and workflow"
         />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load action plans
-        </div>
+        <div style={errorBox}>Failed to load action plans</div>
       </div>
     );
   }
@@ -158,118 +156,196 @@ export default async function ActionPlansPage() {
   const total = parsed.meta?.total ?? 0;
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui" }}>
+    <div style={container}>
       <PageHeader
         title="Action Plans"
         subtitle="Track execution and workflow"
         action={
           canShowCreateAction ? (
-            <Link href="/dashboard/action-plans/new">+ New Action Plan</Link>
+            <Link href="/dashboard/action-plans/new" style={headerAction}>
+              + New Action Plan
+            </Link>
           ) : undefined
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {total}</div>
-
-      {items.length === 0 ? (
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 14,
-            background: "#ffffff",
-            padding: 16,
-            color: "#6b7280",
-          }}
-        >
-          No action plans found.
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div style={sectionTitle}>Execution List</div>
+          <div style={sectionMeta}>Total: {total}</div>
         </div>
-      ) : (
-        <>
-          <div className="desktop-only">
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ minWidth: 550, width: "100%" }}>
-                <tbody>
-                  {items.map((i) => (
-                    <tr key={i.id} style={{ borderTop: "1px solid #eee" }}>
-                      <td
-                        style={{
-                          padding: 8,
-                          maxWidth: 160,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {i.title}
-                      </td>
 
-                      <td style={{ padding: 8 }}>
-                        <StatusBadge status={i.status} />
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 8,
-                          maxWidth: 200,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {i.description ?? "-"}
-                      </td>
-
-                      <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                        <Link href={`/dashboard/action-plans/${i.id}`}>
-                          Open
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="mobile-only" style={{ marginTop: 12 }}>
-            {items.map((i) => (
-              <Link
-                key={i.id}
-                href={`/dashboard/action-plans/${i.id}`}
-                style={{
-                  display: "block",
-                  padding: 16,
-                  borderRadius: 14,
-                  border: "1px solid #e5e7eb",
-                  marginBottom: 12,
-                  textDecoration: "none",
-                  color: "inherit",
-                  background: "#ffffff",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                  {i.title}
-                </div>
-
-                <div
+        {items.length === 0 ? (
+          <div style={emptyBox}>No action plans found.</div>
+        ) : (
+          <>
+            <div className="desktop-only">
+              <div style={tableCard}>
+                <table
                   style={{
-                    fontSize: 13,
-                    color: "#6b7280",
-                    marginBottom: 6,
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 550,
                   }}
                 >
-                  {i.description ?? "-"}
-                </div>
+                  <tbody>
+                    {items.map((i) => (
+                      <tr key={i.id} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={titleCell}>{i.title}</td>
 
-                <div style={{ marginBottom: 4 }}>
-                  <StatusBadge status={i.status} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+                        <td style={td}>
+                          <StatusBadge status={i.status} />
+                        </td>
+
+                        <td style={mutedCell}>
+                          {i.description ?? "-"}
+                        </td>
+
+                        <td style={td}>
+                          <Link
+                            href={`/dashboard/action-plans/${i.id}`}
+                            style={rowLink}
+                          >
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
+              {items.map((i) => (
+                <Link
+                  key={i.id}
+                  href={`/dashboard/action-plans/${i.id}`}
+                  style={card}
+                >
+                  <div style={cardTitle}>{i.title}</div>
+
+                  <div style={cardDesc}>
+                    {i.description ?? "-"}
+                  </div>
+
+                  <div style={{ marginTop: 8 }}>
+                    <StatusBadge status={i.status} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const sectionMeta: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+};
+
+const headerAction: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#fff",
+  textDecoration: "none",
+  fontWeight: 700,
+  fontSize: 13,
+};
+
+const tableCard: React.CSSProperties = {
+  background: "#fff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  overflowX: "auto",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const td: React.CSSProperties = {
+  padding: 10,
+  fontSize: 13,
+};
+
+const titleCell: React.CSSProperties = {
+  ...td,
+  fontWeight: 700,
+};
+
+const mutedCell: React.CSSProperties = {
+  ...td,
+  color: "#6b7280",
+};
+
+const rowLink: React.CSSProperties = {
+  color: "#111827",
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
+const card: React.CSSProperties = {
+  display: "block",
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  background: "#fff",
+  textDecoration: "none",
+  color: "inherit",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const cardTitle: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+};
+
+const cardDesc: React.CSSProperties = {
+  fontSize: 13,
+  color: "#6b7280",
+  marginTop: 6,
+};
+
+const emptyBox: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  padding: 14,
+  color: "#6b7280",
+  background: "#fff",
+};
+
+const errorBox: React.CSSProperties = {
+  marginTop: 12,
+  padding: 12,
+  borderRadius: 12,
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#991b1b",
+};

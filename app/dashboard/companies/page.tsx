@@ -73,7 +73,7 @@ function IndustryBadge({ industry }: { industry: string | null }) {
         padding: "4px 10px",
         borderRadius: "999px",
         fontSize: 12,
-        fontWeight: 600,
+        fontWeight: 700,
         background: "#f3f4f6",
         color: "#111827",
         whiteSpace: "nowrap",
@@ -117,9 +117,9 @@ export default async function CompaniesPage({
     console.error("Companies Fetch Error:", err);
 
     return (
-      <div style={{ padding: 24 }}>
-        <PageHeader title="Companies Administration" subtitle="Error" />
-        <div style={{ color: "red", marginTop: 12 }}>
+      <div style={container}>
+        <PageHeader title="Companies" subtitle="Tenant company administration" />
+        <div style={errorBox}>
           Failed to load companies (network/server error)
         </div>
       </div>
@@ -128,11 +128,9 @@ export default async function CompaniesPage({
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 24 }}>
-        <PageHeader title="Companies Administration" subtitle="Error" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load companies
-        </div>
+      <div style={container}>
+        <PageHeader title="Companies" subtitle="Tenant company administration" />
+        <div style={errorBox}>Failed to load companies</div>
       </div>
     );
   }
@@ -152,99 +150,260 @@ export default async function CompaniesPage({
   const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui" }}>
+    <div style={container}>
       <PageHeader
-        title="Companies Administration"
+        title="Companies"
         subtitle="Tenant company administration"
         action={
           canShowCreateAction ? (
-            <Link href="/dashboard/companies/new">+ New Company</Link>
+            <Link href="/dashboard/companies/new" style={headerAction}>
+              + New Company
+            </Link>
           ) : undefined
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total companies: {meta.total}</div>
-
-      <div className="desktop-only">
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ minWidth: 650, width: "100%" }}>
-            <tbody>
-              {companies.map((c) => (
-                <tr key={c.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>{c.name}</td>
-
-                  <td style={{ padding: 8 }}>{c.country ?? "-"}</td>
-
-                  <td style={{ padding: 8 }}>
-                    <IndustryBadge industry={c.industry} />
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 8,
-                      maxWidth: 160,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {c.id}
-                  </td>
-
-                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
-                    {formatDate(c.createdAt)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div style={sectionTitle}>Companies Register</div>
+          <div style={sectionMeta}>Total: {meta.total}</div>
         </div>
-      </div>
 
-      <div className="mobile-only" style={{ marginTop: 12 }}>
-        {companies.map((c) => (
-          <Link
-            key={c.id}
-            href={`/dashboard/companies/${c.id}`}
-            style={{
-              display: "block",
-              padding: 16,
-              borderRadius: 14,
-              border: "1px solid #e5e7eb",
-              marginBottom: 12,
-              textDecoration: "none",
-              color: "inherit",
-              background: "#ffffff",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>{c.name}</div>
+        {companies.length === 0 ? (
+          <div style={emptyBox}>No companies found.</div>
+        ) : (
+          <>
+            <div className="desktop-only">
+              <div style={tableCard}>
+                <table
+                  style={{
+                    minWidth: 650,
+                    width: "100%",
+                    borderCollapse: "collapse",
+                  }}
+                >
+                  <tbody>
+                    {companies.map((c) => (
+                      <tr key={c.id} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={titleCell}>
+                          <Link
+                            href={`/dashboard/companies/${c.id}`}
+                            style={rowLink}
+                          >
+                            {c.name}
+                          </Link>
+                        </td>
 
-            <div
-              style={{
-                fontSize: 13,
-                color: "#6b7280",
-                marginBottom: 6,
-              }}
-            >
-              {c.country ?? "-"}
+                        <td style={td}>{c.country ?? "-"}</td>
+
+                        <td style={td}>
+                          <IndustryBadge industry={c.industry} />
+                        </td>
+
+                        <td style={mutedCell}>{c.id}</td>
+
+                        <td style={td}>{formatDate(c.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div style={{ marginBottom: 4 }}>
-              <IndustryBadge industry={c.industry} />
-            </div>
+            <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
+              {companies.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/dashboard/companies/${c.id}`}
+                  style={companyCard}
+                >
+                  <div style={companyTop}>
+                    <div style={companyName}>{c.name}</div>
+                    <IndustryBadge industry={c.industry} />
+                  </div>
 
-            <div style={{ fontSize: 12, color: "#9ca3af" }}>
-              {formatDate(c.createdAt)}
+                  <div style={companyCountry}>{c.country ?? "-"}</div>
+
+                  <div style={companyDate}>Created: {formatDate(c.createdAt)}</div>
+                </Link>
+              ))}
             </div>
+          </>
+        )}
+
+        <div style={pagination}>
+          <Link href={buildDashboardCompaniesUrl(prevPage)} style={pageLink}>
+            Prev
           </Link>
-        ))}
-      </div>
 
-      <div style={{ marginTop: 12 }}>
-        <Link href={buildDashboardCompaniesUrl(prevPage)}>Prev</Link> |{" "}
-        <Link href={buildDashboardCompaniesUrl(nextPage)}>Next</Link>
-      </div>
+          <span style={pageText}>
+            Page {meta.page} / {Math.max(meta.totalPages, 1)}
+          </span>
+
+          <Link href={buildDashboardCompaniesUrl(nextPage)} style={pageLink}>
+            Next
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const sectionMeta: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+  whiteSpace: "nowrap",
+};
+
+const headerAction: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "8px 12px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#ffffff",
+  textDecoration: "none",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const tableCard: React.CSSProperties = {
+  overflowX: "auto",
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const td: React.CSSProperties = {
+  padding: "10px 8px",
+  whiteSpace: "nowrap",
+  fontSize: 13,
+};
+
+const titleCell: React.CSSProperties = {
+  ...td,
+  fontWeight: 700,
+};
+
+const mutedCell: React.CSSProperties = {
+  ...td,
+  color: "#6b7280",
+  maxWidth: 180,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const rowLink: React.CSSProperties = {
+  color: "#111827",
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
+const companyCard: React.CSSProperties = {
+  display: "block",
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  textDecoration: "none",
+  color: "inherit",
+  background: "#ffffff",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const companyTop: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const companyName: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+  color: "#111827",
+};
+
+const companyCountry: React.CSSProperties = {
+  marginTop: 10,
+  paddingTop: 10,
+  borderTop: "1px solid #f3f4f6",
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const companyDate: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#9ca3af",
+};
+
+const pagination: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginTop: 4,
+};
+
+const pageLink: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 12,
+  border: "1px solid #e5e7eb",
+  textDecoration: "none",
+  color: "#111827",
+  fontSize: 13,
+  fontWeight: 700,
+  background: "#ffffff",
+};
+
+const pageText: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+};
+
+const emptyBox: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "#ffffff",
+  padding: 14,
+  color: "#6b7280",
+  fontSize: 13,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
+};

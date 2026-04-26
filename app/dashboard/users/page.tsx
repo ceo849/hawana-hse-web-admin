@@ -78,7 +78,7 @@ function RoleBadge({ role }: { role: string }) {
         padding: "4px 10px",
         borderRadius: "999px",
         fontSize: 12,
-        fontWeight: 600,
+        fontWeight: 700,
         background: bg,
         color,
         whiteSpace: "nowrap",
@@ -107,9 +107,9 @@ export default async function UsersPage() {
     console.error("Users Fetch Error:", err);
 
     return (
-      <div style={{ padding: 24 }}>
+      <div style={container}>
         <PageHeader title="Users" subtitle="User management" />
-        <div style={{ color: "red", marginTop: 12 }}>
+        <div style={errorBox}>
           Failed to load users (network/server error)
         </div>
       </div>
@@ -118,11 +118,9 @@ export default async function UsersPage() {
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={container}>
         <PageHeader title="Users" subtitle="User management" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load users
-        </div>
+        <div style={errorBox}>Failed to load users</div>
       </div>
     );
   }
@@ -134,115 +132,222 @@ export default async function UsersPage() {
   const total = parsed.meta?.total ?? 0;
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui" }}>
+    <div style={container}>
       <PageHeader
         title="Users"
         subtitle="User management"
         action={
           canShowCreateAction ? (
-            <Link href="/dashboard/users/new">+ New User</Link>
+            <Link href="/dashboard/users/new" style={headerAction}>
+              + New User
+            </Link>
           ) : undefined
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total users: {total}</div>
-
-      <div className="desktop-only">
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              minWidth: 600,
-              width: "100%",
-              borderCollapse: "collapse",
-            }}
-          >
-            <thead>
-              <tr>
-                <th align="left">Name</th>
-                <th align="left">Email</th>
-                <th align="left">Role</th>
-                <th align="left">Company</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={{ padding: "8px 6px", whiteSpace: "nowrap" }}>
-                    {u.fullName}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: "8px 6px",
-                      maxWidth: 160,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {u.email}
-                  </td>
-
-                  <td style={{ padding: "8px 6px" }}>
-                    <RoleBadge role={u.role} />
-                  </td>
-
-                  <td
-                    style={{
-                      padding: "8px 6px",
-                      maxWidth: 180,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {u.companyId}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div style={sectionTitle}>Directory</div>
+          <div style={sectionMeta}>Total users: {total}</div>
         </div>
-      </div>
 
-      <div className="mobile-only" style={{ marginTop: 12 }}>
-        {users.map((u) => (
-          <Link
-            key={u.id}
-            href={`/dashboard/users/${u.id}`}
-            style={{
-              display: "block",
-              padding: 16,
-              borderRadius: 14,
-              border: "1px solid #e5e7eb",
-              marginBottom: 12,
-              textDecoration: "none",
-              color: "inherit",
-              background: "#ffffff",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>
-              {u.fullName}
-            </div>
-
-            <div
+        <div className="desktop-only">
+          <div style={tableCard}>
+            <table
               style={{
-                fontSize: 13,
-                color: "#6b7280",
-                marginBottom: 6,
+                minWidth: 600,
+                width: "100%",
+                borderCollapse: "collapse",
               }}
             >
-              {u.email}
-            </div>
+              <thead>
+                <tr>
+                  <th align="left" style={th}>
+                    Name
+                  </th>
+                  <th align="left" style={th}>
+                    Email
+                  </th>
+                  <th align="left" style={th}>
+                    Role
+                  </th>
+                  <th align="left" style={th}>
+                    Company
+                  </th>
+                </tr>
+              </thead>
 
-            <div style={{ marginBottom: 4 }}>
-              <RoleBadge role={u.role} />
-            </div>
-          </Link>
-        ))}
-      </div>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id} style={{ borderTop: "1px solid #f3f4f6" }}>
+                    <td style={td}>{u.fullName}</td>
+
+                    <td style={emailCell}>{u.email}</td>
+
+                    <td style={td}>
+                      <RoleBadge role={u.role} />
+                    </td>
+
+                    <td style={companyCell}>{u.companyId}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
+          {users.map((u) => (
+            <Link
+              key={u.id}
+              href={`/dashboard/users/${u.id}`}
+              style={userCard}
+            >
+              <div style={userCardTop}>
+                <div>
+                  <div style={userName}>{u.fullName}</div>
+                  <div style={userEmail}>{u.email}</div>
+                </div>
+
+                <RoleBadge role={u.role} />
+              </div>
+
+              <div style={userCompany}>Company: {u.companyId}</div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const sectionMeta: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+  whiteSpace: "nowrap",
+};
+
+const headerAction: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "8px 12px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#ffffff",
+  textDecoration: "none",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const tableCard: React.CSSProperties = {
+  overflowX: "auto",
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const th: React.CSSProperties = {
+  padding: "10px 8px",
+  fontSize: 12,
+  color: "#6b7280",
+  fontWeight: 700,
+};
+
+const td: React.CSSProperties = {
+  padding: "10px 8px",
+  whiteSpace: "nowrap",
+  fontSize: 13,
+};
+
+const emailCell: React.CSSProperties = {
+  ...td,
+  maxWidth: 160,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const companyCell: React.CSSProperties = {
+  ...td,
+  maxWidth: 180,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const userCard: React.CSSProperties = {
+  display: "block",
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  textDecoration: "none",
+  color: "inherit",
+  background: "#ffffff",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const userCardTop: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const userName: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+  marginBottom: 4,
+};
+
+const userEmail: React.CSSProperties = {
+  fontSize: 12,
+  color: "#6b7280",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const userCompany: React.CSSProperties = {
+  marginTop: 10,
+  paddingTop: 10,
+  borderTop: "1px solid #f3f4f6",
+  fontSize: 12,
+  color: "#9ca3af",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
+};

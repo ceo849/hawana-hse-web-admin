@@ -89,10 +89,11 @@ function StatusBadge({ status }: { status: string | null }) {
       style={{
         padding: "4px 10px",
         borderRadius: "999px",
-        fontSize: "12px",
-        fontWeight: 600,
+        fontSize: 12,
+        fontWeight: 700,
         background: bg,
         color,
+        whiteSpace: "nowrap",
       }}
     >
       {s}
@@ -117,9 +118,9 @@ export default async function SafetyReportsPage() {
     console.error("Safety Reports Fetch Error:", err);
 
     return (
-      <div style={{ fontFamily: "system-ui", padding: 16 }}>
+      <div style={container}>
         <PageHeader title="Safety Reports" subtitle="Operational reports" />
-        <div style={{ color: "red", marginTop: 12 }}>
+        <div style={errorBox}>
           Failed to load safety reports (network/server error)
         </div>
       </div>
@@ -128,11 +129,9 @@ export default async function SafetyReportsPage() {
 
   if (!res.ok) {
     return (
-      <div style={{ fontFamily: "system-ui", padding: 16 }}>
+      <div style={container}>
         <PageHeader title="Safety Reports" subtitle="Operational reports" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load safety reports
-        </div>
+        <div style={errorBox}>Failed to load safety reports</div>
       </div>
     );
   }
@@ -143,129 +142,234 @@ export default async function SafetyReportsPage() {
   const total = parsed.meta?.total ?? 0;
 
   return (
-    <div style={{ fontFamily: "system-ui", padding: 16 }}>
+    <div style={container}>
       <PageHeader
         title="Safety Reports"
         subtitle="Operational reports"
         action={
-          <Link href="/dashboard/safety-reports/new">
+          <Link href="/dashboard/safety-reports/new" style={headerAction}>
             + New Safety Report
           </Link>
         }
       />
 
-      <div style={{ marginBottom: 12 }}>Total: {total}</div>
-
-      {items.length === 0 ? (
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 14,
-            background: "#ffffff",
-            padding: 16,
-            color: "#6b7280",
-          }}
-        >
-          No safety reports found.
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div style={sectionTitle}>Reports Register</div>
+          <div style={sectionMeta}>Total: {total}</div>
         </div>
-      ) : (
-        <>
-          <div className="desktop-only">
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  minWidth: 600,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th align="left" style={{ padding: "8px 12px" }}>
-                      Title
-                    </th>
-                    <th align="left" style={{ padding: "8px 12px" }}>
-                      Status
-                    </th>
-                    <th align="left" style={{ padding: "8px 12px" }}>
-                      Site / Project
-                    </th>
-                    <th align="left" style={{ padding: "8px 12px" }}>
-                      Created At
-                    </th>
-                  </tr>
-                </thead>
 
-                <tbody>
-                  {items.map((r) => (
-                    <tr key={r.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "8px 12px" }}>
-                        <Link href={`/dashboard/safety-reports/${r.id}`}>
-                          {r.title ?? "-"}
-                        </Link>
-                      </td>
-
-                      <td style={{ padding: "8px 12px" }}>
-                        <StatusBadge status={r.status} />
-                      </td>
-
-                      <td style={{ padding: "8px 12px" }}>
-                        {r.siteProjectId ?? "-"}
-                      </td>
-
-                      <td style={{ padding: "8px 12px" }}>
-                        {r.createdAt ?? "-"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="mobile-only" style={{ marginTop: 12 }}>
-            {items.map((r) => (
-              <Link
-                key={r.id}
-                href={`/dashboard/safety-reports/${r.id}`}
-                style={{
-                  display: "block",
-                  padding: 16,
-                  borderRadius: 14,
-                  border: "1px solid #e5e7eb",
-                  marginBottom: 12,
-                  textDecoration: "none",
-                  color: "inherit",
-                  background: "#ffffff",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                  {r.title ?? "-"}
-                </div>
-
-                <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-                  <StatusBadge status={r.status} />
-                </div>
-
-                <div
+        {items.length === 0 ? (
+          <div style={emptyBox}>No safety reports found.</div>
+        ) : (
+          <>
+            <div className="desktop-only">
+              <div style={tableCard}>
+                <table
                   style={{
-                    fontSize: 13,
-                    color: "#6b7280",
-                    marginBottom: 4,
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 600,
                   }}
                 >
-                  {r.siteProjectId ?? "-"}
-                </div>
+                  <thead>
+                    <tr>
+                      <th align="left" style={th}>
+                        Title
+                      </th>
+                      <th align="left" style={th}>
+                        Status
+                      </th>
+                      <th align="left" style={th}>
+                        Site / Project
+                      </th>
+                      <th align="left" style={th}>
+                        Created At
+                      </th>
+                    </tr>
+                  </thead>
 
-                <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                  {r.createdAt ?? "-"}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+                  <tbody>
+                    {items.map((r) => (
+                      <tr key={r.id} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={td}>
+                          <Link
+                            href={`/dashboard/safety-reports/${r.id}`}
+                            style={rowLink}
+                          >
+                            {r.title ?? "-"}
+                          </Link>
+                        </td>
+
+                        <td style={td}>
+                          <StatusBadge status={r.status} />
+                        </td>
+
+                        <td style={mutedCell}>{r.siteProjectId ?? "-"}</td>
+
+                        <td style={mutedCell}>{r.createdAt ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
+              {items.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/dashboard/safety-reports/${r.id}`}
+                  style={reportCard}
+                >
+                  <div style={reportTitle}>{r.title ?? "-"}</div>
+
+                  <div style={{ marginTop: 8 }}>
+                    <StatusBadge status={r.status} />
+                  </div>
+
+                  <div style={reportMeta}>{r.siteProjectId ?? "-"}</div>
+
+                  <div style={reportDate}>{r.createdAt ?? "-"}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const sectionMeta: React.CSSProperties = {
+  fontSize: 12,
+  color: "#9ca3af",
+  whiteSpace: "nowrap",
+};
+
+const headerAction: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "8px 12px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#ffffff",
+  textDecoration: "none",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const tableCard: React.CSSProperties = {
+  overflowX: "auto",
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const th: React.CSSProperties = {
+  padding: "10px 8px",
+  fontSize: 12,
+  color: "#6b7280",
+  fontWeight: 700,
+};
+
+const td: React.CSSProperties = {
+  padding: "10px 8px",
+  whiteSpace: "nowrap",
+  fontSize: 13,
+};
+
+const mutedCell: React.CSSProperties = {
+  ...td,
+  color: "#6b7280",
+  maxWidth: 180,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const rowLink: React.CSSProperties = {
+  color: "#111827",
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
+const reportCard: React.CSSProperties = {
+  display: "block",
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  textDecoration: "none",
+  color: "inherit",
+  background: "#ffffff",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const reportTitle: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+  color: "#111827",
+};
+
+const reportMeta: React.CSSProperties = {
+  marginTop: 10,
+  paddingTop: 10,
+  borderTop: "1px solid #f3f4f6",
+  fontSize: 12,
+  color: "#6b7280",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const reportDate: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#9ca3af",
+};
+
+const emptyBox: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "#ffffff",
+  padding: 14,
+  color: "#6b7280",
+  fontSize: 13,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
+};

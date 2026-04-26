@@ -45,6 +45,59 @@ function formatDate(value: string | null) {
   }).format(d);
 }
 
+function statusStyle(status: string): React.CSSProperties {
+  const s = status.toUpperCase();
+
+  if (s === "ACTIVE") {
+    return {
+      background: "#dcfce7",
+      color: "#166534",
+      border: "1px solid #86efac",
+    };
+  }
+
+  if (s === "TRIAL") {
+    return {
+      background: "#dbeafe",
+      color: "#1e40af",
+      border: "1px solid #93c5fd",
+    };
+  }
+
+  if (s === "SUSPENDED" || s === "CANCELLED") {
+    return {
+      background: "#fee2e2",
+      color: "#991b1b",
+      border: "1px solid #fecaca",
+    };
+  }
+
+  return {
+    background: "#f3f4f6",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+  };
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      style={{
+        ...statusStyle(status),
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default async function BillingPage() {
   await requireAccessToken();
 
@@ -90,11 +143,9 @@ export default async function BillingPage() {
     }
 
     return (
-      <div style={{ padding: 24 }}>
+      <div style={container}>
         <PageHeader title="Billing" subtitle="Subscription status" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load billing (network error)
-        </div>
+        <div style={errorBox}>Failed to load billing (network error)</div>
       </div>
     );
   }
@@ -105,11 +156,9 @@ export default async function BillingPage() {
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={container}>
         <PageHeader title="Billing" subtitle="Subscription status" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load billing
-        </div>
+        <div style={errorBox}>Failed to load billing</div>
       </div>
     );
   }
@@ -119,38 +168,145 @@ export default async function BillingPage() {
 
   if (!billing) {
     return (
-      <div style={{ padding: 24 }}>
+      <div style={container}>
         <PageHeader title="Billing" subtitle="Subscription status" />
-        <div style={{ marginTop: 12 }}>No billing data</div>
+        <div style={emptyBox}>No billing data</div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui" }}>
+    <div style={container}>
       <PageHeader title="Billing" subtitle="Subscription status" />
 
-      <div style={{ marginTop: 16 }}>
-        <div>
-          <b>Plan:</b> {billing.plan}
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div style={sectionTitle}>Current Subscription</div>
+          <StatusBadge status={billing.status} />
         </div>
-        <div>
-          <b>Status:</b> {billing.status}
-        </div>
-        <div>
-          <b>Trial Ends:</b> {formatDate(billing.trialEndsAt)}
-        </div>
-        <div>
-          <b>Subscription Ends:</b> {formatDate(billing.subscriptionEndsAt)}
-        </div>
-      </div>
 
-      <div style={{ marginTop: 24 }}>
+        <div style={billingCard}>
+          <div style={billingRow}>
+            <span style={label}>Plan</span>
+            <strong style={value}>{billing.plan}</strong>
+          </div>
+
+          <div style={billingRow}>
+            <span style={label}>Status</span>
+            <strong style={value}>{billing.status}</strong>
+          </div>
+
+          <div style={billingRow}>
+            <span style={label}>Trial Ends</span>
+            <strong style={value}>{formatDate(billing.trialEndsAt)}</strong>
+          </div>
+
+          <div style={billingRow}>
+            <span style={label}>Subscription Ends</span>
+            <strong style={value}>
+              {formatDate(billing.subscriptionEndsAt)}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section style={section}>
+        <div style={sectionTitle}>Plan Upgrade</div>
+
         <form action={startCheckout}>
           <input type="hidden" name="plan" value="BASIC" />
-          <button type="submit">Upgrade to BASIC</button>
+          <button type="submit" style={upgradeButton}>
+            Upgrade to BASIC
+          </button>
         </form>
-      </div>
+      </section>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const billingCard: React.CSSProperties = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  overflow: "hidden",
+};
+
+const billingRow: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "12px 14px",
+  borderBottom: "1px solid #f3f4f6",
+};
+
+const label: React.CSSProperties = {
+  fontSize: 12,
+  color: "#6b7280",
+  fontWeight: 600,
+};
+
+const value: React.CSSProperties = {
+  fontSize: 13,
+  color: "#111827",
+  textAlign: "right",
+};
+
+const upgradeButton: React.CSSProperties = {
+  width: "100%",
+  border: "none",
+  borderRadius: 14,
+  background: "#111827",
+  color: "#ffffff",
+  padding: "13px 16px",
+  fontSize: 14,
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
+};
+
+const emptyBox: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "#ffffff",
+  padding: 14,
+  color: "#6b7280",
+  fontSize: 13,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};

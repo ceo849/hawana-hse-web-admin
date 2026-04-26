@@ -42,7 +42,7 @@ export default async function AdminPage() {
     return (
       <div style={container}>
         <PageHeader title="Platform Admin" subtitle="System overview" />
-        <div style={{ color: "red", marginTop: 12 }}>
+        <div style={errorBox}>
           Failed to load admin data (network/server error)
         </div>
       </div>
@@ -72,11 +72,32 @@ export default async function AdminPage() {
     <div style={container}>
       <PageHeader title="Platform Admin" subtitle="System overview" />
 
-      <div style={grid}>
-        <StatsCard label="Users" value={users} />
-        <StatsCard label="Reports" value={reports} />
-        <StatsCard label="Plans" value={plans} />
-      </div>
+      <section style={section}>
+        <div style={sectionHeader}>
+          <div>
+            <div style={sectionTitle}>Platform Snapshot</div>
+            <div style={sectionSubtitle}>
+              Read-only operational overview for platform administration
+            </div>
+          </div>
+        </div>
+
+        <div style={grid}>
+          <StatsCard label="Users" value={users} />
+          <StatsCard label="Reports" value={reports} />
+          <StatsCard label="Plans" value={plans} />
+        </div>
+      </section>
+
+      <section style={section}>
+        <div style={infoCard}>
+          <div style={infoTitle}>Governance Mode</div>
+          <div style={infoText}>
+            Admin overview is read-only. Operational decisions remain enforced
+            by the backend.
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -84,12 +105,69 @@ export default async function AdminPage() {
 const container: React.CSSProperties = {
   padding: 16,
   fontFamily: "system-ui",
-  maxWidth: 900,
+  maxWidth: 680,
   margin: "0 auto",
+};
+
+const section: React.CSSProperties = {
+  marginTop: 18,
+  display: "grid",
+  gap: 10,
+};
+
+const sectionHeader: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#6b7280",
+};
+
+const sectionSubtitle: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#9ca3af",
+  lineHeight: 1.4,
 };
 
 const grid: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-  gap: 12,
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: 10,
+};
+
+const infoCard: React.CSSProperties = {
+  background: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  padding: 14,
+};
+
+const infoTitle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: "#111827",
+};
+
+const infoText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 12,
+  color: "#6b7280",
+  lineHeight: 1.5,
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
 };
