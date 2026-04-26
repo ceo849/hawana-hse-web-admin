@@ -82,8 +82,7 @@ export default async function UserOverviewPage({
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  // ✅ FIX
-  const r = await serverAppFetch(`/users/${encodeURIComponent(id)}`, token);
+  const r = await serverAppFetch(`/api/users/${encodeURIComponent(id)}`, token);
 
   if (r.status === 401) redirect("/login");
   if (!r.ok) redirect("/dashboard/users");
@@ -95,9 +94,6 @@ export default async function UserOverviewPage({
   const user = json;
   const roleBadgeStyle = getRoleBadgeStyle(user.role);
 
-  // ======================
-  // UPDATE
-  // ======================
   async function updateUser(formData: FormData) {
     "use server";
 
@@ -111,7 +107,7 @@ export default async function UserOverviewPage({
     if (role) payload.role = role;
 
     const res = await serverAppFetch(
-      `/users/${encodeURIComponent(id)}`,
+      `/api/users/${encodeURIComponent(id)}`,
       tokenInner,
       {
         method: "PATCH",
@@ -130,16 +126,13 @@ export default async function UserOverviewPage({
     redirect(`/dashboard/users/${id}`);
   }
 
-  // ======================
-  // DELETE
-  // ======================
   async function deleteUser() {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
     const res = await serverAppFetch(
-      `/users/${encodeURIComponent(id)}`,
+      `/api/users/${encodeURIComponent(id)}`,
       tokenInner,
       { method: "DELETE" }
     );

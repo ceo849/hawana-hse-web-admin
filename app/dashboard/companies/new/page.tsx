@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link"; // ✅ FIX
+import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
@@ -39,7 +39,7 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (country) payload.country = country;
     if (industry) payload.industry = industry;
 
-    const res = await serverAppFetch(token, "/api/companies", {
+    const res = await serverAppFetch("/api/companies", token, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -89,7 +89,6 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
 
         <button type="submit">Create</button>
 
-        {/* ✅ FIX */}
         <Link href="/dashboard/companies">Cancel</Link>
       </form>
     </div>

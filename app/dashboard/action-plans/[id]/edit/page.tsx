@@ -32,8 +32,10 @@ export default async function EditActionPlanPage({
 
   const token = await requireAccessToken();
 
-  // ✅ FIX: serverAppFetch بدل fetch(api)
-  const r = await serverAppFetch(`/action-plans/${encodeURIComponent(id)}`, token);
+  const r = await serverAppFetch(
+    `/api/action-plans/${encodeURIComponent(id)}`,
+    token,
+  );
 
   if (r.status === 401) redirect("/login");
   if (!r.ok) redirect(`/dashboard/action-plans/${id}`);
@@ -43,7 +45,6 @@ export default async function EditActionPlanPage({
   const error = normalize(resolvedSearch?.error);
   const status = normalize(ap.status).toUpperCase();
 
-  // منع تعديل VERIFIED
   if (status === "VERIFIED") {
     redirect(`/dashboard/action-plans/${id}`);
   }
@@ -64,9 +65,8 @@ export default async function EditActionPlanPage({
       );
     }
 
-    // ✅ FIX: serverAppFetch بدل fetch(api)
     const res = await serverAppFetch(
-      `/action-plans/${encodeURIComponent(id)}`,
+      `/api/action-plans/${encodeURIComponent(id)}`,
       tokenInner,
       {
         method: "PATCH",
@@ -77,7 +77,7 @@ export default async function EditActionPlanPage({
           title,
           description: description || null,
         }),
-      }
+      },
     );
 
     if (res.status === 401) redirect("/login");
@@ -136,9 +136,7 @@ export default async function EditActionPlanPage({
           }}
         >
           <div>
-            <label style={{ marginBottom: 6, fontWeight: 600 }}>
-              Title
-            </label>
+            <label style={{ marginBottom: 6, fontWeight: 600 }}>Title</label>
             <input
               name="title"
               defaultValue={ap.title}
