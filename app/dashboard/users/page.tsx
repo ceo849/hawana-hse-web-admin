@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { redirect } from "next/navigation"; // ✅ NEW
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
@@ -103,7 +104,12 @@ export default async function UsersPage() {
     res = await serverAppFetch("/api/users?page=1&limit=20", {
       cache: "no-store",
     });
-  } catch (err) {
+  } catch (err: any) {
+    // ✅ FIX: SESSION_EXPIRED handling
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
     console.error("Users Fetch Error:", err);
 
     return (
@@ -114,6 +120,11 @@ export default async function UsersPage() {
         </div>
       </div>
     );
+  }
+
+  // ✅ FIX: 401 handling
+  if (res.status === 401) {
+    redirect("/login");
   }
 
   if (!res.ok) {
