@@ -1,82 +1,76 @@
 'use client';
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { Plus } from "lucide-react";
 
-import {
-  Home,
-  AlertTriangle,
-  Wrench,
-} from "lucide-react";
-
-const MAIN_NAV = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/dashboard/safety-reports", label: "Reports", icon: AlertTriangle },
-  { href: "/dashboard/action-plans", label: "Actions", icon: Wrench },
+const QUICK_ACTIONS = [
+  { href: "/dashboard/safety-reports/new", label: "Safety Report" },
+  { href: "/dashboard/action-plans/new", label: "Action Plan" },
+  { href: "/dashboard/sites-projects/new", label: "Site / Project" },
 ];
 
 export default function MobileBottomNav() {
-  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 76,
-        padding: "10px 16px",
-        background: "rgba(255,255,255,0.95)",
-        backdropFilter: "blur(12px)",
-        borderTop: "1px solid rgba(229,231,235,0.8)",
-        boxShadow: "0 -6px 20px rgba(0,0,0,0.06)",
-        display: "flex",
-        alignItems: "center",
-        zIndex: 10,
-      }}
-    >
-      {MAIN_NAV.map((item) => {
-        const active =
-          pathname === item.href || pathname.startsWith(item.href + "/");
-        const Icon = item.icon;
+    <>
+      {/* Floating Button */}
+      <div
+        onClick={() => setOpen(!open)}
+        style={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          width: 60,
+          height: 60,
+          borderRadius: "50%",
+          background: "#111827",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 50,
+          cursor: "pointer",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+        }}
+      >
+        <Plus size={26} color="#fff" />
+      </div>
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => navigator.vibrate?.(10)}
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              fontSize: 12,
-              fontWeight: active ? 700 : 500,
-              color: active ? "#111827" : "#9ca3af",
-              position: "relative",
-              textDecoration: "none",
-            }}
-          >
-            {active && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: -6,
-                  width: 32,
-                  height: 3,
-                  background: "#111827",
-                }}
-              />
-            )}
-
-            <Icon size={26} strokeWidth={active ? 2.8 : 2} />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </div>
+      {/* Actions Menu */}
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 90,
+            right: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            zIndex: 60,
+          }}
+        >
+          {QUICK_ACTIONS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              style={{
+                background: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+                textDecoration: "none",
+                color: "#111",
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              + {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
