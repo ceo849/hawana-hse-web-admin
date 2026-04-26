@@ -7,7 +7,13 @@ const CORE_API = (
 
 const API_PREFIX = "/v1";
 
-async function getToken() {
+async function getToken(req: Request) {
+  const authHeader = req.headers.get("authorization");
+
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.replace("Bearer ", "").trim();
+  }
+
   const cookieStore = await cookies();
   return cookieStore.get("access_token")?.value ?? null;
 }
@@ -36,7 +42,7 @@ async function buildProxyResponse(upstream: Response) {
 // =========================
 export async function GET(req: Request) {
   try {
-    const token = await getToken();
+    const token = await getToken(req);
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
