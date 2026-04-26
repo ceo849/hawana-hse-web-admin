@@ -24,11 +24,23 @@ function getIcon(label: string) {
     'Sites / Projects': '📍',
     'Safety Reports': '⚠️',
     'Action Plans': '🛠',
-    Admin: '⚙️',
+    Billing: '💳',
     'Admin Panel': '⚙️',
   };
 
   return icons[label] ?? '•';
+}
+
+function getGroup(label: string) {
+  if (['Dashboard', 'Users', 'Companies', 'Sites / Projects'].includes(label)) {
+    return 'Core';
+  }
+
+  if (['Safety Reports', 'Action Plans'].includes(label)) {
+    return 'Operations';
+  }
+
+  return 'System';
 }
 
 export default function Sidebar({
@@ -41,141 +53,175 @@ export default function Sidebar({
   const pathname = usePathname();
 
   const uniqueItems = Array.from(
-    new Map(navItems.map((i) => [i.href, i])).values()
+    new Map(navItems.map((i) => [i.href, i])).values(),
+  );
+
+  const groups = uniqueItems.reduce<Record<string, SidebarNavItem[]>>(
+    (acc, item) => {
+      const group = getGroup(item.label);
+      acc[group] = acc[group] ?? [];
+      acc[group].push(item);
+      return acc;
+    },
+    {},
   );
 
   return (
     <>
-      {/* Overlay */}
       {isOpen && (
         <div
           onClick={onClose}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.35)',
+            background: 'rgba(17, 24, 39, 0.45)',
             zIndex: 1000,
           }}
         />
       )}
 
-      {/* Sidebar */}
       <aside
+        data-sidebar
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
-          width: 260,
+          width: 300,
+          maxWidth: '82vw',
           height: '100vh',
-          background: '#fff',
-          padding: 20,
+          background: '#ffffff',
+          padding: 18,
           zIndex: 2000,
           display: 'flex',
           flexDirection: 'column',
           transition: 'transform 0.25s ease',
-          boxShadow: isOpen ? '2px 0 12px rgba(0,0,0,0.15)' : 'none',
-
-          // ✅ ADDITIVE: mobile scroll fix
+          boxShadow: isOpen ? '8px 0 24px rgba(0,0,0,0.18)' : 'none',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {/* Top */}
-        <div style={{ marginBottom: 20 }}>
-          {/* Close */}
-          <button
-            onClick={onClose}
+        <div style={{ marginBottom: 18 }}>
+          <div
             style={{
-              alignSelf: 'flex-end',
-              marginBottom: 10,
-              background: 'none',
-              border: 'none',
-              fontSize: 18,
-              cursor: 'pointer',
-
-              // ✅ ADDITIVE: better touch target
-              padding: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 18,
             }}
           >
-            ✕
-          </button>
-
-          {/* Logo */}
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Hawana</div>
-          <div style={{ fontSize: 12, color: '#777' }}>
-            HSE Platform
-          </div>
-        </div>
-
-        {/* User */}
-        <div
-          style={{
-            padding: 10,
-            borderRadius: 10,
-            background: '#f9fafb',
-            border: '1px solid #eee',
-            fontSize: 12,
-            marginBottom: 20,
-          }}
-        >
-          <div>
-            Role: <strong>{role}</strong>
-          </div>
-          {email && (
-            <div style={{ marginTop: 4, color: '#555' }}>
-              {email}
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 22 }}>Hawana</div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                HSE Platform
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Navigation */}
-        <nav style={{ display: 'grid', gap: 6 }}>
-          {uniqueItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              pathname.startsWith(item.href + '/');
+            <button
+              onClick={onClose}
+              aria-label="Close sidebar"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                border: '1px solid #e5e7eb',
+                background: '#fff',
+                fontSize: 18,
+                cursor: 'pointer',
+              }}
+            >
+              ✕
+            </button>
+          </div>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 14,
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#6b7280' }}>Signed in as</div>
+            <div style={{ marginTop: 4, fontWeight: 800 }}>{role}</div>
+            {email && (
+              <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  border: isActive ? '1px solid #111' : '1px solid #eee',
-                  background: isActive ? '#111' : '#fff',
-                  color: isActive ? '#fff' : '#111',
-                  transition: 'all 0.15s ease',
-
-                  // ✅ ADDITIVE: better mobile tap
-                  minHeight: 44,
+                  marginTop: 4,
+                  color: '#374151',
+                  fontSize: 12,
+                  wordBreak: 'break-word',
                 }}
               >
-                <span style={{ fontSize: 16 }}>
-                  {getIcon(item.label)}
-                </span>
-                {item.label}
-              </Link>
-            );
-          })}
+                {email}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <nav style={{ display: 'grid', gap: 18 }}>
+          {Object.entries(groups).map(([group, items]) => (
+            <div key={group}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: '#9ca3af',
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  marginBottom: 8,
+                  paddingLeft: 4,
+                }}
+              >
+                {group}
+              </div>
+
+              <div style={{ display: 'grid', gap: 8 }}>
+                {items.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + '/');
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '11px 12px',
+                        borderRadius: 14,
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        border: isActive
+                          ? '1px solid #111827'
+                          : '1px solid #f3f4f6',
+                        background: isActive ? '#111827' : '#f9fafb',
+                        color: isActive ? '#ffffff' : '#111827',
+                        minHeight: 46,
+                      }}
+                    >
+                      <span style={{ fontSize: 17 }}>{getIcon(item.label)}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Footer */}
         <div
           style={{
             marginTop: 'auto',
+            paddingTop: 18,
             fontSize: 11,
-            color: '#999',
+            color: '#9ca3af',
           }}
         >
-          Hawana HSE Platform
+          Hawana HSE · SaaS Admin
         </div>
       </aside>
     </>

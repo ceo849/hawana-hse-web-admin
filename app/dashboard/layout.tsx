@@ -48,6 +48,11 @@ const NAV: NavItem[] = [
     roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
   },
   {
+    href: "/dashboard/billing",
+    label: "Billing",
+    roles: ["OWNER", "ADMIN"],
+  },
+  {
     href: "/dashboard/admin",
     label: "Admin Panel",
     roles: ["OWNER"],
@@ -86,16 +91,6 @@ export default async function DashboardLayout({
         background: "#f3f4f6",
       }}
     >
-      <style>{`
-        @media (max-width: 768px) {
-          aside { display: none !important; }
-          [data-sidebar] { display: none !important; }
-
-          button[aria-label="Toggle Menu"] { display: none !important; }
-          button[aria-label="Open menu"] { display: none !important; }
-        }
-      `}</style>
-
       <DashboardShell role={role} email={email} navItems={navItems}>
         <MobileContainer>
           <Suspense fallback={null}>{children}</Suspense>
