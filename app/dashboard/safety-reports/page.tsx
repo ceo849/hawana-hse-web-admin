@@ -127,6 +127,11 @@ export default async function SafetyReportsPage() {
     );
   }
 
+  // ✅ ADD: handle 401 مثل باقي الصفحات
+  if (res.status === 401) {
+    redirect("/login");
+  }
+
   if (!res.ok) {
     return (
       <div style={container}>
