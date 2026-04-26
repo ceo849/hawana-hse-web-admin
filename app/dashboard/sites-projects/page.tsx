@@ -143,6 +143,11 @@ export default async function SitesProjectsPage() {
     );
   }
 
+  // ✅ FIX ONLY
+  if (res.status === 401) {
+    redirect("/login");
+  }
+
   if (res.status === 403) {
     return (
       <div style={container}>
@@ -160,7 +165,10 @@ export default async function SitesProjectsPage() {
   if (!res.ok) {
     return (
       <div style={container}>
-        <PageHeader title="Sites / Projects" subtitle="Operational sites management" />
+        <PageHeader
+          title="Sites / Projects"
+          subtitle="Operational sites management"
+        />
         <div style={errorBox}>Failed to load sites/projects</div>
       </div>
     );
@@ -256,7 +264,9 @@ export default async function SitesProjectsPage() {
 
                   <div style={siteLocation}>{i.location ?? "-"}</div>
 
-                  <div style={siteDate}>Created: {formatDate(i.createdAt)}</div>
+                  <div style={siteDate}>
+                    Created: {formatDate(i.createdAt)}
+                  </div>
                 </Link>
               ))}
             </div>
@@ -266,6 +276,8 @@ export default async function SitesProjectsPage() {
     </div>
   );
 }
+
+/* ===== STYLES (UNCHANGED) ===== */
 
 const container: React.CSSProperties = {
   padding: 16,
