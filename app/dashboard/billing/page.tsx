@@ -8,8 +8,8 @@ import PageHeader from "@/components/ui/page-header";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type BillingDto = {
-  subscriptionPlan: string;
-  subscriptionStatus: string;
+  plan: string;
+  status: string;
   trialEndsAt: string | null;
   subscriptionEndsAt: string | null;
 };
@@ -19,22 +19,16 @@ function parseBilling(value: unknown): BillingDto | null {
 
   const c = value as Record<string, unknown>;
 
-  if (
-    typeof c.subscriptionPlan !== "string" ||
-    typeof c.subscriptionStatus !== "string"
-  ) {
+  if (typeof c.plan !== "string" || typeof c.status !== "string") {
     return null;
   }
 
   return {
-    subscriptionPlan: c.subscriptionPlan,
-    subscriptionStatus: c.subscriptionStatus,
-    trialEndsAt:
-      typeof c.trialEndsAt === "string" ? c.trialEndsAt : null,
+    plan: c.plan,
+    status: c.status,
+    trialEndsAt: typeof c.trialEndsAt === "string" ? c.trialEndsAt : null,
     subscriptionEndsAt:
-      typeof c.subscriptionEndsAt === "string"
-        ? c.subscriptionEndsAt
-        : null,
+      typeof c.subscriptionEndsAt === "string" ? c.subscriptionEndsAt : null,
   };
 }
 
@@ -53,6 +47,36 @@ function formatDate(value: string | null) {
 
 export default async function BillingPage() {
   await requireAccessToken();
+
+  async function startCheckout(formData: FormData) {
+    "use server";
+
+    const plan = String(formData.get("plan") ?? "");
+
+    const res = await serverAppFetch("/api/billing/checkout-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ plan }),
+    });
+
+    if (res.status === 401) {
+      redirect("/login");
+    }
+
+    if (!res.ok) {
+      redirect("/dashboard/billing");
+    }
+
+    const data = await res.json().catch(() => null);
+
+    if (data?.url) {
+      redirect(String(data.url));
+    }
+
+    redirect("/dashboard/billing");
+  }
 
   let res: Response;
 
@@ -107,10 +131,25 @@ export default async function BillingPage() {
       <PageHeader title="Billing" subtitle="Subscription status" />
 
       <div style={{ marginTop: 16 }}>
-        <div><b>Plan:</b> {billing.subscriptionPlan}</div>
-        <div><b>Status:</b> {billing.subscriptionStatus}</div>
-        <div><b>Trial Ends:</b> {formatDate(billing.trialEndsAt)}</div>
-        <div><b>Subscription Ends:</b> {formatDate(billing.subscriptionEndsAt)}</div>
+        <div>
+          <b>Plan:</b> {billing.plan}
+        </div>
+        <div>
+          <b>Status:</b> {billing.status}
+        </div>
+        <div>
+          <b>Trial Ends:</b> {formatDate(billing.trialEndsAt)}
+        </div>
+        <div>
+          <b>Subscription Ends:</b> {formatDate(billing.subscriptionEndsAt)}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <form action={startCheckout}>
+          <input type="hidden" name="plan" value="BASIC" />
+          <button type="submit">Upgrade to BASIC</button>
+        </form>
       </div>
     </div>
   );
