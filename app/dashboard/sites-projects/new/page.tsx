@@ -1,9 +1,11 @@
+// app/dashboard/sites-projects/new/page.tsx
+
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
-import FormSubmitButton from "@/components/ui/form-submit-button"; // ✅ NEW
+import FormSubmitButton from "@/components/ui/form-submit-button";
 
 type PageProps = {
   searchParams?: { err?: string } | Promise<{ err?: string }>;
@@ -18,7 +20,7 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
   async function createSiteProject(formData: FormData) {
     "use server";
 
-    await requireAccessToken();
+    const tokenInner = await requireAccessToken();
 
     const name = String(formData.get("name") ?? "").trim();
     const location = String(formData.get("location") ?? "").trim();
@@ -38,14 +40,18 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
     if (status) payload.status = status;
 
     try {
-      const res = await serverAppFetch("/api/sites-projects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        cache: "no-store",
-      });
+      const res = await serverAppFetch(
+        "/api/sites-projects",
+        tokenInner,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        }
+      );
 
       if (res.status === 401) {
         redirect("/login");
@@ -142,7 +148,6 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
         </div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {/* ✅ NEW UX */}
           <FormSubmitButton
             idleText="Create Site / Project"
             pendingText="Creating..."

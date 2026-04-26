@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { apiClient } from '@/src/lib/api-client'; // لم نحذفه
+import { apiClient } from '@/src/lib/api-client';
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -14,9 +14,8 @@ export default function LogoutButton() {
     setLoading(true);
 
     try {
-      await fetch('/api/auth/logout', {
-        method: 'DELETE',
-      });
+      // ✅ FIX: correct usage
+      await apiClient.delete('/api/auth/logout');
     } catch (err) {
       console.error('Network logout error:', err);
     } finally {

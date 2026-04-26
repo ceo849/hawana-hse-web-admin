@@ -1,8 +1,11 @@
+// app/dashboard/companies/new/page.tsx
+
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state"; // ✅ ADD
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -39,14 +42,31 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
     if (country) payload.country = country;
     if (industry) payload.industry = industry;
 
-    const res = await serverAppFetch("/api/companies", token, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    let res: Response;
+
+    try {
+      res = await serverAppFetch("/api/companies", token, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+    } catch (err: any) {
+      // ✅ ADD
+      if (err?.message === "SESSION_EXPIRED") {
+        redirect("/login");
+      }
+
+      console.error("Create Company Error:", err);
+
+      redirect(
+        `/dashboard/companies/new?error=${encodeURIComponent(
+          "Network/server error while creating company",
+        )}`,
+      );
+    }
 
     if (res.status === 401) redirect("/login");
 
@@ -69,18 +89,7 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
         subtitle="Add a new tenant company"
       />
 
-      {error && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorState message={error} />}
 
       <form action={createCompany} style={{ display: "grid", gap: 16 }}>
         <input name="name" placeholder="Company Name" required />

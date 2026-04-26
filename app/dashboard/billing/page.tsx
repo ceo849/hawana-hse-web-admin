@@ -1,5 +1,3 @@
-// app/dashboard/billing/page.tsx
-
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
@@ -68,7 +66,7 @@ function statusStyle(status: string): React.CSSProperties {
     return {
       background: "#fee2e2",
       color: "#991b1b",
-      border: "1px solid #fecaca",
+      border: "1px solid #fecaca", // ✅ FIX
     };
   }
 

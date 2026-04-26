@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { redirect } from "next/navigation"; // ✅ NEW
+import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { decodeJwtPayload } from "@/src/auth/jwt";
@@ -101,11 +101,12 @@ export default async function UsersPage() {
   let res: Response;
 
   try {
-    res = await serverAppFetch("/api/users?page=1&limit=20", {
-      cache: "no-store",
-    });
+    res = await serverAppFetch(
+      "/api/users?page=1&limit=20",
+      token,
+      { cache: "no-store" }
+    );
   } catch (err: any) {
-    // ✅ FIX: SESSION_EXPIRED handling
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
     }
@@ -122,7 +123,6 @@ export default async function UsersPage() {
     );
   }
 
-  // ✅ FIX: 401 handling
   if (res.status === 401) {
     redirect("/login");
   }
@@ -173,18 +173,10 @@ export default async function UsersPage() {
             >
               <thead>
                 <tr>
-                  <th align="left" style={th}>
-                    Name
-                  </th>
-                  <th align="left" style={th}>
-                    Email
-                  </th>
-                  <th align="left" style={th}>
-                    Role
-                  </th>
-                  <th align="left" style={th}>
-                    Company
-                  </th>
+                  <th align="left" style={th}>Name</th>
+                  <th align="left" style={th}>Email</th>
+                  <th align="left" style={th}>Role</th>
+                  <th align="left" style={th}>Company</th>
                 </tr>
               </thead>
 
@@ -192,13 +184,10 @@ export default async function UsersPage() {
                 {users.map((u) => (
                   <tr key={u.id} style={{ borderTop: "1px solid #f3f4f6" }}>
                     <td style={td}>{u.fullName}</td>
-
                     <td style={emailCell}>{u.email}</td>
-
                     <td style={td}>
                       <RoleBadge role={u.role} />
                     </td>
-
                     <td style={companyCell}>{u.companyId}</td>
                   </tr>
                 ))}
@@ -232,6 +221,7 @@ export default async function UsersPage() {
   );
 }
 
+/* styles بدون تغيير */
 const container: React.CSSProperties = {
   padding: 16,
   fontFamily: "system-ui",

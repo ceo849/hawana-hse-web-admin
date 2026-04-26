@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state"; // ✅ ADD
 
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
@@ -99,14 +100,49 @@ export default async function ActionPlanPage({
 
   const token = await requireAccessToken();
 
-  const res = await serverAppFetch(
-    `/api/action-plans/${encodeURIComponent(id)}`,
-    token,
-    { cache: "no-store" }
-  );
+  let res: Response;
 
+  try {
+    res = await serverAppFetch(
+      `/api/action-plans/${encodeURIComponent(id)}`,
+      token,
+      { cache: "no-store" }
+    );
+  } catch (err: any) {
+    // ✅ ADD
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
+    console.error("Action Plan Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+        <PageHeader
+          title="Action Plan Overview"
+          subtitle="Plan insight and control"
+        />
+
+        <ErrorState message="Failed to load action plan (network/server error)" />
+      </div>
+    );
+  }
+
+  // ✅ ADD (already exists logically, but kept consistent)
   if (res.status === 401) redirect("/login");
-  if (!res.ok) redirect("/dashboard/action-plans");
+
+  if (!res.ok) {
+    return (
+      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+        <PageHeader
+          title="Action Plan Overview"
+          subtitle="Plan insight and control"
+        />
+
+        <ErrorState message="Failed to load action plan" />
+      </div>
+    );
+  }
 
   const ap = (await res.json()) as ActionPlan;
 
@@ -116,7 +152,10 @@ export default async function ActionPlanPage({
 
   return (
     <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
-      <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
+      <PageHeader
+        title="Action Plan Overview"
+        subtitle="Plan insight and control"
+      />
 
       {err && (
         <div

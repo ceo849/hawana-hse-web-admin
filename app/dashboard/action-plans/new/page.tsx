@@ -1,8 +1,13 @@
+// app/dashboard/action-plans/new/page.tsx
+
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   searchParams?:
@@ -20,26 +25,18 @@ type UserLite = {
 function isUserLite(value: unknown): value is UserLite {
   if (typeof value !== "object" || value === null) return false;
 
-  const candidate = value as Record<string, unknown>;
+  const c = value as Record<string, unknown>;
 
   return (
-    typeof candidate.id === "string" &&
-    (typeof candidate.email === "string" ||
-      candidate.email === null ||
-      candidate.email === undefined) &&
-    (typeof candidate.fullName === "string" ||
-      candidate.fullName === null ||
-      candidate.fullName === undefined) &&
-    (typeof candidate.role === "string" ||
-      candidate.role === null ||
-      candidate.role === undefined)
+    typeof c.id === "string" &&
+    (typeof c.email === "string" || c.email == null) &&
+    (typeof c.fullName === "string" || c.fullName == null) &&
+    (typeof c.role === "string" || c.role == null)
   );
 }
 
 function parseUsers(value: unknown): UserLite[] {
-  if (Array.isArray(value)) {
-    return value.filter(isUserLite);
-  }
+  if (Array.isArray(value)) return value.filter(isUserLite);
 
   if (
     typeof value === "object" &&
@@ -71,7 +68,9 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
   let users: UserLite[] = [];
 
   try {
-    const r = await serverAppFetch("/api/users", token);
+    const r = await serverAppFetch("/api/users", token, {
+      cache: "no-store", // ✅ ADD
+    });
 
     if (r.status === 401) redirect("/login");
 
@@ -79,7 +78,10 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       const data = await r.json();
       users = parseUsers(data);
     }
-  } catch {
+  } catch (e: any) {
+    if (e?.message === "SESSION_EXPIRED") redirect("/login");
+
+    console.error("Users Fetch Error:", e);
     users = [];
   }
 
@@ -97,6 +99,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
     ).trim();
 
     const effectiveSafetyReportId = srId || safetyReportId;
+
     const base = `/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(
       effectiveSafetyReportId
     )}`;
@@ -148,83 +151,28 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 760 }}>
+    <div style={container}>
       <PageHeader
         title="Create Action Plan"
         subtitle="Create a corrective action and link it to the related safety report"
       />
 
-      {err ? (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #fecaca",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {err}
-        </div>
-      ) : null}
+      {err && <ErrorState message={err} />}
 
-      <form action={createActionPlan} style={{ display: "grid", gap: 16 }}>
+      <form action={createActionPlan} style={form}>
         <input type="hidden" name="safetyReportId" value={safetyReportId} />
 
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            background: "#fff",
-            padding: 16,
-            display: "grid",
-            gap: 14,
-          }}
-        >
+        <div style={card}>
           <div>
-            <label
-              htmlFor="title"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Title
-            </label>
-            <input
-              id="title"
-              name="title"
-              required
-              placeholder="Enter action plan title"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-            />
+            <label style={label}>Title</label>
+            <input name="title" required style={input} />
           </div>
 
           <div>
-            <label
-              htmlFor="assignedToUserId"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Assigned To
-            </label>
+            <label style={label}>Assigned To</label>
 
             {users.length > 0 ? (
-              <select
-                id="assignedToUserId"
-                name="assignedToUserId"
-                defaultValue=""
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                  background: "#fff",
-                }}
-              >
+              <select name="assignedToUserId" defaultValue="" style={input}>
                 <option value="">— Not assigned —</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -233,53 +181,61 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
                 ))}
               </select>
             ) : (
-              <input
-                id="assignedToUserId"
-                name="assignedToUserId"
-                placeholder="User ID responsible"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                }}
-              />
+              <input name="assignedToUserId" style={input} />
             )}
           </div>
 
           <div>
-            <label
-              htmlFor="description"
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={5}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-            />
+            <label style={label}>Description</label>
+            <textarea name="description" rows={5} style={input} />
           </div>
         </div>
 
-        <button
-          type="submit"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            background: "#111",
-            color: "#fff",
-          }}
-        >
+        <button type="submit" style={primaryBtn}>
           Create Action Plan
         </button>
       </form>
     </div>
   );
 }
+
+/* styles */
+
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+  maxWidth: 760,
+};
+
+const form: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #eee",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 16,
+  display: "grid",
+  gap: 14,
+};
+
+const label: React.CSSProperties = {
+  marginBottom: 6,
+  fontWeight: 700,
+};
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  background: "#111",
+  color: "#fff",
+};

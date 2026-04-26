@@ -1,3 +1,5 @@
+// app/dashboard/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
@@ -5,6 +7,7 @@ import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
+import ErrorState from "@/components/ui/error-state";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type DashboardDto = {
@@ -20,14 +23,18 @@ type DashboardDto = {
 };
 
 export default async function DashboardPage() {
-  await requireAccessToken();
+  const token = await requireAccessToken(); // ✅ FIX
 
   let dashboard: DashboardDto = {};
 
   try {
-    const dashboardRes = await serverAppFetch("/api/dashboard", {
-      cache: "no-store",
-    });
+    const dashboardRes = await serverAppFetch(
+      "/api/dashboard",
+      token, // ✅ FIX
+      {
+        cache: "no-store",
+      }
+    );
 
     if (dashboardRes.status === 401) {
       redirect("/login");
@@ -51,9 +58,8 @@ export default async function DashboardPage() {
           title="Dashboard"
           subtitle="Platform and HSE operational overview"
         />
-        <div style={errorBox}>
-          Failed to load dashboard data (network/server error)
-        </div>
+
+        <ErrorState message="Failed to load dashboard data (network/server error)" />
       </div>
     );
   }

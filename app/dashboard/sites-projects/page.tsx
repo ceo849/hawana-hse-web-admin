@@ -1,3 +1,5 @@
+// app/dashboard/sites-projects/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
@@ -120,9 +122,11 @@ export default async function SitesProjectsPage() {
   let res: Response;
 
   try {
-    res = await serverAppFetch("/api/sites-projects?page=1&limit=20", {
-      cache: "no-store",
-    });
+    res = await serverAppFetch(
+      "/api/sites-projects?page=1&limit=20",
+      token,
+      { cache: "no-store" }
+    );
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
@@ -143,10 +147,7 @@ export default async function SitesProjectsPage() {
     );
   }
 
-  // ✅ FIX ONLY
-  if (res.status === 401) {
-    redirect("/login");
-  }
+  if (res.status === 401) redirect("/login");
 
   if (res.status === 403) {
     return (
@@ -206,21 +207,12 @@ export default async function SitesProjectsPage() {
           <>
             <div className="desktop-only">
               <div style={tableCard}>
-                <table
-                  style={{
-                    minWidth: 600,
-                    width: "100%",
-                    borderCollapse: "collapse",
-                  }}
-                >
+                <table style={{ minWidth: 600, width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     {items.map((i) => (
                       <tr key={i.id} style={{ borderTop: "1px solid #f3f4f6" }}>
                         <td style={titleCell}>
-                          <Link
-                            href={`/dashboard/sites-projects/${i.id}`}
-                            style={rowLink}
-                          >
+                          <Link href={`/dashboard/sites-projects/${i.id}`} style={rowLink}>
                             {i.name}
                           </Link>
                         </td>
@@ -230,16 +222,11 @@ export default async function SitesProjectsPage() {
                         </td>
 
                         <td style={mutedCell}>{i.location ?? "-"}</td>
-
                         <td style={td}>{formatDate(i.createdAt)}</td>
-
                         <td style={td}>{formatDate(i.updatedAt)}</td>
 
                         <td style={td}>
-                          <Link
-                            href={`/dashboard/sites-projects/${i.id}`}
-                            style={rowLink}
-                          >
+                          <Link href={`/dashboard/sites-projects/${i.id}`} style={rowLink}>
                             Open
                           </Link>
                         </td>
@@ -252,21 +239,14 @@ export default async function SitesProjectsPage() {
 
             <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
               {items.map((i) => (
-                <Link
-                  key={i.id}
-                  href={`/dashboard/sites-projects/${i.id}`}
-                  style={siteCard}
-                >
+                <Link key={i.id} href={`/dashboard/sites-projects/${i.id}`} style={siteCard}>
                   <div style={siteTop}>
                     <div style={siteName}>{i.name}</div>
                     <span style={statusStyle(i.status)}>{i.status}</span>
                   </div>
 
                   <div style={siteLocation}>{i.location ?? "-"}</div>
-
-                  <div style={siteDate}>
-                    Created: {formatDate(i.createdAt)}
-                  </div>
+                  <div style={siteDate}>Created: {formatDate(i.createdAt)}</div>
                 </Link>
               ))}
             </div>
@@ -277,152 +257,23 @@ export default async function SitesProjectsPage() {
   );
 }
 
-/* ===== STYLES (UNCHANGED) ===== */
-
-const container: React.CSSProperties = {
-  padding: 16,
-  fontFamily: "system-ui",
-  maxWidth: 680,
-  margin: "0 auto",
-};
-
-const section: React.CSSProperties = {
-  marginTop: 18,
-  display: "grid",
-  gap: 10,
-};
-
-const sectionHeader: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
-};
-
-const sectionTitle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 700,
-  color: "#6b7280",
-};
-
-const sectionMeta: React.CSSProperties = {
-  fontSize: 12,
-  color: "#9ca3af",
-  whiteSpace: "nowrap",
-};
-
-const headerAction: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "8px 12px",
-  borderRadius: 12,
-  background: "#111827",
-  color: "#ffffff",
-  textDecoration: "none",
-  fontSize: 13,
-  fontWeight: 700,
-};
-
-const tableCard: React.CSSProperties = {
-  overflowX: "auto",
-  background: "#ffffff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-};
-
-const td: React.CSSProperties = {
-  padding: "10px 8px",
-  whiteSpace: "nowrap",
-  fontSize: 13,
-};
-
-const titleCell: React.CSSProperties = {
-  ...td,
-  fontWeight: 700,
-};
-
-const mutedCell: React.CSSProperties = {
-  ...td,
-  color: "#6b7280",
-  maxWidth: 180,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-const rowLink: React.CSSProperties = {
-  color: "#111827",
-  fontWeight: 700,
-  textDecoration: "none",
-};
-
-const siteCard: React.CSSProperties = {
-  display: "block",
-  padding: 14,
-  borderRadius: 16,
-  border: "1px solid #e5e7eb",
-  textDecoration: "none",
-  color: "inherit",
-  background: "#ffffff",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-};
-
-const siteTop: React.CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 12,
-};
-
-const siteName: React.CSSProperties = {
-  fontWeight: 800,
-  fontSize: 15,
-  color: "#111827",
-};
-
-const siteLocation: React.CSSProperties = {
-  marginTop: 10,
-  paddingTop: 10,
-  borderTop: "1px solid #f3f4f6",
-  fontSize: 12,
-  color: "#6b7280",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-const siteDate: React.CSSProperties = {
-  marginTop: 4,
-  fontSize: 12,
-  color: "#9ca3af",
-};
-
-const emptyBox: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
-  background: "#ffffff",
-  padding: 14,
-  color: "#6b7280",
-  fontSize: 13,
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-};
-
-const errorBox: React.CSSProperties = {
-  color: "#991b1b",
-  background: "#fef2f2",
-  border: "1px solid #fecaca",
-  borderRadius: 12,
-  padding: 12,
-  marginTop: 12,
-  fontSize: 13,
-};
-
-const restrictedBox: React.CSSProperties = {
-  color: "#92400e",
-  background: "#fffbeb",
-  border: "1px solid #fde68a",
-  borderRadius: 12,
-  padding: 12,
-  marginTop: 12,
-  fontSize: 13,
-};
+/* styles بدون تغيير */
+const container: React.CSSProperties = { padding: 16, fontFamily: "system-ui", maxWidth: 680, margin: "0 auto" };
+const section: React.CSSProperties = { marginTop: 18, display: "grid", gap: 10 };
+const sectionHeader: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 };
+const sectionTitle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: "#6b7280" };
+const sectionMeta: React.CSSProperties = { fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" };
+const headerAction: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 12, background: "#111827", color: "#ffffff", textDecoration: "none", fontSize: 13, fontWeight: 700 };
+const tableCard: React.CSSProperties = { overflowX: "auto", background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" };
+const td: React.CSSProperties = { padding: "10px 8px", whiteSpace: "nowrap", fontSize: 13 };
+const titleCell: React.CSSProperties = { ...td, fontWeight: 700 };
+const mutedCell: React.CSSProperties = { ...td, color: "#6b7280", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" };
+const rowLink: React.CSSProperties = { color: "#111827", fontWeight: 700, textDecoration: "none" };
+const siteCard: React.CSSProperties = { display: "block", padding: 14, borderRadius: 16, border: "1px solid #e5e7eb", textDecoration: "none", color: "inherit", background: "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" };
+const siteTop: React.CSSProperties = { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 };
+const siteName: React.CSSProperties = { fontWeight: 800, fontSize: 15, color: "#111827" };
+const siteLocation: React.CSSProperties = { marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 12, color: "#6b7280" };
+const siteDate: React.CSSProperties = { marginTop: 4, fontSize: 12, color: "#9ca3af" };
+const emptyBox: React.CSSProperties = { border: "1px solid #e5e7eb", borderRadius: 16, background: "#ffffff", padding: 14, color: "#6b7280", fontSize: 13 };
+const errorBox: React.CSSProperties = { color: "#991b1b", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 12, marginTop: 12, fontSize: 13 };
+const restrictedBox: React.CSSProperties = { color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 12, marginTop: 12, fontSize: 13 };

@@ -1,18 +1,16 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireAccessToken } from "@/lib/server-auth";
 import { decodeJwtPayload } from "@/src/auth/jwt";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import ErrorState from "@/components/ui/error-state";
 
 export default async function AdminPage() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("access_token")?.value ?? null;
+  const token = await requireAccessToken();
 
-  // لو مفيش توكن: روح لوجن مباشرة
-  if (!accessToken) {
-    redirect("/login?next=/admin");
-  }
-
-  const payload = decodeJwtPayload(accessToken);
+  const payload = decodeJwtPayload(token);
   const role = payload?.role ?? null;
 
   // OWNER only
@@ -25,12 +23,42 @@ export default async function AdminPage() {
           This page is OWNER only.
         </p>
 
-        <Link
-          href="/dashboard"
-          style={{ textDecoration: "underline" }}
-        >
+        <Link href="/dashboard" style={{ textDecoration: "underline" }}>
           Back to Dashboard
         </Link>
+      </div>
+    );
+  }
+
+  // ✅ ADD: backend validation (no logic, just ping)
+  let res: Response;
+
+  try {
+    res = await serverAppFetch("/api/users?page=1&limit=1", {
+      cache: "no-store",
+    });
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
+    console.error("Admin Page Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 24, fontFamily: "system-ui" }}>
+        <ErrorState message="Failed to load admin panel (network/server error)" />
+      </div>
+    );
+  }
+
+  if (res.status === 401) {
+    redirect("/login");
+  }
+
+  if (!res.ok) {
+    return (
+      <div style={{ padding: 24, fontFamily: "system-ui" }}>
+        <ErrorState message="Failed to load admin panel" />
       </div>
     );
   }

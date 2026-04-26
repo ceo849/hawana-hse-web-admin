@@ -1,7 +1,13 @@
+// app/dashboard/safety-reports/[id]/edit/page.tsx
+
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -62,10 +68,26 @@ export default async function EditSafetyReportPage({
   const sp = searchParams ? await searchParams : undefined;
   const error = String(sp?.error ?? "").trim();
 
-  const reportRes = await serverAppFetch(
-    `/api/safety-reports/${encodeURIComponent(id)}`,
-    token
-  );
+  let reportRes: Response;
+
+  try {
+    reportRes = await serverAppFetch(
+      `/api/safety-reports/${encodeURIComponent(id)}`,
+      token,
+      { cache: "no-store" }
+    );
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") redirect("/login");
+
+    console.error("Safety Report Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 40, maxWidth: 900 }}>
+        <PageHeader title="Edit Safety Report" />
+        <ErrorState message="Failed to load safety report (network/server error)" />
+      </div>
+    );
+  }
 
   if (reportRes.status === 401) redirect("/login");
   if (!reportRes.ok) redirect("/dashboard/safety-reports");
@@ -77,7 +99,24 @@ export default async function EditSafetyReportPage({
 
   const report = reportJson;
 
-  const sitesRes = await serverAppFetch("/api/sites-projects", token);
+  let sitesRes: Response;
+
+  try {
+    sitesRes = await serverAppFetch("/api/sites-projects", token, {
+      cache: "no-store",
+    });
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") redirect("/login");
+
+    console.error("Sites Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 40, maxWidth: 900 }}>
+        <PageHeader title="Edit Safety Report" />
+        <ErrorState message="Failed to load sites/projects" />
+      </div>
+    );
+  }
 
   if (sitesRes.status === 401) redirect("/login");
 
@@ -131,30 +170,9 @@ export default async function EditSafetyReportPage({
 
   return (
     <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
-      <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
-        <Link href="/dashboard">Dashboard</Link> /
-        <Link href="/dashboard/safety-reports"> Safety Reports</Link> /
-        <span> Edit Safety Report</span>
-      </div>
+      <PageHeader title="Edit Safety Report" subtitle="Update report details" />
 
-      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 20 }}>
-        Edit Safety Report
-      </h1>
-
-      {error && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #fecaca",
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorState message={error} />}
 
       <form action={updateSafetyReport}>
         <input
@@ -195,6 +213,10 @@ export default async function EditSafetyReportPage({
 
         <button type="submit">Update</button>
       </form>
+
+      <div style={{ marginTop: 16 }}>
+        <Link href={`/dashboard/safety-reports/${id}`}>Back</Link>
+      </div>
     </div>
   );
 }

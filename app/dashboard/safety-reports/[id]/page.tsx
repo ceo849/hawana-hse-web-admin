@@ -1,27 +1,21 @@
+// app/dashboard/safety-reports/[id]/page.tsx
+
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
-import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
+import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
-type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
-
-type AssignedUserLite = {
+type SafetyReport = {
   id: string;
-  fullName?: string | null;
-  email?: string | null;
-};
-
-type ActionPlan = {
-  id: string;
-  title: string;
-  description?: string | null;
-  status: ActionPlanStatus;
-  dueDate?: string | null;
-  safetyReportId?: string | null;
-  assignedToUserId?: string | null;
-  assignedTo?: AssignedUserLite | null;
-  createdAt?: string | null;
+  title: string | null;
+  description: string | null;
+  status: string | null;
+  createdAt: string | null;
+  siteProjectId?: string | null;
 };
 
 type PageProps = {
@@ -29,81 +23,45 @@ type PageProps = {
   searchParams?: { err?: string } | Promise<{ err?: string }>;
 };
 
-function normalizeId(raw: unknown): string {
-  return String(raw ?? "").trim();
+function normalize(v: unknown) {
+  return String(v ?? "").trim();
 }
 
-function actionPlanEditPath(id: string) {
-  return `/dashboard/action-plans/${encodeURIComponent(id)}/edit`;
+function getStatusStyle(status?: string | null) {
+  const s = String(status ?? "").toUpperCase();
+
+  if (s === "OPEN") return { background: "#fef3c7", color: "#92400e" };
+  if (s === "IN_PROGRESS") return { background: "#dbeafe", color: "#1e40af" };
+  if (s === "CLOSED") return { background: "#dcfce7", color: "#166534" };
+
+  return { background: "#e5e7eb", color: "#111827" };
 }
 
-function allowedNextStatuses(current: ActionPlanStatus): ActionPlanStatus[] {
-  switch (current) {
-    case "OPEN":
-      return ["IN_PROGRESS"];
-    case "IN_PROGRESS":
-      return ["COMPLETED"];
-    case "COMPLETED":
-      return ["VERIFIED"];
-    default:
-      return [];
-  }
-}
-
-function formatDateDisplay(iso?: string | null): string {
+function formatDate(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("en-GB").format(d);
 }
 
-function getStatusStyle(status?: string | null) {
-  const s = String(status ?? "").toUpperCase();
-
-  if (s === "OPEN") return { background: "#f3f4f6", color: "#111" };
-  if (s === "IN_PROGRESS") return { background: "#dbeafe", color: "#1d4ed8" };
-  if (s === "COMPLETED") return { background: "#dcfce7", color: "#166534" };
-  if (s === "VERIFIED") return { background: "#bbf7d0", color: "#14532d" };
-
-  return { background: "#f3f4f6", color: "#111" };
-}
-
-function formatAssignedUser(
-  user?: AssignedUserLite | null,
-  fallbackId?: string | null,
-) {
-  if (user?.fullName || user?.email) {
-    return `${user.fullName ?? "—"} — ${user.email ?? "—"}`;
-  }
-  return fallbackId ?? "—";
-}
-
-function metricCard(label: string, value: string | number) {
-  return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 16 }}>
-      <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
-    </div>
-  );
-}
-
-export default async function ActionPlanPage({
+export default async function SafetyReportPage({
   params,
   searchParams,
 }: PageProps) {
   const resolvedParams = await Promise.resolve(params);
-  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
-  const id = normalizeId(resolvedParams?.id);
+  const resolvedSearch = await Promise.resolve(searchParams ?? {});
 
-  if (!id) redirect("/dashboard/action-plans");
+  const id = normalize(resolvedParams?.id);
+  if (!id) redirect("/dashboard/safety-reports");
 
-  await requireAccessToken();
+  const token = await requireAccessToken(); // ✅ FIX
 
   let res: Response;
 
   try {
     res = await serverAppFetch(
-      `/api/action-plans/${encodeURIComponent(id)}`,
+      `/api/safety-reports/${encodeURIComponent(id)}`,
+      token, // ✅ FIX
       { cache: "no-store" }
     );
   } catch (err: any) {
@@ -111,14 +69,12 @@ export default async function ActionPlanPage({
       redirect("/login");
     }
 
-    console.error("Action Plan Details Fetch Error:", err);
+    console.error("Safety Report Fetch Error:", err);
 
     return (
-      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
-        <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load action plan (network/server error)
-        </div>
+      <div style={container}>
+        <PageHeader title="Safety Report" subtitle="Report details" />
+        <ErrorState message="Failed to load safety report (network/server error)" />
       </div>
     );
   }
@@ -127,11 +83,11 @@ export default async function ActionPlanPage({
 
   if (res.status === 404) {
     return (
-      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
-        <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
-        <div style={{ marginTop: 12 }}>Action plan not found</div>
+      <div style={container}>
+        <PageHeader title="Safety Report" subtitle="Report details" />
+        <ErrorState message="Safety report not found" />
         <div style={{ marginTop: 20 }}>
-          <Link href="/dashboard/action-plans">Back</Link>
+          <Link href="/dashboard/safety-reports">Back</Link>
         </div>
       </div>
     );
@@ -139,61 +95,62 @@ export default async function ActionPlanPage({
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
-        <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
-        <div style={{ color: "red", marginTop: 12 }}>
-          Failed to load action plan
-        </div>
+      <div style={container}>
+        <PageHeader title="Safety Report" subtitle="Report details" />
+        <ErrorState message="Failed to load safety report" />
       </div>
     );
   }
 
-  const ap = (await res.json()) as ActionPlan;
+  const report = (await res.json()) as SafetyReport;
 
-  const nextStatuses = allowedNextStatuses(ap.status);
-  const err = normalizeId(resolvedSearchParams?.err);
-  const statusStyle = getStatusStyle(ap.status);
+  const err = normalize(resolvedSearch?.err);
+  const statusStyle = getStatusStyle(report.status);
 
   return (
-    <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
-      <PageHeader title="Action Plan Overview" subtitle="Plan insight and control" />
+    <div style={container}>
+      <PageHeader title="Safety Report" subtitle="Report details" />
 
-      {err && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
-          }}
-        >
-          {err}
-        </div>
-      )}
+      {err && <ErrorState message={err} />}
 
       <div style={{ marginBottom: 16 }}>
         <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
-          {ap.status}
+          {report.status ?? "UNKNOWN"}
         </span>
       </div>
 
-      <div style={{ border: "1px solid #e5e7eb", padding: 16, marginBottom: 16 }}>
-        <div><b>ID:</b> {ap.id}</div>
-        <div><b>Title:</b> {ap.title}</div>
-        <div><b>Assigned:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}</div>
-        <div><b>Due:</b> {formatDateDisplay(ap.dueDate)}</div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        {metricCard("Status", ap.status)}
-        {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
-        {metricCard("Next Steps", nextStatuses.length)}
+      <div style={card}>
+        <div><b>ID:</b> {report.id}</div>
+        <div><b>Title:</b> {report.title ?? "-"}</div>
+        <div><b>Description:</b> {report.description ?? "-"}</div>
+        <div><b>Site / Project:</b> {report.siteProjectId ?? "-"}</div>
+        <div><b>Created At:</b> {formatDate(report.createdAt)}</div>
       </div>
 
       <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-        <Link href={actionPlanEditPath(ap.id)}>Edit</Link>
-        <Link href="/dashboard/action-plans">Back</Link>
+        <Link href={`/dashboard/safety-reports/${report.id}/edit`}>
+          Edit
+        </Link>
+
+        <Link href="/dashboard/safety-reports">
+          Back
+        </Link>
       </div>
     </div>
   );
 }
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 720,
+  margin: "0 auto",
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 14,
+  padding: 16,
+  display: "grid",
+  gap: 8,
+};

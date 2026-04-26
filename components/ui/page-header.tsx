@@ -6,12 +6,16 @@ type PageHeaderProps = {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+
+  // ✅ NEW (Phase 4.4 preparation - optional only)
+  rightSlot?: React.ReactNode;
 };
 
 export default function PageHeader({
   title,
   subtitle,
   action,
+  rightSlot,
 }: PageHeaderProps) {
   return (
     <div
@@ -53,15 +57,17 @@ export default function PageHeader({
           {title}
         </h1>
 
-        {/* Action */}
-        {action && (
+        {/* Right Area (action + future slot) */}
+        {(action || rightSlot) && (
           <div
             style={{
               flexShrink: 0,
               display: "flex",
               alignItems: "center",
+              gap: 8,
             }}
           >
+            {rightSlot}
             {action}
           </div>
         )}

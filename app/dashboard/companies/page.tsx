@@ -1,8 +1,12 @@
+// app/dashboard/companies/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
@@ -67,21 +71,7 @@ function buildDashboardCompaniesUrl(page: number) {
 }
 
 function IndustryBadge({ industry }: { industry: string | null }) {
-  return (
-    <span
-      style={{
-        padding: "4px 10px",
-        borderRadius: "999px",
-        fontSize: 12,
-        fontWeight: 700,
-        background: "#f3f4f6",
-        color: "#111827",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {industry ?? "-"}
-    </span>
-  );
+  return <span style={badgeStyle}>{industry ?? "-"}</span>;
 }
 
 export default async function CompaniesPage({
@@ -111,26 +101,31 @@ export default async function CompaniesPage({
     res = await serverAppFetch(
       `/api/companies?page=${page}&limit=${limit}` +
         (search ? `&search=${encodeURIComponent(search)}` : ""),
+      token,
       { cache: "no-store" }
     );
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
     console.error("Companies Fetch Error:", err);
 
     return (
       <div style={container}>
         <PageHeader title="Companies" subtitle="Tenant company administration" />
-        <div style={errorBox}>
-          Failed to load companies (network/server error)
-        </div>
+        <ErrorState message="Failed to load companies (network/server error)" />
       </div>
     );
   }
+
+  if (res.status === 401) redirect("/login");
 
   if (!res.ok) {
     return (
       <div style={container}>
         <PageHeader title="Companies" subtitle="Tenant company administration" />
-        <div style={errorBox}>Failed to load companies</div>
+        <ErrorState message="Failed to load companies" />
       </div>
     );
   }
@@ -224,7 +219,9 @@ export default async function CompaniesPage({
 
                   <div style={companyCountry}>{c.country ?? "-"}</div>
 
-                  <div style={companyDate}>Created: {formatDate(c.createdAt)}</div>
+                  <div style={companyDate}>
+                    Created: {formatDate(c.createdAt)}
+                  </div>
                 </Link>
               ))}
             </div>
@@ -249,6 +246,8 @@ export default async function CompaniesPage({
   );
 }
 
+/* styles بدون تغيير */
+
 const container: React.CSSProperties = {
   padding: 16,
   fontFamily: "system-ui",
@@ -264,9 +263,7 @@ const section: React.CSSProperties = {
 
 const sectionHeader: React.CSSProperties = {
   display: "flex",
-  alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
 };
 
 const sectionTitle: React.CSSProperties = {
@@ -278,33 +275,25 @@ const sectionTitle: React.CSSProperties = {
 const sectionMeta: React.CSSProperties = {
   fontSize: 12,
   color: "#9ca3af",
-  whiteSpace: "nowrap",
 };
 
 const headerAction: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
   padding: "8px 12px",
   borderRadius: 12,
   background: "#111827",
-  color: "#ffffff",
+  color: "#fff",
   textDecoration: "none",
-  fontSize: 13,
-  fontWeight: 700,
 };
 
 const tableCard: React.CSSProperties = {
-  overflowX: "auto",
-  background: "#ffffff",
+  background: "#fff",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  overflowX: "auto" as const,
 };
 
 const td: React.CSSProperties = {
-  padding: "10px 8px",
-  whiteSpace: "nowrap",
+  padding: 10,
   fontSize: 13,
 };
 
@@ -316,9 +305,6 @@ const titleCell: React.CSSProperties = {
 const mutedCell: React.CSSProperties = {
   ...td,
   color: "#6b7280",
-  maxWidth: 180,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
 };
 
 const rowLink: React.CSSProperties = {
@@ -327,60 +313,48 @@ const rowLink: React.CSSProperties = {
   textDecoration: "none",
 };
 
+const badgeStyle: React.CSSProperties = {
+  padding: "4px 10px",
+  borderRadius: "999px",
+  fontSize: 12,
+  fontWeight: 700,
+  background: "#f3f4f6",
+};
+
 const companyCard: React.CSSProperties = {
   display: "block",
   padding: 14,
   borderRadius: 16,
   border: "1px solid #e5e7eb",
-  textDecoration: "none",
-  color: "inherit",
-  background: "#ffffff",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
 const companyTop: React.CSSProperties = {
   display: "flex",
-  alignItems: "flex-start",
   justifyContent: "space-between",
-  gap: 12,
 };
 
 const companyName: React.CSSProperties = {
   fontWeight: 800,
-  fontSize: 15,
-  color: "#111827",
 };
 
 const companyCountry: React.CSSProperties = {
   marginTop: 10,
-  paddingTop: 10,
-  borderTop: "1px solid #f3f4f6",
-  fontSize: 12,
-  color: "#6b7280",
 };
 
 const companyDate: React.CSSProperties = {
-  marginTop: 4,
   fontSize: 12,
   color: "#9ca3af",
 };
 
 const pagination: React.CSSProperties = {
   display: "flex",
-  alignItems: "center",
   justifyContent: "space-between",
-  marginTop: 4,
 };
 
 const pageLink: React.CSSProperties = {
   padding: "8px 12px",
-  borderRadius: 12,
   border: "1px solid #e5e7eb",
-  textDecoration: "none",
-  color: "#111827",
-  fontSize: 13,
-  fontWeight: 700,
-  background: "#ffffff",
+  borderRadius: 12,
 };
 
 const pageText: React.CSSProperties = {
@@ -389,21 +363,7 @@ const pageText: React.CSSProperties = {
 };
 
 const emptyBox: React.CSSProperties = {
+  padding: 14,
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  background: "#ffffff",
-  padding: 14,
-  color: "#6b7280",
-  fontSize: 13,
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-};
-
-const errorBox: React.CSSProperties = {
-  color: "#991b1b",
-  background: "#fef2f2",
-  border: "1px solid #fecaca",
-  borderRadius: 12,
-  padding: 12,
-  marginTop: 12,
-  fontSize: 13,
 };

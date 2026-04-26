@@ -1,3 +1,5 @@
+// app/dashboard/safety-reports/new/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
@@ -5,6 +7,7 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 import SubmitButton from "@/components/ui/submit-button";
+import ErrorState from "@/components/ui/error-state"; // ✅ ADD
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -62,6 +65,7 @@ export default async function NewSafetyReportPage({
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
   let siteProjects: SiteProject[] = [];
+  let fetchError: string | null = null; // ✅ ADD
 
   try {
     const res = await serverAppFetch("/api/sites-projects", token);
@@ -74,8 +78,13 @@ export default async function NewSafetyReportPage({
 
     const json = await res.json();
     siteProjects = parseSiteProjects(json);
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
     console.error("SitesProjects Error:", err);
+    fetchError = "Failed to load sites/projects"; // ✅ ADD
   }
 
   async function createSafetyReport(formData: FormData) {
@@ -133,21 +142,9 @@ export default async function NewSafetyReportPage({
         subtitle="Register a new safety report and optionally link it to a site or project"
       />
 
-      {error ? (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #fecaca",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
+      {/* ✅ Unified Error Handling */}
+      {error && <ErrorState message={error} />}
+      {fetchError && <ErrorState message={fetchError} />}
 
       <form action={createSafetyReport} style={{ display: "grid", gap: 16 }}>
         <div

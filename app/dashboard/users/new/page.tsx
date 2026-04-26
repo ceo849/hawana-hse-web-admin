@@ -1,3 +1,5 @@
+// app/dashboard/users/new/page.tsx
+
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
@@ -30,7 +32,7 @@ function extractErrorMessage(data: unknown): string {
 }
 
 export default async function NewUserPage({ searchParams }: PageProps) {
-  await requireAccessToken();
+  const token = await requireAccessToken();
 
   const resolvedSearchParams = searchParams
     ? await Promise.resolve(searchParams)
@@ -41,7 +43,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
   async function createUser(formData: FormData) {
     "use server";
 
-    await requireAccessToken();
+    const tokenInner = await requireAccessToken();
 
     const payload = {
       fullName: String(formData.get("fullName") ?? "").trim(),
@@ -57,14 +59,18 @@ export default async function NewUserPage({ searchParams }: PageProps) {
     }
 
     try {
-      const res = await serverAppFetch("/api/users", {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
+      const res = await serverAppFetch(
+        "/api/users",
+        tokenInner,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        }
+      );
 
       if (res.status === 401) {
         redirect("/login");

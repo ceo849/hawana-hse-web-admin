@@ -1,9 +1,12 @@
+// app/dashboard/action-plans/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
@@ -114,9 +117,13 @@ export default async function ActionPlansPage() {
   let res: Response;
 
   try {
-    res = await serverAppFetch("/api/action-plans?page=1&limit=20", {
-      cache: "no-store",
-    });
+    res = await serverAppFetch(
+      "/api/action-plans?page=1&limit=20",
+      token, // ✅ FIX
+      {
+        cache: "no-store",
+      }
+    );
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
@@ -130,11 +137,13 @@ export default async function ActionPlansPage() {
           title="Action Plans"
           subtitle="Track execution and workflow"
         />
-        <div style={errorBox}>
-          Failed to load action plans (network/server error)
-        </div>
+        <ErrorState message="Failed to load action plans (network/server error)" />
       </div>
     );
+  }
+
+  if (res.status === 401) {
+    redirect("/login");
   }
 
   if (!res.ok) {
@@ -144,7 +153,7 @@ export default async function ActionPlansPage() {
           title="Action Plans"
           subtitle="Track execution and workflow"
         />
-        <div style={errorBox}>Failed to load action plans</div>
+        <ErrorState message="Failed to load action plans" />
       </div>
     );
   }
@@ -197,9 +206,7 @@ export default async function ActionPlansPage() {
                           <StatusBadge status={i.status} />
                         </td>
 
-                        <td style={mutedCell}>
-                          {i.description ?? "-"}
-                        </td>
+                        <td style={mutedCell}>{i.description ?? "-"}</td>
 
                         <td style={td}>
                           <Link
@@ -218,17 +225,13 @@ export default async function ActionPlansPage() {
 
             <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
               {items.map((i) => (
-                <Link
+        <Link
                   key={i.id}
                   href={`/dashboard/action-plans/${i.id}`}
                   style={card}
                 >
                   <div style={cardTitle}>{i.title}</div>
-
-                  <div style={cardDesc}>
-                    {i.description ?? "-"}
-                  </div>
-
+                  <div style={cardDesc}>{i.description ?? "-"}</div>
                   <div style={{ marginTop: 8 }}>
                     <StatusBadge status={i.status} />
                   </div>
@@ -286,7 +289,7 @@ const tableCard: React.CSSProperties = {
   background: "#fff",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  overflowX: "auto",
+  overflowX: "auto" as const,
   boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
@@ -339,13 +342,4 @@ const emptyBox: React.CSSProperties = {
   padding: 14,
   color: "#6b7280",
   background: "#fff",
-};
-
-const errorBox: React.CSSProperties = {
-  marginTop: 12,
-  padding: 12,
-  borderRadius: 12,
-  background: "#fef2f2",
-  border: "1px solid #fecaca",
-  color: "#991b1b",
 };

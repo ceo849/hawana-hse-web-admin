@@ -1,8 +1,13 @@
+// app/dashboard/action-plans/[id]/edit/page.tsx
+
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
-import DashboardPageHeader from "@/components/ui/page-header";
+import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   params: { id: string } | Promise<{ id: string }>;
@@ -32,13 +37,47 @@ export default async function EditActionPlanPage({
 
   const token = await requireAccessToken();
 
-  const r = await serverAppFetch(
-    `/api/action-plans/${encodeURIComponent(id)}`,
-    token,
-  );
+  let r: Response;
+
+  try {
+    r = await serverAppFetch(
+      `/api/action-plans/${encodeURIComponent(id)}`,
+      token,
+      { cache: "no-store" } // ✅ ADD
+    );
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
+    console.error("Edit Action Plan Fetch Error:", err);
+
+    return (
+      <div style={container}>
+        <PageHeader
+          title="Edit Action Plan"
+          subtitle="Update the action plan title and description"
+        />
+
+        <ErrorState message="Failed to load action plan (network/server error)" />
+      </div>
+    );
+  }
 
   if (r.status === 401) redirect("/login");
-  if (!r.ok) redirect(`/dashboard/action-plans/${id}`);
+
+  if (!r.ok) {
+    return (
+      <div style={container}>
+        <PageHeader
+          title="Edit Action Plan"
+          subtitle="Update the action plan title and description"
+        />
+
+        <ErrorState message="Failed to load action plan" />
+      </div>
+    );
+  }
 
   const ap = (await r.json()) as ActionPlan;
 
@@ -60,8 +99,8 @@ export default async function EditActionPlanPage({
     if (!title) {
       redirect(
         `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
-          "Title is required",
-        )}`,
+          "Title is required"
+        )}`
       );
     }
 
@@ -77,7 +116,7 @@ export default async function EditActionPlanPage({
           title,
           description: description || null,
         }),
-      },
+      }
     );
 
     if (res.status === 401) redirect("/login");
@@ -86,8 +125,8 @@ export default async function EditActionPlanPage({
       const text = await res.text().catch(() => "");
       redirect(
         `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
-          `Update failed (${res.status}) ${text}`,
-        )}`,
+          `Update failed (${res.status}) ${text}`
+        )}`
       );
     }
 
@@ -95,105 +134,43 @@ export default async function EditActionPlanPage({
   }
 
   return (
-    <div
-      style={{
-        padding: 16,
-        fontFamily: "system-ui",
-        maxWidth: 720,
-        margin: "0 auto",
-      }}
-    >
-      <DashboardPageHeader
+    <div style={container}>
+      <PageHeader
         title="Edit Action Plan"
         subtitle="Update the action plan title and description"
       />
 
-      {error && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #fecaca",
-            fontSize: 13,
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <ErrorState message={error} />}
 
-      <form action={updateActionPlan} style={{ display: "grid", gap: 16 }}>
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 14,
-            background: "#fff",
-            padding: 16,
-            display: "grid",
-            gap: 14,
-          }}
-        >
+      <form action={updateActionPlan} style={form}>
+        <div style={card}>
           <div>
-            <label style={{ marginBottom: 6, fontWeight: 600 }}>Title</label>
+            <label style={label}>Title</label>
             <input
               name="title"
               defaultValue={ap.title}
               required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
+              style={input}
             />
           </div>
 
           <div>
-            <label style={{ marginBottom: 6, fontWeight: 600 }}>
-              Description
-            </label>
+            <label style={label}>Description</label>
             <textarea
               name="description"
               defaultValue={ap.description ?? ""}
               rows={6}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
+              style={textarea}
             />
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="submit"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #111",
-              background: "#111",
-              color: "#fff",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
+        <div style={actions}>
+          <button type="submit" style={primaryBtn}>
             Update
           </button>
 
-          <Link
-            href={`/dashboard/action-plans/${ap.id}`}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              textDecoration: "none",
-              color: "#111",
-            }}
-          >
+          <Link href={`/dashboard/action-plans/${ap.id}`} style={secondaryBtn}>
             Cancel
           </Link>
         </div>
@@ -201,3 +178,68 @@ export default async function EditActionPlanPage({
     </div>
   );
 }
+
+/* ================== STYLES ================== */
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 720,
+  margin: "0 auto",
+};
+
+const form: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 14,
+  background: "#fff",
+  padding: 16,
+  display: "grid",
+  gap: 14,
+};
+
+const label: React.CSSProperties = {
+  marginBottom: 6,
+  fontWeight: 600,
+};
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};
+
+const textarea: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};
+
+const actions: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  border: "1px solid #111",
+  background: "#111",
+  color: "#fff",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
+const secondaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  textDecoration: "none",
+  color: "#111",
+};
