@@ -51,7 +51,7 @@ export default async function DashboardPage() {
           title="Dashboard"
           subtitle="Platform and HSE operational overview"
         />
-        <div style={{ color: "red", marginTop: 12 }}>
+        <div style={errorBox}>
           Failed to load dashboard data (network/server error)
         </div>
       </div>
@@ -65,40 +65,46 @@ export default async function DashboardPage() {
         subtitle="Platform and HSE operational overview"
       />
 
-      <div style={sectionTitle}>Quick Actions</div>
+      <section style={section}>
+        <div style={sectionTitle}>Quick Actions</div>
 
-      <div style={grid}>
-        <ActionButton href="/dashboard/safety-reports/new">
-          + Safety Report
-        </ActionButton>
-        <ActionButton href="/dashboard/action-plans/new">
-          + Action Plan
-        </ActionButton>
-        <ActionButton href="/dashboard/sites-projects/new">
-          + Site / Project
-        </ActionButton>
-        <ActionButton href="/dashboard/users/new">+ User</ActionButton>
-      </div>
+        <div style={grid}>
+          <ActionButton href="/dashboard/safety-reports/new">
+            + Safety Report
+          </ActionButton>
+          <ActionButton href="/dashboard/action-plans/new">
+            + Action Plan
+          </ActionButton>
+          <ActionButton href="/dashboard/sites-projects/new">
+            + Site / Project
+          </ActionButton>
+          <ActionButton href="/dashboard/users/new">+ User</ActionButton>
+        </div>
+      </section>
 
-      <div style={sectionTitle}>Platform Metrics</div>
+      <section style={section}>
+        <div style={sectionTitle}>Platform Metrics</div>
 
-      <div style={grid}>
-        <StatsCard label="Companies" value={dashboard.companies ?? 0} />
-        <StatsCard label="Users" value={dashboard.users ?? 0} />
-        <StatsCard label="Reports" value={dashboard.reports ?? 0} />
-        <StatsCard label="Action Plans" value={dashboard.actionPlans ?? 0} />
-      </div>
+        <div style={grid}>
+          <StatsCard label="Companies" value={dashboard.companies ?? 0} />
+          <StatsCard label="Users" value={dashboard.users ?? 0} />
+          <StatsCard label="Reports" value={dashboard.reports ?? 0} />
+          <StatsCard label="Action Plans" value={dashboard.actionPlans ?? 0} />
+        </div>
+      </section>
 
-      <div style={sectionTitle}>HSE Operations</div>
+      <section style={section}>
+        <div style={sectionTitle}>HSE Operations</div>
 
-      <div style={grid}>
-        <StatsCard label="Open" value={dashboard.reportStats?.open ?? 0} />
-        <StatsCard
-          label="In Progress"
-          value={dashboard.reportStats?.inProgress ?? 0}
-        />
-        <StatsCard label="Closed" value={dashboard.reportStats?.closed ?? 0} />
-      </div>
+        <div style={grid}>
+          <StatsCard label="Open" value={dashboard.reportStats?.open ?? 0} />
+          <StatsCard
+            label="In Progress"
+            value={dashboard.reportStats?.inProgress ?? 0}
+          />
+          <StatsCard label="Closed" value={dashboard.reportStats?.closed ?? 0} />
+        </div>
+      </section>
     </div>
   );
 }
@@ -110,6 +116,12 @@ const container: React.CSSProperties = {
   margin: "0 auto",
 };
 
+const section: React.CSSProperties = {
+  marginTop: 20,
+  display: "grid",
+  gap: 10,
+};
+
 const grid: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
@@ -117,9 +129,18 @@ const grid: React.CSSProperties = {
 };
 
 const sectionTitle: React.CSSProperties = {
-  marginTop: 20,
-  marginBottom: 6,
-  fontWeight: 600,
+  fontWeight: 700,
   fontSize: 13,
   color: "#6b7280",
+  letterSpacing: "-0.01em",
+};
+
+const errorBox: React.CSSProperties = {
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: 12,
+  marginTop: 12,
+  fontSize: 13,
 };
