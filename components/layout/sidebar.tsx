@@ -74,7 +74,7 @@ export default function Sidebar({
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(17, 24, 39, 0.45)',
+            background: 'rgba(17, 24, 39, 0.42)',
             zIndex: 1000,
           }}
         />
@@ -87,32 +87,32 @@ export default function Sidebar({
           top: 0,
           left: 0,
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
-          width: 300,
-          maxWidth: '82vw',
+          width: 288,
+          maxWidth: '84vw',
           height: '100vh',
           background: '#ffffff',
-          padding: 18,
+          padding: 16,
           zIndex: 2000,
           display: 'flex',
           flexDirection: 'column',
           transition: 'transform 0.25s ease',
-          boxShadow: isOpen ? '8px 0 24px rgba(0,0,0,0.18)' : 'none',
+          boxShadow: isOpen ? '8px 0 24px rgba(0,0,0,0.16)' : 'none',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 16 }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 18,
+              marginBottom: 14,
             }}
           >
             <div>
-              <div style={{ fontWeight: 800, fontSize: 22 }}>Hawana</div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              <div style={{ fontWeight: 800, fontSize: 20 }}>Hawana</div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>
                 HSE Platform
               </div>
             </div>
@@ -121,12 +121,12 @@ export default function Sidebar({
               onClick={onClose}
               aria-label="Close sidebar"
               style={{
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 borderRadius: 12,
                 border: '1px solid #e5e7eb',
                 background: '#fff',
-                fontSize: 18,
+                fontSize: 17,
                 cursor: 'pointer',
               }}
             >
@@ -136,19 +136,23 @@ export default function Sidebar({
 
           <div
             style={{
-              padding: 12,
+              padding: 11,
               borderRadius: 14,
               background: '#f9fafb',
               border: '1px solid #e5e7eb',
             }}
           >
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Signed in as</div>
-            <div style={{ marginTop: 4, fontWeight: 800 }}>{role}</div>
+            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>
+              Signed in as
+            </div>
+            <div style={{ marginTop: 4, fontWeight: 800, fontSize: 15 }}>
+              {role}
+            </div>
             {email && (
               <div
                 style={{
-                  marginTop: 4,
-                  color: '#374151',
+                  marginTop: 3,
+                  color: '#4b5563',
                   fontSize: 12,
                   wordBreak: 'break-word',
                 }}
@@ -159,24 +163,24 @@ export default function Sidebar({
           </div>
         </div>
 
-        <nav style={{ display: 'grid', gap: 18 }}>
+        <nav style={{ display: 'grid', gap: 14 }}>
           {Object.entries(groups).map(([group, items]) => (
             <div key={group}>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 800,
                   color: '#9ca3af',
-                  letterSpacing: 0.8,
+                  letterSpacing: 0.9,
                   textTransform: 'uppercase',
-                  marginBottom: 8,
+                  marginBottom: 7,
                   paddingLeft: 4,
                 }}
               >
                 {group}
               </div>
 
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gap: 7 }}>
                 {items.map((item) => {
                   const isActive =
                     pathname === item.href ||
@@ -191,19 +195,22 @@ export default function Sidebar({
                         display: 'flex',
                         alignItems: 'center',
                         gap: 10,
-                        padding: '11px 12px',
-                        borderRadius: 14,
+                        padding: '10px 11px',
+                        borderRadius: 13,
                         textDecoration: 'none',
+                        fontSize: 15,
                         fontWeight: 700,
                         border: isActive
                           ? '1px solid #111827'
                           : '1px solid #f3f4f6',
                         background: isActive ? '#111827' : '#f9fafb',
                         color: isActive ? '#ffffff' : '#111827',
-                        minHeight: 46,
+                        minHeight: 42,
                       }}
                     >
-                      <span style={{ fontSize: 17 }}>{getIcon(item.label)}</span>
+                      <span style={{ fontSize: 16, width: 22 }}>
+                        {getIcon(item.label)}
+                      </span>
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -216,7 +223,7 @@ export default function Sidebar({
         <div
           style={{
             marginTop: 'auto',
-            paddingTop: 18,
+            paddingTop: 16,
             fontSize: 11,
             color: '#9ca3af',
           }}
