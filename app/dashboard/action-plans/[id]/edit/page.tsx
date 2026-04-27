@@ -43,7 +43,7 @@ export default async function EditActionPlanPage({
     r = await serverAppFetch(
       `/api/action-plans/${encodeURIComponent(id)}`,
       token,
-      { cache: "no-store" } // ✅ ADD
+      { cache: "no-store" }
     );
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
@@ -150,6 +150,7 @@ export default async function EditActionPlanPage({
               name="title"
               defaultValue={ap.title}
               required
+              placeholder="Update action plan title"
               style={input}
             />
           </div>
@@ -159,18 +160,22 @@ export default async function EditActionPlanPage({
             <textarea
               name="description"
               defaultValue={ap.description ?? ""}
-              rows={6}
-              style={textarea}
+              rows={4} // ✅ aligned with standard
+              placeholder="Update description"
+              style={input}
             />
           </div>
         </div>
 
-        <div style={actions}>
+        <div style={actionsRow}>
           <button type="submit" style={primaryBtn}>
-            Update
+            Update Action Plan
           </button>
 
-          <Link href={`/dashboard/action-plans/${ap.id}`} style={secondaryBtn}>
+          <Link
+            href={`/dashboard/action-plans/${ap.id}`}
+            style={cancelLink}
+          >
             Cancel
           </Link>
         </div>
@@ -179,12 +184,12 @@ export default async function EditActionPlanPage({
   );
 }
 
-/* ================== STYLES ================== */
+/* ================= STANDARDIZED STYLES ================= */
 
 const container: React.CSSProperties = {
-  padding: 16,
+  padding: 24,
   fontFamily: "system-ui",
-  maxWidth: 720,
+  maxWidth: 760,
   margin: "0 auto",
 };
 
@@ -195,7 +200,7 @@ const form: React.CSSProperties = {
 
 const card: React.CSSProperties = {
   border: "1px solid #e5e7eb",
-  borderRadius: 14,
+  borderRadius: 12,
   background: "#fff",
   padding: 16,
   display: "grid",
@@ -204,7 +209,7 @@ const card: React.CSSProperties = {
 
 const label: React.CSSProperties = {
   marginBottom: 6,
-  fontWeight: 600,
+  fontWeight: 700,
 };
 
 const input: React.CSSProperties = {
@@ -214,32 +219,21 @@ const input: React.CSSProperties = {
   border: "1px solid #ddd",
 };
 
-const textarea: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #ddd",
-};
-
-const actions: React.CSSProperties = {
+const actionsRow: React.CSSProperties = {
   display: "flex",
   gap: 10,
+  alignItems: "center",
 };
 
 const primaryBtn: React.CSSProperties = {
   padding: "10px 16px",
   borderRadius: 10,
-  border: "1px solid #111",
   background: "#111",
   color: "#fff",
-  fontWeight: 600,
-  cursor: "pointer",
 };
 
-const secondaryBtn: React.CSSProperties = {
-  padding: "10px 16px",
-  borderRadius: 10,
-  border: "1px solid #ddd",
+const cancelLink: React.CSSProperties = {
   textDecoration: "none",
-  color: "#111",
+  color: "#111827",
+  fontWeight: 600,
 };

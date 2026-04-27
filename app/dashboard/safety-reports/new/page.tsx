@@ -7,7 +7,7 @@ import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 import SubmitButton from "@/components/ui/submit-button";
-import ErrorState from "@/components/ui/error-state"; // ✅ ADD
+import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -65,10 +65,12 @@ export default async function NewSafetyReportPage({
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
   let siteProjects: SiteProject[] = [];
-  let fetchError: string | null = null; // ✅ ADD
+  let fetchError: string | null = null;
 
   try {
-    const res = await serverAppFetch("/api/sites-projects", token);
+    const res = await serverAppFetch("/api/sites-projects", token, {
+      cache: "no-store", // ✅ consistency
+    });
 
     if (res.status === 401) redirect("/login");
 
@@ -84,7 +86,7 @@ export default async function NewSafetyReportPage({
     }
 
     console.error("SitesProjects Error:", err);
-    fetchError = "Failed to load sites/projects"; // ✅ ADD
+    fetchError = "Failed to load sites/projects";
   }
 
   async function createSafetyReport(formData: FormData) {
@@ -136,61 +138,30 @@ export default async function NewSafetyReportPage({
   }
 
   return (
-    <div style={{ fontFamily: "system-ui", padding: 24, maxWidth: 760 }}>
+    <div style={container}>
       <PageHeader
         title="Create Safety Report"
         subtitle="Register a new safety report and optionally link it to a site or project"
       />
 
-      {/* ✅ Unified Error Handling */}
       {error && <ErrorState message={error} />}
       {fetchError && <ErrorState message={fetchError} />}
 
-      <form action={createSafetyReport} style={{ display: "grid", gap: 16 }}>
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            background: "#fff",
-            padding: 16,
-            display: "grid",
-            gap: 14,
-          }}
-        >
+      <form action={createSafetyReport} style={form}>
+        <div style={card}>
           <div>
-            <label
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Title
-            </label>
+            <label style={label}>Title</label>
             <input
               name="title"
               required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
+              placeholder="Enter safety report title"
+              style={input}
             />
           </div>
 
           <div>
-            <label
-              style={{ display: "block", marginBottom: 6, fontWeight: 700 }}
-            >
-              Site / Project
-            </label>
-            <select
-              name="siteProjectId"
-              defaultValue=""
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-            >
+            <label style={label}>Site / Project</label>
+            <select name="siteProjectId" defaultValue="" style={input}>
               <option value="">No Site / Project</option>
 
               {siteProjects.map((site) => (
@@ -201,16 +172,15 @@ export default async function NewSafetyReportPage({
             </select>
           </div>
 
-          <textarea
-            name="description"
-            rows={6}
-            placeholder="Description"
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              border: "1px solid #ddd",
-            }}
-          />
+          <div>
+            <label style={label}>Description</label>
+            <textarea
+              name="description"
+              rows={4} // ✅ reduced
+              placeholder="Describe the safety report"
+              style={input}
+            />
+          </div>
         </div>
 
         <SubmitButton />
@@ -218,3 +188,37 @@ export default async function NewSafetyReportPage({
     </div>
   );
 }
+
+/* styles (standardized) */
+
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+  maxWidth: 760,
+};
+
+const form: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #eee",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 16,
+  display: "grid",
+  gap: 14,
+};
+
+const label: React.CSSProperties = {
+  marginBottom: 6,
+  fontWeight: 700,
+};
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};

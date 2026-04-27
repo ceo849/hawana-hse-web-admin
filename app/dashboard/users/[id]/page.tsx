@@ -1,8 +1,11 @@
+// app/dashboard/users/[id]/page.tsx
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 
 type UserRole = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER";
 
@@ -62,9 +65,9 @@ function getRoleBadgeStyle(role: string) {
 
 function metricCard(label: string, value: string) {
   return (
-    <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
-      <div style={{ fontSize: 12, color: "#666" }}>{label}</div>
-      <div style={{ fontWeight: 800 }}>{value}</div>
+    <div style={metric}>
+      <div style={metricLabel}>{label}</div>
+      <div style={metricValue}>{value}</div>
     </div>
   );
 }
@@ -148,18 +151,18 @@ export default async function UserOverviewPage({
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 960 }}>
+    <div style={container}>
       <PageHeader title="User Overview" subtitle="User insight & control" />
 
-      {error && (
-        <div style={{ marginBottom: 16, padding: 12, background: "#fef2f2" }}>
-          {error}
-        </div>
-      )}
+      {error && <ErrorState message={error} />}
 
-      <div style={{ marginBottom: 12, ...roleBadgeStyle }}>{user.role}</div>
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ padding: "6px 10px", borderRadius: 999, ...roleBadgeStyle }}>
+          {user.role}
+        </span>
+      </div>
 
-      <div style={{ border: "1px solid #eee", padding: 16, marginBottom: 16 }}>
+      <div style={card}>
         <div><b>ID:</b> {user.id}</div>
         <div><b>Name:</b> {user.fullName}</div>
         <div><b>Email:</b> {user.email}</div>
@@ -167,29 +170,122 @@ export default async function UserOverviewPage({
         <div><b>Created:</b> {formatDate(user.createdAt)}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+      <div style={metricsGrid}>
         {metricCard("Role", user.role)}
         {metricCard("Company", user.companyId)}
         {metricCard("Email", user.email)}
       </div>
 
-      <form action={updateUser} style={{ marginTop: 20 }}>
-        <input name="fullName" defaultValue={user.fullName} />
-        <select name="role" defaultValue={user.role}>
-          <option>OWNER</option>
-          <option>ADMIN</option>
-          <option>MANAGER</option>
-          <option>WORKER</option>
-          <option>VIEWER</option>
-        </select>
-        <button type="submit">Update</button>
+      <form action={updateUser} style={form}>
+        <div style={card}>
+          <input
+            name="fullName"
+            defaultValue={user.fullName}
+            placeholder="Update full name"
+            style={input}
+          />
+
+          <select name="role" defaultValue={user.role} style={input}>
+            <option>OWNER</option>
+            <option>ADMIN</option>
+            <option>MANAGER</option>
+            <option>WORKER</option>
+            <option>VIEWER</option>
+          </select>
+        </div>
+
+        <button type="submit" style={primaryBtn}>
+          Update User
+        </button>
       </form>
 
-      <form action={deleteUser} style={{ marginTop: 10 }}>
-        <button type="submit">Delete</button>
-      </form>
+      <div style={{ marginTop: 10 }}>
+        <form action={deleteUser}>
+          <button type="submit" style={dangerBtn}>
+            Delete User
+          </button>
+        </form>
+      </div>
 
-      <Link href="/dashboard/users">Back</Link>
+      <div style={{ marginTop: 16 }}>
+        <Link href="/dashboard/users" style={secondaryBtn}>
+          Back
+        </Link>
+      </div>
     </div>
   );
 }
+
+/* ================= STANDARD ================= */
+
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+  maxWidth: 760,
+  margin: "0 auto",
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 14,
+  padding: 16,
+  background: "#fff",
+  display: "grid",
+  gap: 8,
+};
+
+const metricsGrid: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: 10,
+  marginTop: 16,
+};
+
+const metric: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 14,
+  padding: 14,
+};
+
+const metricLabel: React.CSSProperties = {
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const metricValue: React.CSSProperties = {
+  fontWeight: 800,
+};
+
+const form: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+  marginTop: 20,
+};
+
+const input: React.CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  background: "#111",
+  color: "#fff",
+};
+
+const dangerBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  background: "#dc2626",
+  color: "#fff",
+};
+
+const secondaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  textDecoration: "none",
+  color: "#111",
+};

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
+import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
@@ -105,57 +106,51 @@ export default async function NewUserPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div style={{ fontFamily: "system-ui", padding: 24, maxWidth: 760 }}>
+    <div style={container}>
       <PageHeader
         title="Create User"
         subtitle="Add a new system user and assign an access role"
       />
 
-      {error ? (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 10,
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #fecaca",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
+      {error && <ErrorState message={error} />}
 
-      <form action={createUser} style={{ display: "grid", gap: 16 }}>
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            background: "#fff",
-            padding: 16,
-            display: "grid",
-            gap: 14,
-          }}
-        >
+      <form action={createUser} style={form}>
+        <div style={card}>
           <div>
-            <label htmlFor="fullName">Full Name</label>
-            <input id="fullName" name="fullName" required />
+            <label style={label}>Full Name</label>
+            <input
+              name="fullName"
+              placeholder="Enter full name"
+              required
+              style={input}
+            />
           </div>
 
           <div>
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" required />
+            <label style={label}>Email</label>
+            <input
+              name="email"
+              type="email"
+              placeholder="Enter email"
+              required
+              style={input}
+            />
           </div>
 
           <div>
-            <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" required />
+            <label style={label}>Password</label>
+            <input
+              name="password"
+              type="password"
+              placeholder="Enter password"
+              required
+              style={input}
+            />
           </div>
 
           <div>
-            <label htmlFor="role">Role</label>
-            <select id="role" name="role" defaultValue="VIEWER">
+            <label style={label}>Role</label>
+            <select name="role" defaultValue="VIEWER" style={input}>
               <option value="OWNER">OWNER</option>
               <option value="ADMIN">ADMIN</option>
               <option value="MANAGER">MANAGER</option>
@@ -165,8 +160,60 @@ export default async function NewUserPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        <button type="submit">Create User</button>
+        <div style={actionsRow}>
+          <button type="submit" style={primaryBtn}>
+            Create User
+          </button>
+        </div>
       </form>
     </div>
   );
 }
+
+/* ================= STANDARDIZED STYLES ================= */
+
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+  maxWidth: 760,
+  margin: "0 auto",
+};
+
+const form: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 16,
+  display: "grid",
+  gap: 14,
+};
+
+const label: React.CSSProperties = {
+  marginBottom: 6,
+  fontWeight: 700,
+};
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};
+
+const actionsRow: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  alignItems: "center",
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  background: "#111",
+  color: "#fff",
+};

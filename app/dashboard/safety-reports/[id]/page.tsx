@@ -54,14 +54,14 @@ export default async function SafetyReportPage({
   const id = normalize(resolvedParams?.id);
   if (!id) redirect("/dashboard/safety-reports");
 
-  const token = await requireAccessToken(); // ✅ FIX
+  const token = await requireAccessToken();
 
   let res: Response;
 
   try {
     res = await serverAppFetch(
       `/api/safety-reports/${encodeURIComponent(id)}`,
-      token, // ✅ FIX
+      token,
       { cache: "no-store" }
     );
   } catch (err: any) {
@@ -127,12 +127,12 @@ export default async function SafetyReportPage({
         <div><b>Created At:</b> {formatDate(report.createdAt)}</div>
       </div>
 
-      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-        <Link href={`/dashboard/safety-reports/${report.id}/edit`}>
+      <div style={actionsRow}>
+        <Link href={`/dashboard/safety-reports/${report.id}/edit`} style={primaryLink}>
           Edit
         </Link>
 
-        <Link href="/dashboard/safety-reports">
+        <Link href="/dashboard/safety-reports" style={secondaryLink}>
           Back
         </Link>
       </div>
@@ -140,10 +140,12 @@ export default async function SafetyReportPage({
   );
 }
 
+/* ================= STANDARD ================= */
+
 const container: React.CSSProperties = {
-  padding: 16,
+  padding: 24, // ✅ unified
   fontFamily: "system-ui",
-  maxWidth: 720,
+  maxWidth: 760,
   margin: "0 auto",
 };
 
@@ -153,4 +155,27 @@ const card: React.CSSProperties = {
   padding: 16,
   display: "grid",
   gap: 8,
+  background: "#fff",
+};
+
+const actionsRow: React.CSSProperties = {
+  marginTop: 20,
+  display: "flex",
+  gap: 10,
+};
+
+const primaryLink: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  background: "#111",
+  color: "#fff",
+  textDecoration: "none",
+};
+
+const secondaryLink: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  textDecoration: "none",
+  color: "#111",
 };

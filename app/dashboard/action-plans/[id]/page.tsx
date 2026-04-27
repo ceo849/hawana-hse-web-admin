@@ -1,9 +1,11 @@
+// app/dashboard/action-plans/[id]/page.tsx
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
-import ErrorState from "@/components/ui/error-state"; // ✅ ADD
+import ErrorState from "@/components/ui/error-state";
 
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
@@ -81,9 +83,9 @@ function formatAssignedUser(
 
 function metricCard(label: string, value: string | number) {
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 16 }}>
-      <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
+    <div style={metric}>
+      <div style={metricLabel}>{label}</div>
+      <div style={metricValue}>{value}</div>
     </div>
   );
 }
@@ -109,7 +111,6 @@ export default async function ActionPlanPage({
       { cache: "no-store" }
     );
   } catch (err: any) {
-    // ✅ ADD
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
     }
@@ -117,28 +118,25 @@ export default async function ActionPlanPage({
     console.error("Action Plan Fetch Error:", err);
 
     return (
-      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+      <div style={container}>
         <PageHeader
           title="Action Plan Overview"
           subtitle="Plan insight and control"
         />
-
         <ErrorState message="Failed to load action plan (network/server error)" />
       </div>
     );
   }
 
-  // ✅ ADD (already exists logically, but kept consistent)
   if (res.status === 401) redirect("/login");
 
   if (!res.ok) {
     return (
-      <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+      <div style={container}>
         <PageHeader
           title="Action Plan Overview"
           subtitle="Plan insight and control"
         />
-
         <ErrorState message="Failed to load action plan" />
       </div>
     );
@@ -151,24 +149,13 @@ export default async function ActionPlanPage({
   const statusStyle = getStatusStyle(ap.status);
 
   return (
-    <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+    <div style={container}>
       <PageHeader
         title="Action Plan Overview"
         subtitle="Plan insight and control"
       />
 
-      {err && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
-          }}
-        >
-          {err}
-        </div>
-      )}
+      {err && <ErrorState message={err} />}
 
       <div style={{ marginBottom: 16 }}>
         <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
@@ -176,23 +163,90 @@ export default async function ActionPlanPage({
         </span>
       </div>
 
-      <div style={{ border: "1px solid #e5e7eb", padding: 16, marginBottom: 16 }}>
+      <div style={card}>
         <div><b>ID:</b> {ap.id}</div>
         <div><b>Title:</b> {ap.title}</div>
         <div><b>Assigned:</b> {formatAssignedUser(ap.assignedTo, ap.assignedToUserId)}</div>
         <div><b>Due:</b> {formatDateDisplay(ap.dueDate)}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+      <div style={metricsGrid}>
         {metricCard("Status", ap.status)}
         {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
         {metricCard("Next Steps", nextStatuses.length)}
       </div>
 
-      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-        <Link href={actionPlanEditPath(ap.id)}>Edit</Link>
-        <Link href="/dashboard/action-plans">Back</Link>
+      <div style={actionsRow}>
+        <Link href={actionPlanEditPath(ap.id)} style={primaryLink}>
+          Edit
+        </Link>
+
+        <Link href="/dashboard/action-plans" style={secondaryLink}>
+          Back
+        </Link>
       </div>
     </div>
   );
 }
+
+/* ================= STANDARD ================= */
+
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+  maxWidth: 760,
+  margin: "0 auto",
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 14,
+  padding: 16,
+  background: "#fff",
+  display: "grid",
+  gap: 8,
+};
+
+const metricsGrid: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: 10,
+  marginTop: 16,
+};
+
+const metric: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 14,
+  padding: 12,
+};
+
+const metricLabel: React.CSSProperties = {
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const metricValue: React.CSSProperties = {
+  fontWeight: 800,
+};
+
+const actionsRow: React.CSSProperties = {
+  marginTop: 20,
+  display: "flex",
+  gap: 10,
+};
+
+const primaryLink: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  background: "#111",
+  color: "#fff",
+  textDecoration: "none",
+};
+
+const secondaryLink: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  textDecoration: "none",
+  color: "#111",
+};

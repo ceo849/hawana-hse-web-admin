@@ -40,3 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 *.tar.gz
+FETCH_USAGE.txt
+FILES_CLEAN.txt
+FILES_TO_FIX.txt
+MISSING_ERROR_STATE.txt
+MISSING_REDIRECT.txt
+MISSING_SESSION_HANDLER.txt
+PROJECT_EXPORTS.txt

@@ -69,7 +69,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
 
   try {
     const r = await serverAppFetch("/api/users", token, {
-      cache: "no-store", // ✅ ADD
+      cache: "no-store",
     });
 
     if (r.status === 401) redirect("/login");
@@ -165,7 +165,12 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
         <div style={card}>
           <div>
             <label style={label}>Title</label>
-            <input name="title" required style={input} />
+            <input
+              name="title"
+              required
+              placeholder="Enter action plan title"
+              style={input}
+            />
           </div>
 
           <div>
@@ -181,13 +186,22 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
                 ))}
               </select>
             ) : (
-              <input name="assignedToUserId" style={input} />
+              <input
+                name="assignedToUserId"
+                placeholder="Enter user ID"
+                style={input}
+              />
             )}
           </div>
 
           <div>
             <label style={label}>Description</label>
-            <textarea name="description" rows={5} style={input} />
+            <textarea
+              name="description"
+              rows={4} // ✅ reduced height
+              placeholder="Describe the action plan"
+              style={input}
+            />
           </div>
         </div>
 

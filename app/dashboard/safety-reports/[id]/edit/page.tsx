@@ -82,7 +82,7 @@ export default async function EditSafetyReportPage({
     console.error("Safety Report Fetch Error:", err);
 
     return (
-      <div style={{ padding: 40, maxWidth: 900 }}>
+      <div style={container}>
         <PageHeader title="Edit Safety Report" />
         <ErrorState message="Failed to load safety report (network/server error)" />
       </div>
@@ -111,7 +111,7 @@ export default async function EditSafetyReportPage({
     console.error("Sites Fetch Error:", err);
 
     return (
-      <div style={{ padding: 40, maxWidth: 900 }}>
+      <div style={container}>
         <PageHeader title="Edit Safety Report" />
         <ErrorState message="Failed to load sites/projects" />
       </div>
@@ -169,54 +169,134 @@ export default async function EditSafetyReportPage({
   }
 
   return (
-    <div style={{ padding: 40, fontFamily: "system-ui", maxWidth: 900 }}>
-      <PageHeader title="Edit Safety Report" subtitle="Update report details" />
+    <div style={container}>
+      <PageHeader
+        title="Edit Safety Report"
+        subtitle="Update report details"
+      />
 
       {error && <ErrorState message={error} />}
 
-      <form action={updateSafetyReport}>
-        <input
-          name="title"
-          defaultValue={report.title ?? ""}
-          style={{ width: "100%", padding: 16, marginBottom: 12 }}
-        />
+      <form action={updateSafetyReport} style={form}>
+        <div style={card}>
+          <div>
+            <label style={label}>Title</label>
+            <input
+              name="title"
+              defaultValue={report.title ?? ""}
+              placeholder="Update report title"
+              required // ✅ ADD
+              style={input}
+            />
+          </div>
 
-        <select
-          name="siteProjectId"
-          defaultValue={report.siteProjectId ?? ""}
-          style={{ width: "100%", padding: 16, marginBottom: 12 }}
-        >
-          <option value="">No Site / Project</option>
-          {siteProjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {formatSiteProjectLabel(s)}
-            </option>
-          ))}
-        </select>
+          <div>
+            <label style={label}>Site / Project</label>
+            <select
+              name="siteProjectId"
+              defaultValue={report.siteProjectId ?? ""}
+              style={input}
+            >
+              <option value="">No Site / Project</option>
+              {siteProjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {formatSiteProjectLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <textarea
-          name="description"
-          defaultValue={report.description ?? ""}
-          rows={8}
-          style={{ width: "100%", padding: 16, marginBottom: 12 }}
-        />
+          <div>
+            <label style={label}>Description</label>
+            <textarea
+              name="description"
+              defaultValue={report.description ?? ""}
+              rows={4}
+              placeholder="Update description"
+              style={input}
+            />
+          </div>
 
-        <select
-          name="status"
-          defaultValue={report.status ?? "OPEN"}
-          style={{ width: "100%", padding: 16, marginBottom: 16 }}
-        >
-          <option value="OPEN">OPEN</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="CLOSED">CLOSED</option>
-        </select>
+          <div>
+            <label style={label}>Status</label>
+            <select
+              name="status"
+              defaultValue={report.status ?? "OPEN"}
+              style={input}
+            >
+              <option value="OPEN">OPEN</option>
+              <option value="IN_PROGRESS">IN_PROGRESS</option>
+              <option value="CLOSED">CLOSED</option>
+            </select>
+          </div>
+        </div>
 
-        <button type="submit">Update</button>
+        <div style={actionsRow}>
+          <button type="submit" style={primaryBtn}>
+            Update Safety Report
+          </button>
+
+          <Link href={`/dashboard/safety-reports/${id}`} style={secondaryBtn}>
+            Cancel
+          </Link>
+        </div>
       </form>
-
-      <div style={{ marginTop: 16 }}>
-        <Link href={`/dashboard/safety-reports/${id}`}>Back</Link>
-      </div>
     </div>
   );
 }
+
+/* ================= STANDARD ================= */
+
+const container: React.CSSProperties = {
+  padding: 24,
+  fontFamily: "system-ui",
+  maxWidth: 760,
+  margin: "0 auto",
+};
+
+const form: React.CSSProperties = {
+  display: "grid",
+  gap: 16,
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 16,
+  display: "grid",
+  gap: 14,
+};
+
+const label: React.CSSProperties = {
+  marginBottom: 6,
+  fontWeight: 700,
+};
+
+const input: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+};
+
+const actionsRow: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  alignItems: "center",
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  background: "#111",
+  color: "#fff",
+};
+
+const secondaryBtn: React.CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  textDecoration: "none",
+  color: "#111",
+};
