@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
+import EmptyState from "@/components/ui/empty-state";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 type SafetyReport = {
@@ -157,7 +158,7 @@ export default async function SafetyReportsPage() {
         </div>
 
         {items.length === 0 ? (
-          <div style={emptyBox}>No safety reports found.</div>
+          <EmptyState message="No safety reports found." />
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             {items.map((r) => (

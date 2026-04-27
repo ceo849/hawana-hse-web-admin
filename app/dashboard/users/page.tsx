@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
+import EmptyState from "@/components/ui/empty-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
@@ -162,60 +163,66 @@ export default async function UsersPage() {
           <div style={sectionMeta}>Total users: {total}</div>
         </div>
 
-        <div className="desktop-only">
-          <div style={tableCard}>
-            <table
-              style={{
-                minWidth: 600,
-                width: "100%",
-                borderCollapse: "collapse",
-              }}
-            >
-              <thead>
-                <tr>
-                  <th align="left" style={th}>Name</th>
-                  <th align="left" style={th}>Email</th>
-                  <th align="left" style={th}>Role</th>
-                  <th align="left" style={th}>Company</th>
-                </tr>
-              </thead>
+        {users.length === 0 ? (
+          <EmptyState message="No users found." />
+        ) : (
+          <>
+            <div className="desktop-only">
+              <div style={tableCard}>
+                <table
+                  style={{
+                    minWidth: 600,
+                    width: "100%",
+                    borderCollapse: "collapse",
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th align="left" style={th}>Name</th>
+                      <th align="left" style={th}>Email</th>
+                      <th align="left" style={th}>Role</th>
+                      <th align="left" style={th}>Company</th>
+                    </tr>
+                  </thead>
 
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                    <td style={td}>{u.fullName}</td>
-                    <td style={emailCell}>{u.email}</td>
-                    <td style={td}>
-                      <RoleBadge role={u.role} />
-                    </td>
-                    <td style={companyCell}>{u.companyId}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
-          {users.map((u) => (
-            <Link
-              key={u.id}
-              href={`/dashboard/users/${u.id}`}
-              style={userCard}
-            >
-              <div style={userCardTop}>
-                <div>
-                  <div style={userName}>{u.fullName}</div>
-                  <div style={userEmail}>{u.email}</div>
-                </div>
-
-                <RoleBadge role={u.role} />
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} style={{ borderTop: "1px solid #f3f4f6" }}>
+                        <td style={td}>{u.fullName}</td>
+                        <td style={emailCell}>{u.email}</td>
+                        <td style={td}>
+                          <RoleBadge role={u.role} />
+                        </td>
+                        <td style={companyCell}>{u.companyId}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+            </div>
 
-              <div style={userCompany}>Company: {u.companyId}</div>
-            </Link>
-          ))}
-        </div>
+            <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
+              {users.map((u) => (
+                <Link
+                  key={u.id}
+                  href={`/dashboard/users/${u.id}`}
+                  style={userCard}
+                >
+                  <div style={userCardTop}>
+                    <div>
+                      <div style={userName}>{u.fullName}</div>
+                      <div style={userEmail}>{u.email}</div>
+                    </div>
+
+                    <RoleBadge role={u.role} />
+                  </div>
+
+                  <div style={userCompany}>Company: {u.companyId}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

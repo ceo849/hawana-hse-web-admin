@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
+import EmptyState from "@/components/ui/empty-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
@@ -185,9 +186,7 @@ export default async function ActionPlansPage() {
         </div>
 
         {items.length === 0 ? (
-          <div style={emptyBox}>
-            <div style={emptyText}>No action plans found.</div>
-          </div>
+          <EmptyState message="No action plans found." />
         ) : (
           <>
             <div className="desktop-only">
