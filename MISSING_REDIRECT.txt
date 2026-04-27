@@ -1,0 +1,2 @@
+app/dashboard/companies/page.tsx
+app/dashboard/logout-button.tsx

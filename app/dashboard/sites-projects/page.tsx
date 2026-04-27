@@ -202,7 +202,9 @@ export default async function SitesProjectsPage() {
         </div>
 
         {items.length === 0 ? (
-          <div style={emptyBox}>No sites/projects found.</div>
+          <div style={emptyBox}>
+            <div style={emptyText}>No sites/projects found.</div>
+          </div>
         ) : (
           <>
             <div className="desktop-only">
@@ -257,7 +259,7 @@ export default async function SitesProjectsPage() {
   );
 }
 
-/* styles بدون تغيير */
+/* styles */
 const container: React.CSSProperties = { padding: 16, fontFamily: "system-ui", maxWidth: 680, margin: "0 auto" };
 const section: React.CSSProperties = { marginTop: 18, display: "grid", gap: 10 };
 const sectionHeader: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 };
@@ -274,6 +276,22 @@ const siteTop: React.CSSProperties = { display: "flex", alignItems: "flex-start"
 const siteName: React.CSSProperties = { fontWeight: 800, fontSize: 15, color: "#111827" };
 const siteLocation: React.CSSProperties = { marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6", fontSize: 12, color: "#6b7280" };
 const siteDate: React.CSSProperties = { marginTop: 4, fontSize: 12, color: "#9ca3af" };
-const emptyBox: React.CSSProperties = { border: "1px solid #e5e7eb", borderRadius: 16, background: "#ffffff", padding: 14, color: "#6b7280", fontSize: 13 };
+
+const emptyBox: React.CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  padding: 16,
+  background: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const emptyText: React.CSSProperties = {
+  color: "#6b7280",
+  fontSize: 13,
+  fontWeight: 500,
+};
+
 const errorBox: React.CSSProperties = { color: "#991b1b", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 12, marginTop: 12, fontSize: 13 };
 const restrictedBox: React.CSSProperties = { color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 12, marginTop: 12, fontSize: 13 };

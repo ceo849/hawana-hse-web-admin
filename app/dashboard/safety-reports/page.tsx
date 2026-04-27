@@ -113,8 +113,6 @@ export default async function SafetyReportsPage() {
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") redirect("/login");
 
-    console.error("Safety Reports Fetch Error:", err);
-
     return (
       <div style={container}>
         <PageHeader title="Safety Reports" subtitle="Operational reports" />
@@ -161,35 +159,35 @@ export default async function SafetyReportsPage() {
         {items.length === 0 ? (
           <div style={emptyBox}>No safety reports found.</div>
         ) : (
-          <>
-            <div style={tableCard}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <tbody>
-                  {items.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <Link href={`/dashboard/safety-reports/${r.id}`}>
-                          {r.title ?? "-"}
-                        </Link>
-                      </td>
-                      <td>
-                        <StatusBadge status={r.status} />
-                      </td>
-                      <td>{r.siteProjectId ?? "-"}</td>
-                      <td>{r.createdAt ?? "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <div style={{ display: "grid", gap: 10 }}>
+            {items.map((r) => (
+              <Link
+                key={r.id}
+                href={`/dashboard/safety-reports/${r.id}`}
+                style={card}
+              >
+                <div style={cardTop}>
+                  <div style={title}>{r.title ?? "-"}</div>
+                  <StatusBadge status={r.status} />
+                </div>
+
+                <div style={meta}>
+                  Site: {r.siteProjectId ?? "-"}
+                </div>
+
+                <div style={date}>
+                  {r.createdAt ?? "-"}
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
     </div>
   );
 }
 
-/* ================= STYLES ================= */
+/* STYLES — MATCH USERS PAGE */
 
 const container: React.CSSProperties = {
   padding: 16,
@@ -210,25 +208,60 @@ const sectionHeader: React.CSSProperties = {
 };
 
 const sectionTitle: React.CSSProperties = {
+  fontSize: 13,
   fontWeight: 700,
+  color: "#6b7280",
 };
 
 const sectionMeta: React.CSSProperties = {
   fontSize: 12,
-  color: "#999",
+  color: "#9ca3af",
 };
 
 const headerAction: React.CSSProperties = {
   padding: "8px 12px",
-  background: "#111",
+  borderRadius: 12,
+  background: "#111827",
   color: "#fff",
+  textDecoration: "none",
+  fontWeight: 700,
 };
 
-const tableCard: React.CSSProperties = {
-  overflowX: "auto",
+const card: React.CSSProperties = {
+  display: "block",
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid #e5e7eb",
+  background: "#fff",
+  textDecoration: "none",
+  color: "inherit",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+};
+
+const cardTop: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+};
+
+const title: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: 15,
+};
+
+const meta: React.CSSProperties = {
+  marginTop: 10,
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const date: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#9ca3af",
 };
 
 const emptyBox: React.CSSProperties = {
-  padding: 12,
-  border: "1px solid #eee",
+  padding: 14,
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
 };

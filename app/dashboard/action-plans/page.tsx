@@ -119,7 +119,7 @@ export default async function ActionPlansPage() {
   try {
     res = await serverAppFetch(
       "/api/action-plans?page=1&limit=20",
-      token, // ✅ FIX
+      token,
       {
         cache: "no-store",
       }
@@ -185,7 +185,9 @@ export default async function ActionPlansPage() {
         </div>
 
         {items.length === 0 ? (
-          <div style={emptyBox}>No action plans found.</div>
+          <div style={emptyBox}>
+            <div style={emptyText}>No action plans found.</div>
+          </div>
         ) : (
           <>
             <div className="desktop-only">
@@ -225,7 +227,7 @@ export default async function ActionPlansPage() {
 
             <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
               {items.map((i) => (
-        <Link
+                <Link
                   key={i.id}
                   href={`/dashboard/action-plans/${i.id}`}
                   style={card}
@@ -244,6 +246,8 @@ export default async function ActionPlansPage() {
     </div>
   );
 }
+
+/* styles */
 
 const container: React.CSSProperties = {
   padding: 16,
@@ -339,7 +343,15 @@ const cardDesc: React.CSSProperties = {
 const emptyBox: React.CSSProperties = {
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  padding: 14,
-  color: "#6b7280",
+  padding: 16,
   background: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const emptyText: React.CSSProperties = {
+  color: "#6b7280",
+  fontSize: 13,
+  fontWeight: 500,
 };

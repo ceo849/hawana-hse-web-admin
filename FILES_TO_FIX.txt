@@ -1,0 +1,50 @@
+app/dashboard/action-plans/[id]/edit/page.tsx
+app/dashboard/action-plans/[id]/edit/page.tsx:    const res = await serverAppFetch(
+app/dashboard/action-plans/[id]/edit/page.tsx:  const r = await serverAppFetch(
+app/dashboard/action-plans/[id]/page.tsx
+app/dashboard/action-plans/[id]/page.tsx:  const res = await serverAppFetch(
+app/dashboard/action-plans/new/page.tsx
+app/dashboard/action-plans/new/page.tsx:    const r = await serverAppFetch("/api/users", token);
+app/dashboard/action-plans/new/page.tsx:    const res = await serverAppFetch("/api/action-plans", tokenInner, {
+app/dashboard/action-plans/page.tsx:    res = await serverAppFetch("/api/action-plans?page=1&limit=20", {
+app/dashboard/admin/page.tsx
+app/dashboard/admin/page.tsx:      serverAppFetch("/api/action-plans?page=1&limit=1", {
+app/dashboard/admin/page.tsx:      serverAppFetch("/api/safety-reports?page=1&limit=1", {
+app/dashboard/admin/page.tsx:      serverAppFetch("/api/users?page=1&limit=1", {
+app/dashboard/billing/page.tsx
+app/dashboard/billing/page.tsx:    const res = await serverAppFetch("/api/billing/checkout-session", {
+app/dashboard/billing/page.tsx:    res = await serverAppFetch("/api/billing", {
+app/dashboard/companies/[id]/page.tsx
+app/dashboard/companies/[id]/page.tsx:    const res = await serverAppFetch(
+app/dashboard/companies/[id]/page.tsx:  const companyRes = await serverAppFetch(
+app/dashboard/companies/new/page.tsx
+app/dashboard/companies/new/page.tsx:    const res = await serverAppFetch("/api/companies", token, {
+app/dashboard/companies/page.tsx
+app/dashboard/companies/page.tsx:    res = await serverAppFetch(
+app/dashboard/layout.tsx
+app/dashboard/logout-button.tsx
+app/dashboard/page.tsx:    const dashboardRes = await serverAppFetch("/api/dashboard", {
+app/dashboard/safety-reports/[id]/edit/page.tsx
+app/dashboard/safety-reports/[id]/edit/page.tsx:    const res = await serverAppFetch(
+app/dashboard/safety-reports/[id]/edit/page.tsx:  const reportRes = await serverAppFetch(
+app/dashboard/safety-reports/[id]/edit/page.tsx:  const sitesRes = await serverAppFetch("/api/sites-projects", token);
+app/dashboard/safety-reports/[id]/page.tsx
+app/dashboard/safety-reports/[id]/page.tsx:    res = await serverAppFetch(
+app/dashboard/safety-reports/new/page.tsx
+app/dashboard/safety-reports/new/page.tsx:    const res = await serverAppFetch("/api/safety-reports", tokenInner, {
+app/dashboard/safety-reports/new/page.tsx:    const res = await serverAppFetch("/api/sites-projects", token);
+app/dashboard/safety-reports/page.tsx:    res = await serverAppFetch("/api/safety-reports?page=1&limit=20", {
+app/dashboard/sites-projects/[id]/page.tsx
+app/dashboard/sites-projects/[id]/page.tsx:      const res = await serverAppFetch(
+app/dashboard/sites-projects/[id]/page.tsx:    r = await serverAppFetch(`/api/sites-projects/${encodeURIComponent(id)}`, {
+app/dashboard/sites-projects/new/page.tsx
+app/dashboard/sites-projects/new/page.tsx:      const res = await serverAppFetch("/api/sites-projects", {
+app/dashboard/sites-projects/page.tsx
+app/dashboard/sites-projects/page.tsx:    res = await serverAppFetch("/api/sites-projects?page=1&limit=20", {
+app/dashboard/users/[id]/page.tsx
+app/dashboard/users/[id]/page.tsx:    const res = await serverAppFetch(
+app/dashboard/users/[id]/page.tsx:  const r = await serverAppFetch(`/api/users/${encodeURIComponent(id)}`, token);
+app/dashboard/users/new/page.tsx
+app/dashboard/users/new/page.tsx:      const res = await serverAppFetch("/api/users", {
+app/dashboard/users/page.tsx
+app/dashboard/users/page.tsx:    res = await serverAppFetch("/api/users?page=1&limit=20", {
