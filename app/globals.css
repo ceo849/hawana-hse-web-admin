@@ -66,3 +66,11 @@ body {
     align-items: center;
   }
 }
+
+/* ===== Loading Animation (Phase 4.4) ===== */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
