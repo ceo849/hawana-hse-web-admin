@@ -6,13 +6,12 @@ type LoginBody = {
 };
 
 const CORE_API =
-  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+  (process.env.CORE_API_BASE_URL!).replace(/\/$/, "");
 
 export async function POST(req: Request) {
   try {
     let body: LoginBody = {};
 
-    // ===== Parse body safely =====
     try {
       body = (await req.json()) as LoginBody;
     } catch {
@@ -32,12 +31,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // ===== Call Core API =====
     const upstream = await fetch(`${CORE_API}/v1/auth/login`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        connection: "close", // ✅ FIX (حل التعليق)
       },
       body: JSON.stringify({ email, password }),
       cache: "no-store",
@@ -72,8 +69,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const res = NextResponse.json({ ok: true });
-
     const isProd = process.env.NODE_ENV === "production";
 
     const cookieOptions = {
@@ -82,6 +77,11 @@ export async function POST(req: Request) {
       secure: isProd,
       path: "/",
     };
+
+    const res = NextResponse.json({
+      ok: true,
+      accessToken, // ✅ ADDITIVE (مهم)
+    });
 
     res.cookies.set("access_token", String(accessToken), {
       ...cookieOptions,

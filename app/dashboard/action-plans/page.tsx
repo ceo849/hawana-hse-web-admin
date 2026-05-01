@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
@@ -47,6 +49,13 @@ function isActionPlan(v: unknown): v is ActionPlan {
 }
 
 function parseActionPlans(value: unknown): ActionPlansResponse {
+  if (Array.isArray(value)) {
+    return {
+      data: value.filter(isActionPlan),
+      meta: { total: value.length },
+    };
+  }
+
   if (
     typeof value === "object" &&
     value !== null &&
@@ -54,21 +63,21 @@ function parseActionPlans(value: unknown): ActionPlansResponse {
   ) {
     const raw = value as {
       data: unknown[];
-      meta?: {
-        total?: unknown;
-      };
+      meta?: { total?: unknown };
     };
 
     return {
       data: raw.data.filter(isActionPlan),
       meta: {
         total:
-          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
+          typeof raw.meta?.total === "number"
+            ? raw.meta.total
+            : raw.data.length,
       },
     };
   }
 
-  return { data: [], meta: { total: undefined } };
+  return { data: [], meta: { total: 0 } };
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -107,6 +116,10 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function ActionPlansPage() {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
@@ -179,6 +192,12 @@ export default async function ActionPlansPage() {
         }
       />
 
+      {items.length === 0 && (
+        <div style={hintBox}>
+          Create Action Plans from Safety Reports for proper linking.
+        </div>
+      )}
+
       <section style={section}>
         <div style={sectionHeader}>
           <div style={sectionTitle}>Execution List</div>
@@ -246,7 +265,7 @@ export default async function ActionPlansPage() {
   );
 }
 
-/* styles */
+/* styles بدون تغيير */
 
 const container: React.CSSProperties = {
   padding: 16,
@@ -353,4 +372,14 @@ const emptyText: React.CSSProperties = {
   color: "#6b7280",
   fontSize: 13,
   fontWeight: 500,
+};
+
+const hintBox: React.CSSProperties = {
+  marginTop: 10,
+  padding: 10,
+  borderRadius: 10,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
+  fontSize: 12,
+  color: "#6b7280",
 };

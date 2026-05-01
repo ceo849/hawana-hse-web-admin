@@ -1,14 +1,27 @@
 // app/dashboard/users/page.tsx
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
+import { headers, cookies } from "next/headers";
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import EmptyState from "@/components/ui/empty-state";
+import ErrorState from "@/components/ui/error-state";
+import SuccessState from "@/components/ui/success-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
+
+const container: React.CSSProperties = {
+  padding: 16,
+  fontFamily: "system-ui",
+  maxWidth: 680,
+  margin: "0 auto",
+};
 
 type Role =
   | "OWNER"
@@ -91,7 +104,16 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-export default async function UsersPage() {
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams?: { success?: string };
+}) {
+  noStore();
+
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
@@ -99,14 +121,14 @@ export default async function UsersPage() {
 
   const canShowCreateAction = role === "OWNER" || role === "ADMIN";
 
+  const success = String(searchParams?.success ?? "").trim();
+
   let res: Response;
 
   try {
-    res = await serverAppFetch(
-      "/api/users?page=1&limit=20",
-      token,
-      { cache: "no-store" }
-    );
+    res = await serverAppFetch("/api/users?page=1&limit=20", {
+      cache: "no-store",
+    });
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
@@ -117,9 +139,7 @@ export default async function UsersPage() {
     return (
       <div style={container}>
         <PageHeader title="Users" subtitle="User management" />
-        <div style={errorBox}>
-          Failed to load users (network/server error)
-        </div>
+        <ErrorState message="Failed to load users (network/server error)" />
       </div>
     );
   }
@@ -132,7 +152,7 @@ export default async function UsersPage() {
     return (
       <div style={container}>
         <PageHeader title="Users" subtitle="User management" />
-        <div style={errorBox}>Failed to load users</div>
+        <ErrorState message="Failed to load users" />
       </div>
     );
   }
@@ -156,6 +176,10 @@ export default async function UsersPage() {
           ) : undefined
         }
       />
+
+      {success && (
+        <SuccessState message="Operation completed successfully" />
+      )}
 
       <section style={section}>
         <div style={sectionHeader}>
@@ -188,7 +212,12 @@ export default async function UsersPage() {
                   <tbody>
                     {users.map((u) => (
                       <tr key={u.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                        <td style={td}>{u.fullName}</td>
+                        <td style={td}>
+                          {/* ✅ FIX */}
+                          <Link href={`/dashboard/users/${u.id}`} style={rowLink}>
+                            {u.fullName}
+                          </Link>
+                        </td>
                         <td style={emailCell}>{u.email}</td>
                         <td style={td}>
                           <RoleBadge role={u.role} />
@@ -217,7 +246,9 @@ export default async function UsersPage() {
                     <RoleBadge role={u.role} />
                   </div>
 
-                  <div style={userCompany}>Company: {u.companyId}</div>
+                  <div style={userCompany}>
+                    Company: {u.companyId}
+                  </div>
                 </Link>
               ))}
             </div>
@@ -228,14 +259,7 @@ export default async function UsersPage() {
   );
 }
 
-/* styles بدون تغيير */
-const container: React.CSSProperties = {
-  padding: 16,
-  fontFamily: "system-ui",
-  maxWidth: 680,
-  margin: "0 auto",
-};
-
+/* styles */
 const section: React.CSSProperties = {
   marginTop: 18,
   display: "grid",
@@ -244,9 +268,7 @@ const section: React.CSSProperties = {
 
 const sectionHeader: React.CSSProperties = {
   display: "flex",
-  alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
 };
 
 const sectionTitle: React.CSSProperties = {
@@ -258,104 +280,51 @@ const sectionTitle: React.CSSProperties = {
 const sectionMeta: React.CSSProperties = {
   fontSize: 12,
   color: "#9ca3af",
-  whiteSpace: "nowrap",
 };
 
 const headerAction: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
   padding: "8px 12px",
   borderRadius: 12,
   background: "#111827",
-  color: "#ffffff",
-  textDecoration: "none",
-  fontSize: 13,
-  fontWeight: 700,
+  color: "#fff",
 };
 
 const tableCard: React.CSSProperties = {
-  overflowX: "auto",
-  background: "#ffffff",
+  background: "#fff",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
-const th: React.CSSProperties = {
-  padding: "10px 8px",
-  fontSize: 12,
-  color: "#6b7280",
+const th: React.CSSProperties = { padding: 10 };
+const td: React.CSSProperties = { padding: 10 };
+
+const emailCell: React.CSSProperties = { ...td };
+const companyCell: React.CSSProperties = { ...td };
+
+const rowLink: React.CSSProperties = {
+  color: "#111827",
+  textDecoration: "none",
   fontWeight: 700,
-};
-
-const td: React.CSSProperties = {
-  padding: "10px 8px",
-  whiteSpace: "nowrap",
-  fontSize: 13,
-};
-
-const emailCell: React.CSSProperties = {
-  ...td,
-  maxWidth: 160,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-const companyCell: React.CSSProperties = {
-  ...td,
-  maxWidth: 180,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
 };
 
 const userCard: React.CSSProperties = {
   display: "block",
   padding: 14,
-  borderRadius: 16,
-  border: "1px solid #e5e7eb",
-  textDecoration: "none",
-  color: "inherit",
-  background: "#ffffff",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
 const userCardTop: React.CSSProperties = {
   display: "flex",
-  alignItems: "flex-start",
   justifyContent: "space-between",
-  gap: 12,
 };
 
 const userName: React.CSSProperties = {
-  fontWeight: 800,
-  fontSize: 15,
-  marginBottom: 4,
+  fontWeight: 700,
 };
 
 const userEmail: React.CSSProperties = {
   fontSize: 12,
-  color: "#6b7280",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
 };
 
 const userCompany: React.CSSProperties = {
-  marginTop: 10,
-  paddingTop: 10,
-  borderTop: "1px solid #f3f4f6",
   fontSize: 12,
-  color: "#9ca3af",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
-
-const errorBox: React.CSSProperties = {
-  color: "#991b1b",
-  background: "#fef2f2",
-  border: "1px solid #fecaca",
-  borderRadius: 12,
-  padding: 12,
-  marginTop: 12,
-  fontSize: 13,
 };

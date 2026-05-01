@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const body = await req.json();
 
   const CORE_API =
-    (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(
+    (process.env.CORE_API_BASE_URL!).replace(
       /\/$/,
       "",
     );

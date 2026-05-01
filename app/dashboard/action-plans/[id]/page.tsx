@@ -1,5 +1,7 @@
 // app/dashboard/action-plans/[id]/page.tsx
 
+import { headers, cookies } from "next/headers"; // ✅ FIX
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -94,6 +96,10 @@ export default async function ActionPlanPage({
   params,
   searchParams,
 }: PageProps) {
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
   const resolvedParams = await Promise.resolve(params);
   const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
   const id = normalizeId(resolvedParams?.id);
@@ -148,6 +154,33 @@ export default async function ActionPlanPage({
   const err = normalizeId(resolvedSearchParams?.err);
   const statusStyle = getStatusStyle(ap.status);
 
+  async function updateStatus(formData: FormData) {
+    "use server";
+
+    const tokenInner = await requireAccessToken();
+
+    const id = String(formData.get("id") ?? "").trim();
+    const status = String(formData.get("status") ?? "").trim();
+
+    const res = await serverAppFetch(
+      `/api/action-plans/${encodeURIComponent(id)}/status`,
+      tokenInner,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }
+    );
+
+    if (res.status === 401) redirect("/login");
+
+    if (!res.ok) {
+      redirect(`/dashboard/action-plans/${id}?err=STATUS_UPDATE_FAILED`);
+    }
+
+    redirect(`/dashboard/action-plans/${id}`);
+  }
+
   return (
     <div style={container}>
       <PageHeader
@@ -174,6 +207,21 @@ export default async function ActionPlanPage({
         {metricCard("Status", ap.status)}
         {metricCard("Due Date", formatDateDisplay(ap.dueDate))}
         {metricCard("Next Steps", nextStatuses.length)}
+      </div>
+
+      <div style={statusActionsRow}>
+        {nextStatuses.map((s) => (
+          <form key={s} action={updateStatus}>
+            <input type="hidden" name="id" value={ap.id} />
+            <input type="hidden" name="status" value={s} />
+
+            <button type="submit" style={statusBtn}>
+              {s === "IN_PROGRESS" && "Start"}
+              {s === "COMPLETED" && "Complete"}
+              {s === "VERIFIED" && "Verify"}
+            </button>
+          </form>
+        ))}
       </div>
 
       <div style={actionsRow}>
@@ -233,6 +281,21 @@ const actionsRow: React.CSSProperties = {
   marginTop: 20,
   display: "flex",
   gap: 10,
+};
+
+const statusActionsRow: React.CSSProperties = {
+  marginTop: 20,
+  display: "flex",
+  gap: 10,
+};
+
+const statusBtn: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 10,
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  cursor: "pointer",
 };
 
 const primaryLink: React.CSSProperties = {

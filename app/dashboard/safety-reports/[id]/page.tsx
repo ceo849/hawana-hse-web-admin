@@ -2,6 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
+import { headers, cookies } from "next/headers"; // ✅ FIX
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -48,6 +50,10 @@ export default async function SafetyReportPage({
   params,
   searchParams,
 }: PageProps) {
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
   const resolvedParams = await Promise.resolve(params);
   const resolvedSearch = await Promise.resolve(searchParams ?? {});
 
@@ -127,6 +133,15 @@ export default async function SafetyReportPage({
         <div><b>Created At:</b> {formatDate(report.createdAt)}</div>
       </div>
 
+      <div style={{ marginTop: 16 }}>
+        <Link
+          href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(report.id)}`}
+          style={createActionLink}
+        >
+          + Create Action Plan
+        </Link>
+      </div>
+
       <div style={actionsRow}>
         <Link href={`/dashboard/safety-reports/${report.id}/edit`} style={primaryLink}>
           Edit
@@ -143,7 +158,7 @@ export default async function SafetyReportPage({
 /* ================= STANDARD ================= */
 
 const container: React.CSSProperties = {
-  padding: 24, // ✅ unified
+  padding: 24,
   fontFamily: "system-ui",
   maxWidth: 760,
   margin: "0 auto",
@@ -178,4 +193,15 @@ const secondaryLink: React.CSSProperties = {
   border: "1px solid #ddd",
   textDecoration: "none",
   color: "#111",
+};
+
+const createActionLink: React.CSSProperties = {
+  display: "inline-block",
+  padding: "10px 14px",
+  borderRadius: 12,
+  background: "#111827",
+  color: "#ffffff",
+  textDecoration: "none",
+  fontWeight: 700,
+  fontSize: 13,
 };

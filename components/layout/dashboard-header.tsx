@@ -6,7 +6,7 @@ import LogoutButton from '@/app/dashboard/logout-button';
 
 type DashboardHeaderProps = {
   title: string;
-  onMenuClick: () => void;
+  onMenuClick?: () => void; // ✅ FIX: optional
 };
 
 type MenuPosition = {
@@ -110,7 +110,7 @@ export default function DashboardHeader({
           }}
         >
           <button
-            onClick={onMenuClick}
+            onClick={onMenuClick ?? (() => {})} // ✅ FIX
             style={{
               width: 40,
               height: 40,

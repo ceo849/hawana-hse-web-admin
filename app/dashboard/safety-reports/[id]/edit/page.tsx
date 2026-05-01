@@ -2,6 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
+import { headers, cookies } from "next/headers"; // ✅ FIX
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -62,6 +64,10 @@ export default async function EditSafetyReportPage({
   params,
   searchParams,
 }: PageProps) {
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const { id } = await params;
@@ -185,7 +191,7 @@ export default async function EditSafetyReportPage({
               name="title"
               defaultValue={report.title ?? ""}
               placeholder="Update report title"
-              required // ✅ ADD
+              required
               style={input}
             />
           </div>

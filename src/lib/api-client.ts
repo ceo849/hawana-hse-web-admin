@@ -15,15 +15,20 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// ✅ URL Builder (STRICT)
+// ✅ URL Builder (ROOT FIX — NO /v1 mismatch)
 function buildUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     throw new Error('Direct external URLs are not allowed');
   }
 
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  let cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-  // enforce API proxy only
+  // ✅ لو جاي /v1/... نحذفه
+  if (cleanPath.startsWith('/v1/')) {
+    cleanPath = cleanPath.replace(/^\/v1/, '');
+  }
+
+  // ✅ enforce /api/*
   if (!cleanPath.startsWith('/api/')) {
     return `/api${cleanPath}`;
   }
@@ -31,11 +36,10 @@ function buildUrl(path: string): string {
   return cleanPath;
 }
 
-// ❌ ARCH GUARD — Prevent direct Core / external access (ADDITIVE)
+// ❌ ARCH GUARD — Prevent direct Core access
 function enforceArchitecture(url: string) {
   if (
-    url.includes(':3001') ||     // direct core port
-    url.includes('/v1/') ||      // direct core prefix
+    url.includes(':3001') ||
     url.startsWith('http://') ||
     url.startsWith('https://')
   ) {
@@ -50,11 +54,7 @@ function enforceArchitecture(url: string) {
 
 // ✅ Debug
 function debugUrlTrace(url: string) {
-  if (url.includes('/api/v1')) {
-    console.error('🚨 ARCH VIOLATION DETECTED');
-    console.error('URL:', url);
-    console.trace();
-  }
+  console.log('API →', url);
 }
 
 function normalizeErrorMessage(err: ApiError): string {
@@ -83,14 +83,10 @@ async function request<T>(
 ): Promise<T> {
   const url = buildUrl(path);
 
-  // ✅ enforce architecture (ADDITIVE)
   enforceArchitecture(url);
-
-  // debug
   debugUrlTrace(url);
 
   const headers: Record<string, string> = {};
-
   const requestId = generateRequestId();
   headers['x-request-id'] = requestId;
 
@@ -107,7 +103,7 @@ async function request<T>(
     const response = await fetch(url, {
       method,
       headers,
-      credentials: 'include', // ✅ يعتمد على cookie فقط
+      credentials: 'include',
       signal: controller.signal,
       body: hasBody
         ? (typeof body === 'string' ? body : JSON.stringify(body))

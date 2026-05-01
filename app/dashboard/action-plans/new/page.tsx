@@ -2,6 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
+import { headers, cookies } from "next/headers"; // ✅ FIX
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -11,8 +13,8 @@ import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   searchParams?:
-    | { safetyReportId?: string; err?: string }
-    | Promise<{ safetyReportId?: string; err?: string }>;
+    | { safetyReportId?: string; reportId?: string; err?: string }
+    | Promise<{ safetyReportId?: string; reportId?: string; err?: string }>;
 };
 
 type UserLite = {
@@ -59,10 +61,18 @@ function userLabel(u: UserLite) {
 }
 
 export default async function NewActionPlanPage({ searchParams }: PageProps) {
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const sp = await Promise.resolve(searchParams ?? {});
+
+  const reportId = String(sp?.reportId ?? "").trim();
   const safetyReportId = String(sp?.safetyReportId ?? "").trim();
+  const effectiveInitialReportId = reportId || safetyReportId;
+
   const err = String(sp?.err ?? "").trim();
 
   let users: UserLite[] = [];
@@ -98,9 +108,9 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       formData.get("assignedToUserId") ?? ""
     ).trim();
 
-    const effectiveSafetyReportId = srId || safetyReportId;
+    const effectiveSafetyReportId = srId || effectiveInitialReportId;
 
-    const base = `/dashboard/action-plans/new?safetyReportId=${encodeURIComponent(
+    const base = `/dashboard/action-plans/new?reportId=${encodeURIComponent(
       effectiveSafetyReportId
     )}`;
 
@@ -147,7 +157,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       );
     }
 
-    redirect("/dashboard/action-plans");
+    redirect("/dashboard/action-plans?success=created");
   }
 
   return (
@@ -160,7 +170,17 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       {err && <ErrorState message={err} />}
 
       <form action={createActionPlan} style={form}>
-        <input type="hidden" name="safetyReportId" value={safetyReportId} />
+        <input
+          type="hidden"
+          name="safetyReportId"
+          value={effectiveInitialReportId}
+        />
+
+        {effectiveInitialReportId && (
+          <div style={infoBox}>
+            Linked to Safety Report: {effectiveInitialReportId}
+          </div>
+        )}
 
         <div style={card}>
           <div>
@@ -198,7 +218,7 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
             <label style={label}>Description</label>
             <textarea
               name="description"
-              rows={4} // ✅ reduced height
+              rows={4}
               placeholder="Describe the action plan"
               style={input}
             />
@@ -252,4 +272,12 @@ const primaryBtn: React.CSSProperties = {
   borderRadius: 10,
   background: "#111",
   color: "#fff",
+};
+
+const infoBox: React.CSSProperties = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  background: "#eef2ff",
+  border: "1px solid #c7d2fe",
+  fontSize: 13,
 };

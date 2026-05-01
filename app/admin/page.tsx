@@ -2,12 +2,18 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import ErrorState from "@/components/ui/error-state";
 
 export default async function AdminPage() {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
@@ -30,7 +36,7 @@ export default async function AdminPage() {
     );
   }
 
-  // ✅ ADD: backend validation (no logic, just ping)
+  // ✅ backend validation
   let res: Response;
 
   try {

@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
@@ -40,7 +41,17 @@ function isSafetyReport(value: unknown): value is SafetyReport {
   );
 }
 
+// ✅ FIX (unified parsing — same as ActionPlans)
 function parseReports(value: unknown): SafetyReportsResponse {
+  // CASE 1: array مباشرة
+  if (Array.isArray(value)) {
+    return {
+      data: value.filter(isSafetyReport),
+      meta: { total: value.length },
+    };
+  }
+
+  // CASE 2: { data: [] }
   if (
     typeof value === "object" &&
     value !== null &&
@@ -48,21 +59,21 @@ function parseReports(value: unknown): SafetyReportsResponse {
   ) {
     const raw = value as {
       data: unknown[];
-      meta?: {
-        total?: unknown;
-      };
+      meta?: { total?: unknown };
     };
 
     return {
       data: raw.data.filter(isSafetyReport),
       meta: {
         total:
-          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
+          typeof raw.meta?.total === "number"
+            ? raw.meta.total
+            : raw.data.length,
       },
     };
   }
 
-  return { data: [], meta: { total: undefined } };
+  return { data: [], meta: { total: 0 } };
 }
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -188,7 +199,7 @@ export default async function SafetyReportsPage() {
   );
 }
 
-/* STYLES — MATCH USERS PAGE */
+/* styles */
 
 const container: React.CSSProperties = {
   padding: 16,
@@ -259,10 +270,4 @@ const date: React.CSSProperties = {
   marginTop: 4,
   fontSize: 12,
   color: "#9ca3af",
-};
-
-const emptyBox: React.CSSProperties = {
-  padding: 14,
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
 };

@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -8,6 +10,10 @@ import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
 export default async function AdminPage() {
+  // ✅ CRITICAL FIX (SSR cookies binding)
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
   const payload = decodeJwtPayload(token);
   const role = String(payload?.role ?? "UNKNOWN").toUpperCase();

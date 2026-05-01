@@ -1,8 +1,15 @@
+// app/dashboard/companies/[id]/page.tsx
+
+export const dynamic = "force-dynamic";
+
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 
 type CompanyCounts = {
   users: number;
@@ -94,23 +101,49 @@ export default async function CompanyOverviewPage({
   params,
   searchParams,
 }: PageProps) {
+  // ✅ ROOT FIX (mandatory for Next.js caching layer)
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
   const { id } = await params;
 
   const sp = searchParams ? await Promise.resolve(searchParams) : {};
   const error = String(sp?.error ?? "").trim();
 
-  const companyRes = await serverAppFetch(
-    `/api/companies/${encodeURIComponent(id)}`,
-    token
-  );
+  let companyRes: Response;
+
+  try {
+    companyRes = await serverAppFetch(
+      `/api/companies/${encodeURIComponent(id)}`,
+      token
+    );
+  } catch (err: any) {
+    if (err?.message === "SESSION_EXPIRED") {
+      redirect("/login");
+    }
+
+    console.error("Company Fetch Error:", err);
+
+    return (
+      <div style={{ padding: 24, maxWidth: 960 }}>
+        <PageHeader title="Company Overview" subtitle="Tenant insight" />
+        <ErrorState message="Failed to load company (network/server error)" />
+      </div>
+    );
+  }
 
   if (companyRes.status === 401) {
     redirect("/login");
   }
 
   if (!companyRes.ok) {
-    redirect("/dashboard/companies");
+    return (
+      <div style={{ padding: 24, maxWidth: 960 }}>
+        <PageHeader title="Company Overview" subtitle="Tenant insight" />
+        <ErrorState message="Failed to load company" />
+      </div>
+    );
   }
 
   const company = parseCompany(await companyRes.json());
@@ -169,33 +202,17 @@ export default async function CompanyOverviewPage({
     <div style={{ padding: 24, maxWidth: 960 }}>
       <PageHeader title="Company Overview" subtitle="Tenant insight" />
 
-      {error && <div style={{ color: "red" }}>{error}</div>}
+      {error && <ErrorState message={error} />}
 
       <div style={{ marginBottom: 16 }}>
-        <div>
-          <b>ID:</b> {company.id}
-        </div>
-        <div>
-          <b>Name:</b> {company.name}
-        </div>
-        <div>
-          <b>Country:</b> {company.country ?? "-"}
-        </div>
-        <div>
-          <b>Industry:</b> {company.industry ?? "-"}
-        </div>
-        <div>
-          <b>Created:</b> {formatDate(company.createdAt)}
-        </div>
+        <div><b>ID:</b> {company.id}</div>
+        <div><b>Name:</b> {company.name}</div>
+        <div><b>Country:</b> {company.country ?? "-"}</div>
+        <div><b>Industry:</b> {company.industry ?? "-"}</div>
+        <div><b>Created:</b> {formatDate(company.createdAt)}</div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 12,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
         {metricCard("Users", company._count.users)}
         {metricCard("Sites", company._count.sitesProjects)}
         {metricCard("Reports", company._count.safetyReports)}

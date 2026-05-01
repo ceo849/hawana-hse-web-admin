@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
@@ -66,7 +68,7 @@ function statusStyle(status: string): React.CSSProperties {
     return {
       background: "#fee2e2",
       color: "#991b1b",
-      border: "1px solid #fecaca", // ✅ FIX
+      border: "1px solid #fecaca",
     };
   }
 
@@ -97,6 +99,10 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function BillingPage() {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   await requireAccessToken();
 
   async function startCheckout(formData: FormData) {
@@ -221,6 +227,8 @@ export default async function BillingPage() {
     </div>
   );
 }
+
+/* styles بدون تغيير */
 
 const container: React.CSSProperties = {
   padding: 16,

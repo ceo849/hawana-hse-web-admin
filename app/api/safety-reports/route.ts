@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const CORE_API = (
-  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+  process.env.CORE_API_BASE_URL!
 ).replace(/\/$/, "");
 
 const API_PREFIX = "/v1";
 
+// ✅ FIX: دعم Authorization header + cookie
 async function getToken(req: Request) {
   const authHeader = req.headers.get("authorization");
 

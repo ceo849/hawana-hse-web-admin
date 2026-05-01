@@ -1,5 +1,9 @@
 // app/dashboard/sites-projects/new/page.tsx
 
+export const dynamic = "force-dynamic";
+
+import { headers, cookies } from "next/headers"; // ✅ FIX
+
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAccessToken } from "@/lib/server-auth";
@@ -13,6 +17,10 @@ type PageProps = {
 };
 
 export default async function NewSiteProjectPage({ searchParams }: PageProps) {
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
   await requireAccessToken();
 
   const sp = await Promise.resolve(searchParams ?? {});
@@ -81,7 +89,7 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
       );
     }
 
-    redirect("/dashboard/sites-projects");
+    redirect("/dashboard/sites-projects?success=created");
   }
 
   return (

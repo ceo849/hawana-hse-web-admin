@@ -64,6 +64,9 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
+  // ✅ ensure request context (important for Next SSR stability)
+  await cookies();
+
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value ?? null;
 
@@ -92,9 +95,7 @@ export default async function DashboardLayout({
       }}
     >
       <DashboardShell role={role} email={email} navItems={navItems}>
-        <MobileContainer>
-          <Suspense fallback={null}>{children}</Suspense>
-        </MobileContainer>
+        <MobileContainer>{children}</MobileContainer>
 
         <Suspense fallback={null}>
           <MobileBottomNav />

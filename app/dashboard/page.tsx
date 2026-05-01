@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ FIX
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
@@ -22,29 +23,87 @@ type DashboardDto = {
   };
 };
 
+const USE_NEW_DASHBOARD = false;
+
 export default async function DashboardPage() {
-  const token = await requireAccessToken(); // ✅ FIX
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
+  await requireAccessToken();
 
   let dashboard: DashboardDto = {};
 
   try {
-    const dashboardRes = await serverAppFetch(
-      "/api/dashboard",
-      token, // ✅ FIX
-      {
-        cache: "no-store",
+    if (!USE_NEW_DASHBOARD) {
+      const dashboardRes = await serverAppFetch(
+        "/api/dashboard",
+        {
+          cache: "no-store",
+        }
+      );
+
+      if (dashboardRes.status === 401) {
+        redirect("/login");
       }
-    );
 
-    if (dashboardRes.status === 401) {
-      redirect("/login");
+      if (!dashboardRes.ok) {
+        throw new Error("DASHBOARD_FETCH_FAILED");
+      }
+
+      dashboard = await dashboardRes.json();
     }
 
-    if (!dashboardRes.ok) {
-      throw new Error("DASHBOARD_FETCH_FAILED");
-    }
+    if (USE_NEW_DASHBOARD) {
+      const [
+        usersRes,
+        companiesRes,
+        actionPlansRes,
+        reportsRes,
+      ] = await Promise.all([
+        serverAppFetch("/api/users?limit=1", { cache: "no-store" }),
+        serverAppFetch("/api/companies?limit=1", { cache: "no-store" }),
+        serverAppFetch("/api/action-plans?limit=1", { cache: "no-store" }),
+        serverAppFetch("/api/safety-reports?limit=1", { cache: "no-store" }),
+      ]);
 
-    dashboard = await dashboardRes.json();
+      if (
+        usersRes.status === 401 ||
+        companiesRes.status === 401 ||
+        actionPlansRes.status === 401 ||
+        reportsRes.status === 401
+      ) {
+        redirect("/login");
+      }
+
+      const usersJson = usersRes.ok ? await usersRes.json() : null;
+      const companiesJson = companiesRes.ok ? await companiesRes.json() : null;
+      const actionPlansJson = actionPlansRes.ok
+        ? await actionPlansRes.json()
+        : null;
+      const reportsJson = reportsRes.ok
+        ? await reportsRes.json()
+        : null;
+
+      dashboard = {
+        users: usersJson?.meta?.total ?? 0,
+        companies: companiesJson?.meta?.total ?? 0,
+        actionPlans: actionPlansJson?.meta?.total ?? 0,
+        reports: reportsJson?.meta?.total ?? 0,
+        reportStats: {
+          open:
+            reportsJson?.data?.filter((r: any) => r.status === "OPEN").length ??
+            0,
+          inProgress:
+            reportsJson?.data?.filter(
+              (r: any) => r.status === "IN_PROGRESS"
+            ).length ?? 0,
+          closed:
+            reportsJson?.data?.filter((r: any) => r.status === "CLOSED").length ??
+            0,
+        },
+      };
+    }
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
@@ -78,13 +137,22 @@ export default async function DashboardPage() {
           <ActionButton href="/dashboard/safety-reports/new">
             + Safety Report
           </ActionButton>
+
+          <ActionButton href="/dashboard/safety-reports">
+            + Action Plan (from Report)
+          </ActionButton>
+
           <ActionButton href="/dashboard/action-plans/new">
             + Action Plan
           </ActionButton>
+
           <ActionButton href="/dashboard/sites-projects/new">
             + Site / Project
           </ActionButton>
-          <ActionButton href="/dashboard/users/new">+ User</ActionButton>
+
+          <ActionButton href="/dashboard/users/new">
+            + User
+          </ActionButton>
         </div>
       </section>
 
@@ -115,6 +183,7 @@ export default async function DashboardPage() {
   );
 }
 
+/* styles */
 const container: React.CSSProperties = {
   padding: 16,
   fontFamily: "system-ui",
@@ -139,14 +208,4 @@ const sectionTitle: React.CSSProperties = {
   fontSize: 13,
   color: "#6b7280",
   letterSpacing: "-0.01em",
-};
-
-const errorBox: React.CSSProperties = {
-  color: "#991b1b",
-  background: "#fef2f2",
-  border: "1px solid #fecaca",
-  borderRadius: 12,
-  padding: 12,
-  marginTop: 12,
-  fontSize: 13,
 };

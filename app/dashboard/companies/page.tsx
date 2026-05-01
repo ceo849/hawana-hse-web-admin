@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
@@ -34,12 +35,27 @@ type CompaniesResponse = {
 };
 
 function parseCompaniesResponse(value: unknown): CompaniesResponse {
+  if (Array.isArray(value)) {
+    return {
+      data: value as CompanyDto[],
+      meta: {
+        page: 1,
+        limit: value.length,
+        total: value.length,
+        totalPages: 1,
+      },
+    };
+  }
+
   if (
     typeof value === "object" &&
     value !== null &&
     Array.isArray((value as { data?: unknown }).data)
   ) {
-    const raw = value as CompaniesResponse;
+    const raw = value as {
+      data: CompanyDto[];
+      meta?: CompaniesMeta;
+    };
 
     return {
       data: raw.data,
@@ -49,7 +65,12 @@ function parseCompaniesResponse(value: unknown): CompaniesResponse {
 
   return {
     data: [],
-    meta: undefined,
+    meta: {
+      page: 1,
+      limit: 0,
+      total: 0,
+      totalPages: 1,
+    },
   };
 }
 
@@ -135,8 +156,8 @@ export default async function CompaniesPage({
 
   const companies = json.data;
   const meta = json.meta ?? {
-    page,
-    limit,
+    page: 1,
+    limit: 0,
     total: 0,
     totalPages: 1,
   };
@@ -207,7 +228,7 @@ export default async function CompaniesPage({
 
             <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
               {companies.map((c) => (
-                <Link
+        <Link
                   key={c.id}
                   href={`/dashboard/companies/${c.id}`}
                   style={companyCard}
@@ -246,7 +267,7 @@ export default async function CompaniesPage({
   );
 }
 
-/* styles بدون تغيير */
+/* styles */
 
 const container: React.CSSProperties = {
   padding: 16,
@@ -289,7 +310,7 @@ const tableCard: React.CSSProperties = {
   background: "#fff",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
-  overflowX: "auto" as const,
+  overflowX: "auto",
 };
 
 const td: React.CSSProperties = {
@@ -319,6 +340,8 @@ const badgeStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   background: "#f3f4f6",
+  color: "#111827",
+  whiteSpace: "nowrap",
 };
 
 const companyCard: React.CSSProperties = {

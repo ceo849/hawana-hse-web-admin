@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CORE_BASE_URL = (
-  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+  process.env.CORE_API_BASE_URL!
 ).replace(/\/$/, "");
 
 const API_PREFIX = "/v1";

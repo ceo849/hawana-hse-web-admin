@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -12,8 +13,14 @@ type SidebarProps = {
   role: string;
   email?: string;
   navItems?: SidebarNavItem[];
+
   isOpen: boolean;
-  onClose: () => void;
+
+  // ✅ FIX: optional بدل required
+  onClose?: () => void;
+
+  open?: boolean;
+  setOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 function getIcon(label: string) {
@@ -70,7 +77,7 @@ export default function Sidebar({
     <>
       {isOpen && (
         <div
-          onClick={onClose}
+          onClick={() => onClose?.()} // ✅ FIX
           style={{
             position: 'fixed',
             inset: 0,
@@ -81,7 +88,6 @@ export default function Sidebar({
       )}
 
       <aside
-        data-sidebar
         style={{
           position: 'fixed',
           top: 0,
@@ -98,7 +104,6 @@ export default function Sidebar({
           transition: 'transform 0.25s ease',
           boxShadow: isOpen ? '8px 0 24px rgba(0,0,0,0.16)' : 'none',
           overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
         }}
       >
         <div style={{ marginBottom: 16 }}>
@@ -118,8 +123,7 @@ export default function Sidebar({
             </div>
 
             <button
-              onClick={onClose}
-              aria-label="Close sidebar"
+              onClick={() => onClose?.()} // ✅ FIX
               style={{
                 width: 36,
                 height: 36,
@@ -149,14 +153,7 @@ export default function Sidebar({
               {role}
             </div>
             {email && (
-              <div
-                style={{
-                  marginTop: 3,
-                  color: '#4b5563',
-                  fontSize: 12,
-                  wordBreak: 'break-word',
-                }}
-              >
+              <div style={{ marginTop: 3, color: '#4b5563', fontSize: 12 }}>
                 {email}
               </div>
             )}
@@ -171,10 +168,7 @@ export default function Sidebar({
                   fontSize: 10,
                   fontWeight: 800,
                   color: '#9ca3af',
-                  letterSpacing: 0.9,
-                  textTransform: 'uppercase',
                   marginBottom: 7,
-                  paddingLeft: 4,
                 }}
               >
                 {group}
@@ -190,7 +184,8 @@ export default function Sidebar({
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={onClose}
+                      onClick={() => onClose?.()} // ✅ FIX
+                      prefetch={false}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -205,10 +200,9 @@ export default function Sidebar({
                           : '1px solid #f3f4f6',
                         background: isActive ? '#111827' : '#f9fafb',
                         color: isActive ? '#ffffff' : '#111827',
-                        minHeight: 42,
                       }}
                     >
-                      <span style={{ fontSize: 16, width: 22 }}>
+                      <span style={{ width: 22 }}>
                         {getIcon(item.label)}
                       </span>
                       <span>{item.label}</span>
@@ -220,14 +214,7 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div
-          style={{
-            marginTop: 'auto',
-            paddingTop: 16,
-            fontSize: 11,
-            color: '#9ca3af',
-          }}
-        >
+        <div style={{ marginTop: 'auto', paddingTop: 16, fontSize: 11 }}>
           Hawana HSE · SaaS Admin
         </div>
       </aside>

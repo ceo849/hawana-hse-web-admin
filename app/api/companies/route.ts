@@ -1,15 +1,35 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 const CORE_API = (
-  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+  process.env.CORE_API_BASE_URL!
 ).replace(/\/$/, "");
 
 const API_PREFIX = "/v1";
 
-async function getToken() {
-  const cookieStore = await cookies();
-  return cookieStore.get("access_token")?.value ?? null;
+// ✅ FIX: استخدام request بدل cookies()
+function getToken(req: Request): string | null {
+  // 1) Authorization header
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.replace("Bearer ", "").trim();
+  }
+
+  // 2) Raw cookie header
+  const cookieHeader = req.headers.get("cookie");
+  if (cookieHeader) {
+    const cookies = Object.fromEntries(
+      cookieHeader.split("; ").map((c) => {
+        const [k, ...v] = c.split("=");
+        return [k, v.join("=")];
+      })
+    );
+
+    if (cookies["access_token"]) {
+      return cookies["access_token"];
+    }
+  }
+
+  return null;
 }
 
 function buildUpstreamUrl(search: string = "") {
@@ -36,7 +56,7 @@ async function buildProxyResponse(upstream: Response) {
 // =========================
 export async function GET(req: Request) {
   try {
-    const token = await getToken();
+    const token = getToken(req);
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -69,7 +89,7 @@ export async function GET(req: Request) {
 // =========================
 export async function POST(req: Request) {
   try {
-    const token = await getToken();
+    const token = getToken(req);
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

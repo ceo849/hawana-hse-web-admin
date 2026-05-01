@@ -2,6 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
+import { headers, cookies } from "next/headers"; // ✅ FIX
+
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
@@ -56,6 +58,10 @@ function formatSiteProjectLabel(site: SiteProject): string {
 export default async function NewSafetyReportPage({
   searchParams,
 }: PageProps) {
+  // ✅ ROOT FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const resolvedSearchParams = searchParams
@@ -69,7 +75,7 @@ export default async function NewSafetyReportPage({
 
   try {
     const res = await serverAppFetch("/api/sites-projects", token, {
-      cache: "no-store", // ✅ consistency
+      cache: "no-store",
     });
 
     if (res.status === 401) redirect("/login");
@@ -134,7 +140,7 @@ export default async function NewSafetyReportPage({
       );
     }
 
-    redirect("/dashboard/safety-reports");
+    redirect("/dashboard/safety-reports?success=created");
   }
 
   return (
@@ -176,7 +182,7 @@ export default async function NewSafetyReportPage({
             <label style={label}>Description</label>
             <textarea
               name="description"
-              rows={4} // ✅ reduced
+              rows={4}
               placeholder="Describe the safety report"
               style={input}
             />
@@ -189,7 +195,7 @@ export default async function NewSafetyReportPage({
   );
 }
 
-/* styles (standardized) */
+/* styles */
 
 const container: React.CSSProperties = {
   padding: 24,

@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
@@ -12,6 +14,10 @@ type PageProps = {
 };
 
 export default async function NewCompanyPage({ searchParams }: PageProps) {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   await requireAccessToken();
 
   const resolvedSearchParams = searchParams
@@ -78,7 +84,8 @@ export default async function NewCompanyPage({ searchParams }: PageProps) {
       );
     }
 
-    redirect("/dashboard/companies");
+    // ✅ ADD (success feedback)
+    redirect("/dashboard/companies?success=created");
   }
 
   return (

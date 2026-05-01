@@ -2,12 +2,17 @@
 
 import { NextResponse } from "next/server";
 
-const CORE_API =
-  (process.env.CORE_API_BASE_URL ?? "http://127.0.0.1:3001")
-    .replace(/\/$/, "");
-
 export async function GET() {
   try {
+    const CORE_API = process.env.CORE_API_BASE_URL!;
+
+    if (!CORE_API) {
+      return NextResponse.json(
+        { ok: false, message: "CORE_API_BASE_URL missing" },
+        { status: 500 }
+      );
+    }
+
     const upstream = await fetch(`${CORE_API}/v1/health`, {
       method: "GET",
       cache: "no-store",

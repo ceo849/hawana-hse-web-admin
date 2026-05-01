@@ -1,6 +1,8 @@
 // app/dashboard/users/new/page.tsx
 
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
@@ -33,6 +35,10 @@ function extractErrorMessage(data: unknown): string {
 }
 
 export default async function NewUserPage({ searchParams }: PageProps) {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const resolvedSearchParams = searchParams

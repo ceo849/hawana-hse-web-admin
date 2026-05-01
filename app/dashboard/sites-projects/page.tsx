@@ -4,8 +4,11 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
+import ErrorState from "@/components/ui/error-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 
@@ -111,6 +114,10 @@ function statusStyle(status: string): React.CSSProperties {
 }
 
 export default async function SitesProjectsPage() {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
 
   const payload = decodeJwtPayload(token);
@@ -140,9 +147,7 @@ export default async function SitesProjectsPage() {
           title="Sites / Projects"
           subtitle="Operational sites management"
         />
-        <div style={errorBox}>
-          Failed to load sites/projects (network/server error)
-        </div>
+        <ErrorState message="Failed to load sites/projects (network/server error)" />
       </div>
     );
   }
@@ -170,7 +175,7 @@ export default async function SitesProjectsPage() {
           title="Sites / Projects"
           subtitle="Operational sites management"
         />
-        <div style={errorBox}>Failed to load sites/projects</div>
+        <ErrorState message="Failed to load sites/projects" />
       </div>
     );
   }
@@ -259,7 +264,8 @@ export default async function SitesProjectsPage() {
   );
 }
 
-/* styles */
+/* styles بدون تغيير */
+
 const container: React.CSSProperties = { padding: 16, fontFamily: "system-ui", maxWidth: 680, margin: "0 auto" };
 const section: React.CSSProperties = { marginTop: 18, display: "grid", gap: 10 };
 const sectionHeader: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 };

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers, cookies } from "next/headers"; // ✅ ADD
+
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
@@ -76,6 +78,10 @@ export default async function UserOverviewPage({
   params,
   searchParams,
 }: PageProps) {
+  // ✅ CRITICAL FIX
+  headers();
+  cookies();
+
   const token = await requireAccessToken();
   const { id } = await params;
 

@@ -1,8 +1,8 @@
-// app/dashboard/action-plans/[id]/edit/page.tsx
+// app/dashboard/sites-projects/[id]/edit/page.tsx
 
 export const dynamic = "force-dynamic";
 
-import { headers, cookies } from "next/headers"; // ✅ FIX
+import { headers, cookies } from "next/headers"; // ✅ SSR FIX
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,18 +16,18 @@ type PageProps = {
   searchParams?: { error?: string } | Promise<{ error?: string }>;
 };
 
-type ActionPlan = {
+type SiteProject = {
   id: string;
-  title: string;
-  description?: string | null;
-  status?: string | null;
+  name: string;
+  location: string | null;
+  status: string;
 };
 
 function normalize(v: unknown) {
   return String(v ?? "").trim();
 }
 
-export default async function EditActionPlanPage({
+export default async function EditSiteProjectPage({
   params,
   searchParams,
 }: PageProps) {
@@ -39,7 +39,7 @@ export default async function EditActionPlanPage({
   const resolvedSearch = await Promise.resolve(searchParams ?? {});
 
   const id = normalize(resolvedParams?.id);
-  if (!id) redirect("/dashboard/action-plans");
+  if (!id) redirect("/dashboard/sites-projects");
 
   const token = await requireAccessToken();
 
@@ -47,25 +47,22 @@ export default async function EditActionPlanPage({
 
   try {
     r = await serverAppFetch(
-      `/api/action-plans/${encodeURIComponent(id)}`,
+      `/api/sites-projects/${encodeURIComponent(id)}`,
       token,
       { cache: "no-store" }
     );
   } catch (err: any) {
-    if (err?.message === "SESSION_EXPIRED") {
-      redirect("/login");
-    }
+    if (err?.message === "SESSION_EXPIRED") redirect("/login");
 
-    console.error("Edit Action Plan Fetch Error:", err);
+    console.error("Edit SiteProject Fetch Error:", err);
 
     return (
       <div style={container}>
         <PageHeader
-          title="Edit Action Plan"
-          subtitle="Update the action plan title and description"
+          title="Edit Site / Project"
+          subtitle="Update site or project details"
         />
-
-        <ErrorState message="Failed to load action plan (network/server error)" />
+        <ErrorState message="Failed to load site/project (network/server error)" />
       </div>
     );
   }
@@ -76,52 +73,48 @@ export default async function EditActionPlanPage({
     return (
       <div style={container}>
         <PageHeader
-          title="Edit Action Plan"
-          subtitle="Update the action plan title and description"
+          title="Edit Site / Project"
+          subtitle="Update site or project details"
         />
-
-        <ErrorState message="Failed to load action plan" />
+        <ErrorState message="Failed to load site/project" />
       </div>
     );
   }
 
-  const ap = (await r.json()) as ActionPlan;
+  const site = await r.json();
 
   const error = normalize(resolvedSearch?.error);
-  const status = normalize(ap.status).toUpperCase();
 
-  if (status === "VERIFIED") {
-    redirect(`/dashboard/action-plans/${id}`);
-  }
-
-  async function updateActionPlan(formData: FormData) {
+  async function updateSiteProject(formData: FormData) {
     "use server";
 
     const tokenInner = await requireAccessToken();
 
-    const title = normalize(formData.get("title"));
-    const description = normalize(formData.get("description"));
+    const name = normalize(formData.get("name"));
+    const location = normalize(formData.get("location"));
+    const status = normalize(formData.get("status"));
 
-    if (!title) {
+    if (!name) {
       redirect(
-        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
-          "Title is required"
+        `/dashboard/sites-projects/${id}/edit?error=${encodeURIComponent(
+          "Name is required"
         )}`
       );
     }
 
+    const payload: Record<string, string | null> = {
+      name,
+      location: location || null,
+      status,
+    };
+
     const res = await serverAppFetch(
-      `/api/action-plans/${encodeURIComponent(id)}`,
+      `/api/sites-projects/${encodeURIComponent(id)}`,
       tokenInner,
       {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          description: description || null,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       }
     );
 
@@ -130,56 +123,65 @@ export default async function EditActionPlanPage({
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       redirect(
-        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
+        `/dashboard/sites-projects/${id}/edit?error=${encodeURIComponent(
           `Update failed (${res.status}) ${text}`
         )}`
       );
     }
 
-    redirect(`/dashboard/action-plans/${id}`);
+    redirect(`/dashboard/sites-projects/${id}`);
   }
 
   return (
     <div style={container}>
       <PageHeader
-        title="Edit Action Plan"
-        subtitle="Update the action plan title and description"
+        title="Edit Site / Project"
+        subtitle="Update site or project details"
       />
 
       {error && <ErrorState message={error} />}
 
-      <form action={updateActionPlan} style={form}>
+      <form action={updateSiteProject} style={form}>
         <div style={card}>
           <div>
-            <label style={label}>Title</label>
+            <label style={label}>Name</label>
             <input
-              name="title"
-              defaultValue={ap.title}
+              name="name"
+              defaultValue={site.name}
               required
-              placeholder="Update action plan title"
               style={input}
             />
           </div>
 
           <div>
-            <label style={label}>Description</label>
-            <textarea
-              name="description"
-              defaultValue={ap.description ?? ""}
-              rows={4}
-              placeholder="Update description"
+            <label style={label}>Location</label>
+            <input
+              name="location"
+              defaultValue={site.location ?? ""}
               style={input}
             />
+          </div>
+
+          <div>
+            <label style={label}>Status</label>
+            <select
+              name="status"
+              defaultValue={site.status ?? "ACTIVE"}
+              style={input}
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
           </div>
         </div>
 
         <div style={actionsRow}>
           <button type="submit" style={primaryBtn}>
-            Update Action Plan
+            Update Site / Project
           </button>
 
           <Link
-            href={`/dashboard/action-plans/${ap.id}`}
+            href={`/dashboard/sites-projects/${id}`}
             style={cancelLink}
           >
             Cancel
@@ -190,7 +192,7 @@ export default async function EditActionPlanPage({
   );
 }
 
-/* ================= STANDARDIZED STYLES ================= */
+/* ================= STANDARD ================= */
 
 const container: React.CSSProperties = {
   padding: 24,

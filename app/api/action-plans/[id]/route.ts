@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const CORE_API = (
-  process.env.CORE_API_BASE_URL ?? "http://localhost:3001"
+  process.env.CORE_API_BASE_URL!
 ).replace(/\/$/, "");
 
 const API_PREFIX = "/v1";

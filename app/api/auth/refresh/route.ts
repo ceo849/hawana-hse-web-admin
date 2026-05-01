@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 const CORE_API =
-  (process.env.CORE_API_BASE_URL ?? "http://localhost:3001").replace(/\/$/, "");
+  (process.env.CORE_API_BASE_URL!).replace(/\/$/, "");
 
 type RefreshResponse = {
   access_token?: string;
