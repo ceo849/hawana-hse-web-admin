@@ -54,12 +54,22 @@ function parseCompaniesResponse(value: unknown): CompaniesResponse {
   ) {
     const raw = value as {
       data: CompanyDto[];
-      meta?: CompaniesMeta;
+      meta?: Partial<CompaniesMeta>;
     };
+
+    const total = Number(raw.meta?.total ?? raw.data.length) || raw.data.length;
+    const page = Number(raw.meta?.page ?? 1) || 1;
+    const limit = Number(raw.meta?.limit ?? raw.data.length) || raw.data.length || 1;
+    const totalPages = Number(raw.meta?.totalPages ?? 1) || 1;
 
     return {
       data: raw.data,
-      meta: raw.meta,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
     };
   }
 
@@ -162,8 +172,12 @@ export default async function CompaniesPage({
     totalPages: 1,
   };
 
-  const prevPage = Math.max(1, meta.page - 1);
-  const nextPage = Math.min(Math.max(meta.totalPages, 1), meta.page + 1);
+  const safePage = Number(meta.page) || 1;
+  const safeTotalPages = Number(meta.totalPages) || 1;
+  const safeTotal = Number(meta.total) || companies.length;
+
+  const prevPage = Math.max(1, safePage - 1);
+  const nextPage = Math.min(Math.max(safeTotalPages, 1), safePage + 1);
 
   return (
     <div style={container}>
@@ -182,7 +196,7 @@ export default async function CompaniesPage({
       <section style={section}>
         <div style={sectionHeader}>
           <div style={sectionTitle}>Companies Register</div>
-          <div style={sectionMeta}>Total: {meta.total}</div>
+          <div style={sectionMeta}>Total: {safeTotal}</div>
         </div>
 
         {companies.length === 0 ? (
@@ -228,7 +242,7 @@ export default async function CompaniesPage({
 
             <div className="mobile-only" style={{ display: "grid", gap: 10 }}>
               {companies.map((c) => (
-        <Link
+                <Link
                   key={c.id}
                   href={`/dashboard/companies/${c.id}`}
                   style={companyCard}
@@ -255,7 +269,7 @@ export default async function CompaniesPage({
           </Link>
 
           <span style={pageText}>
-            Page {meta.page} / {Math.max(meta.totalPages, 1)}
+            Page {safePage} / {Math.max(safeTotalPages, 1)}
           </span>
 
           <Link href={buildDashboardCompaniesUrl(nextPage)} style={pageLink}>
