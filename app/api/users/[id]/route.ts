@@ -80,3 +80,46 @@ export async function GET(_req: Request, { params }: RouteContext) {
     );
   }
 }
+
+/* =========================
+   ✅ NEW — PATCH (Additive)
+========================= */
+
+export async function PATCH(req: Request, { params }: RouteContext) {
+  try {
+    const token = await getToken();
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = await resolveId(params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing user id" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.text();
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body,
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (PATCH /users/[id]):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
+}
