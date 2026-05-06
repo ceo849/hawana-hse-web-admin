@@ -62,15 +62,23 @@ function formatDateDisplay(iso?: string | null): string {
   return new Intl.DateTimeFormat("en-GB").format(d);
 }
 
+// ✅ UI Mapping ONLY (no business logic)
+const STATUS_UI_MAP: Record<string, { background: string; color: string }> = {
+  OPEN: { background: "#f3f4f6", color: "#111" },
+  IN_PROGRESS: { background: "#dbeafe", color: "#1d4ed8" },
+  COMPLETED: { background: "#dcfce7", color: "#166534" },
+  VERIFIED: { background: "#bbf7d0", color: "#14532d" },
+};
+
 function getStatusStyle(status?: string | null) {
   const s = String(status ?? "").toUpperCase();
 
-  if (s === "OPEN") return { background: "#f3f4f6", color: "#111" };
-  if (s === "IN_PROGRESS") return { background: "#dbeafe", color: "#1d4ed8" };
-  if (s === "COMPLETED") return { background: "#dcfce7", color: "#166534" };
-  if (s === "VERIFIED") return { background: "#bbf7d0", color: "#14532d" };
-
-  return { background: "#f3f4f6", color: "#111" };
+  return (
+    STATUS_UI_MAP[s] ?? {
+      background: "#f3f4f6",
+      color: "#111",
+    }
+  );
 }
 
 function formatAssignedUser(
@@ -96,7 +104,6 @@ export default async function ActionPlanPage({
   params,
   searchParams,
 }: PageProps) {
-  // ✅ ROOT FIX
   headers();
   cookies();
 

@@ -41,9 +41,7 @@ function isSafetyReport(value: unknown): value is SafetyReport {
   );
 }
 
-// ✅ FIX (unified parsing — same as ActionPlans)
 function parseReports(value: unknown): SafetyReportsResponse {
-  // CASE 1: array مباشرة
   if (Array.isArray(value)) {
     return {
       data: value.filter(isSafetyReport),
@@ -51,7 +49,6 @@ function parseReports(value: unknown): SafetyReportsResponse {
     };
   }
 
-  // CASE 2: { data: [] }
   if (
     typeof value === "object" &&
     value !== null &&
@@ -76,25 +73,22 @@ function parseReports(value: unknown): SafetyReportsResponse {
   return { data: [], meta: { total: 0 } };
 }
 
+// ✅ UI Mapping (NO BUSINESS LOGIC)
+const STATUS_UI_MAP: Record<string, { bg: string; color: string }> = {
+  OPEN: { bg: "#fef3c7", color: "#92400e" },
+  IN_PROGRESS: { bg: "#dbeafe", color: "#1e40af" },
+  COMPLETED: { bg: "#dcfce7", color: "#166534" },
+  VERIFIED: { bg: "#dcfce7", color: "#166534" },
+  CLOSED: { bg: "#dcfce7", color: "#166534" },
+};
+
 function StatusBadge({ status }: { status: string | null }) {
   const s = status ?? "UNKNOWN";
 
-  let bg = "#e5e7eb";
-  let color = "#111827";
-
-  if (s === "OPEN") {
-    bg = "#fef3c7";
-    color = "#92400e";
-  } else if (s === "IN_PROGRESS") {
-    bg = "#dbeafe";
-    color = "#1e40af";
-  } else if (s === "COMPLETED") {
-    bg = "#dcfce7";
-    color = "#166534";
-  } else if (s === "VERIFIED" || s === "CLOSED") {
-    bg = "#dcfce7";
-    color = "#166534";
-  }
+  const ui = STATUS_UI_MAP[s] ?? {
+    bg: "#e5e7eb",
+    color: "#111827",
+  };
 
   return (
     <span
@@ -103,8 +97,8 @@ function StatusBadge({ status }: { status: string | null }) {
         borderRadius: "999px",
         fontSize: 12,
         fontWeight: 700,
-        background: bg,
-        color,
+        background: ui.bg,
+        color: ui.color,
         whiteSpace: "nowrap",
       }}
     >

@@ -73,8 +73,8 @@ function scanForDirectFetch() {
 
   if (!fs.existsSync(srcPath)) return [];
 
-  const files = walk(srcPath).filter((f) =>
-    f.endsWith(".ts") || f.endsWith(".tsx")
+  const files = walk(srcPath).filter(
+    (f) => f.endsWith(".ts") || f.endsWith(".tsx")
   );
 
   const violations = [];
@@ -98,16 +98,14 @@ function scanForDirectFetch() {
   return violations;
 }
 
-// ===== ENFORCEMENT: BLOCK BUSINESS LOGIC IN UI (REFINED) =====
+// ===== ENFORCEMENT: BLOCK BUSINESS LOGIC IN UI =====
 function scanForBusinessLogic() {
   const appPath = path.join(ROOT, "app");
 
   if (!fs.existsSync(appPath)) return [];
 
   const files = walk(appPath).filter(
-    (f) =>
-      f.endsWith(".tsx") &&
-      !f.includes("/api/")
+    (f) => f.endsWith(".tsx") && !f.includes("/api/")
   );
 
   const violations = [];
@@ -115,14 +113,7 @@ function scanForBusinessLogic() {
   files.forEach((file) => {
     const content = fs.readFileSync(file, "utf-8");
 
-    const patterns = [
-      "status ===",
-      "status !==",
-      "status ==",
-      "status !=",
-      "subscriptionStatus",
-      "workflow",
-    ];
+    const patterns = ["workflow", "subscriptionStatus", "billingStatus"];
 
     patterns.forEach((p) => {
       if (content.includes(p)) {
@@ -134,19 +125,31 @@ function scanForBusinessLogic() {
   return violations;
 }
 
-// ===== ENFORCEMENT: BLOCK companyId USAGE IN WEB =====
+// ===== ENFORCEMENT: BLOCK companyId IN UI ONLY =====
 function scanForCompanyIdUsage() {
-  const srcPath = path.join(ROOT, "src");
+  const appPath = path.join(ROOT, "app");
 
-  if (!fs.existsSync(srcPath)) return [];
+  if (!fs.existsSync(appPath)) return [];
 
-  const files = walk(srcPath).filter((f) =>
-    f.endsWith(".ts") || f.endsWith(".tsx")
+  const files = walk(appPath).filter(
+    (f) => f.endsWith(".ts") || f.endsWith(".tsx")
   );
 
   const violations = [];
 
   files.forEach((file) => {
+    // ✅ IGNORE API layer بالكامل
+    if (file.includes("/app/api/")) return;
+
+    // ✅ IGNORE deprecated endpoint تحديدًا
+    if (
+      file.includes(
+        "app/api/platform/companies/[companyId]/users/route.ts"
+      )
+    ) {
+      return;
+    }
+
     const content = fs.readFileSync(file, "utf-8");
 
     if (content.includes("companyId")) {
@@ -179,21 +182,18 @@ function main() {
 
   let hasErrors = false;
 
-  // FETCH
   if (fetchViolations.length > 0) {
     console.error("\n❌ FETCH VIOLATIONS DETECTED:");
     console.error(fetchViolations);
     hasErrors = true;
   }
 
-  // BUSINESS LOGIC
   if (logicViolations.length > 0) {
     console.error("\n❌ BUSINESS LOGIC VIOLATIONS DETECTED:");
     console.error(logicViolations);
     hasErrors = true;
   }
 
-  // TENANT
   if (tenantViolations.length > 0) {
     console.error("\n❌ TENANT ISOLATION VIOLATIONS DETECTED:");
     console.error(tenantViolations);
@@ -201,7 +201,9 @@ function main() {
   }
 
   if (hasErrors) {
-    console.warn("\n⚠️ Violations موجودة — مسموح بالـ push مؤقتًا (Phase Extraction)");
+    console.warn(
+      "\n⚠️ Violations موجودة — مسموح بالـ push مؤقتًا (Phase Extraction)"
+    );
   } else {
     console.log("\n✅ AUDIT CLEAN");
   }

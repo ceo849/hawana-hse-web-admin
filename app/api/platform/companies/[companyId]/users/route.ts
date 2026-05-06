@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
-const CORE_API = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
+const CORE_API = process.env.CORE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 const API_PREFIX = "/v1";
+
+// ⚠️ DEPRECATED PROXY (LOCKED)
+// This endpoint is intentionally disabled.
+// companyId must NEVER come from request path/body.
+// Backend must extract companyId from JWT only.
 
 function getToken(req: Request): string | null {
   const authHeader = req.headers.get("authorization");
@@ -44,59 +49,13 @@ async function buildProxyResponse(upstream: Response) {
 }
 
 export async function POST(
-  req: Request,
-  context: { params: Promise<{ companyId: string }> }
+  _req: Request,
+  _context: { params: Promise<{ companyId: string }> }
 ) {
-  try {
-    const token = getToken(req);
-
-    if (!token) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { companyId } = await context.params;
-
-    if (!companyId) {
-      return NextResponse.json(
-        { message: "Missing companyId" },
-        { status: 400 }
-      );
-    }
-
-    let body: unknown;
-
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { message: "Invalid request body" },
-        { status: 400 }
-      );
-    }
-
-    const upstream = await fetch(
-      `${CORE_API}${API_PREFIX}/platform/companies/${companyId}/users`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(body),
-        cache: "no-store",
-      }
-    );
-
-    return buildProxyResponse(upstream);
-  } catch (error) {
-    console.error("API PROXY ERROR (POST /platform/companies/:companyId/users):", error);
-
-    return NextResponse.json(
-      { message: "Upstream service unavailable" },
-      { status: 503 }
-    );
-  }
+  return NextResponse.json(
+    {
+      error: "Deprecated endpoint. Use /api/users instead.",
+    },
+    { status: 410 }
+  );
 }

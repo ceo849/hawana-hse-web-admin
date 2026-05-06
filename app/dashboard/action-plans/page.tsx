@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { headers, cookies } from "next/headers"; // ✅ ADD
+import { headers, cookies } from "next/headers";
 
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
@@ -12,6 +12,9 @@ import ErrorState from "@/components/ui/error-state";
 import EmptyState from "@/components/ui/empty-state";
 import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
+
+// ✅ FIX: rename import to avoid conflict
+import { parseActionPlans as parseActionPlansExternal } from "@/src/lib/parsers/action-plans.parser";
 
 type Role =
   | "OWNER"
@@ -80,23 +83,19 @@ function parseActionPlans(value: unknown): ActionPlansResponse {
   return { data: [], meta: { total: 0 } };
 }
 
-function StatusBadge({ status }: { status: string }) {
-  let bg = "#e5e7eb";
-  let color = "#111827";
+// ✅ UI Mapping (Status)
+const STATUS_UI_MAP: Record<string, { bg: string; color: string }> = {
+  OPEN: { bg: "#fef3c7", color: "#92400e" },
+  IN_PROGRESS: { bg: "#dbeafe", color: "#1e40af" },
+  COMPLETED: { bg: "#dcfce7", color: "#166534" },
+  VERIFIED: { bg: "#bbf7d0", color: "#14532d" },
+};
 
-  if (status === "OPEN") {
-    bg = "#fef3c7";
-    color = "#92400e";
-  } else if (status === "IN_PROGRESS") {
-    bg = "#dbeafe";
-    color = "#1e40af";
-  } else if (status === "COMPLETED") {
-    bg = "#dcfce7";
-    color = "#166534";
-  } else if (status === "VERIFIED") {
-    bg = "#bbf7d0";
-    color = "#14532d";
-  }
+function StatusBadge({ status }: { status: string }) {
+  const ui = STATUS_UI_MAP[status] ?? {
+    bg: "#e5e7eb",
+    color: "#111827",
+  };
 
   return (
     <span
@@ -105,8 +104,8 @@ function StatusBadge({ status }: { status: string }) {
         borderRadius: "999px",
         fontSize: 12,
         fontWeight: 700,
-        background: bg,
-        color,
+        background: ui.bg,
+        color: ui.color,
         whiteSpace: "nowrap",
       }}
     >
@@ -115,8 +114,17 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ✅ UI Capability Map (NO BUSINESS LOGIC)
+const ROLE_UI_CAPABILITIES: Record<Role, { canCreate: boolean }> = {
+  OWNER: { canCreate: true },
+  ADMIN: { canCreate: true },
+  MANAGER: { canCreate: true },
+  WORKER: { canCreate: false },
+  VIEWER: { canCreate: false },
+  UNKNOWN: { canCreate: false },
+};
+
 export default async function ActionPlansPage() {
-  // ✅ CRITICAL FIX
   headers();
   cookies();
 
@@ -126,7 +134,7 @@ export default async function ActionPlansPage() {
   const role: Role = (payload?.role as Role) ?? "UNKNOWN";
 
   const canShowCreateAction =
-    role === "OWNER" || role === "ADMIN" || role === "MANAGER";
+    ROLE_UI_CAPABILITIES[role]?.canCreate ?? false;
 
   let res: Response;
 
@@ -134,9 +142,7 @@ export default async function ActionPlansPage() {
     res = await serverAppFetch(
       "/api/action-plans?page=1&limit=20",
       token,
-      {
-        cache: "no-store",
-      }
+      { cache: "no-store" }
     );
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
@@ -149,7 +155,7 @@ export default async function ActionPlansPage() {
       <div style={container}>
         <PageHeader
           title="Action Plans"
-          subtitle="Track execution and workflow"
+          subtitle="Track execution"
         />
         <ErrorState message="Failed to load action plans (network/server error)" />
       </div>
@@ -165,7 +171,7 @@ export default async function ActionPlansPage() {
       <div style={container}>
         <PageHeader
           title="Action Plans"
-          subtitle="Track execution and workflow"
+          subtitle="Track execution"
         />
         <ErrorState message="Failed to load action plans" />
       </div>
@@ -173,7 +179,9 @@ export default async function ActionPlansPage() {
   }
 
   const json = await res.json();
-  const parsed = parseActionPlans(json);
+
+  // ✅ USE external parser safely
+  const parsed = parseActionPlansExternal(json);
 
   const items = parsed.data;
   const total = parsed.meta?.total ?? 0;
@@ -182,7 +190,7 @@ export default async function ActionPlansPage() {
     <div style={container}>
       <PageHeader
         title="Action Plans"
-        subtitle="Track execution and workflow"
+        subtitle="Track execution"
         action={
           canShowCreateAction ? (
             <Link href="/dashboard/action-plans/new" style={headerAction}>
@@ -221,13 +229,10 @@ export default async function ActionPlansPage() {
                     {items.map((i) => (
                       <tr key={i.id} style={{ borderTop: "1px solid #f3f4f6" }}>
                         <td style={titleCell}>{i.title}</td>
-
                         <td style={td}>
                           <StatusBadge status={i.status} />
                         </td>
-
                         <td style={mutedCell}>{i.description ?? "-"}</td>
-
                         <td style={td}>
                           <Link
                             href={`/dashboard/action-plans/${i.id}`}
@@ -265,7 +270,7 @@ export default async function ActionPlansPage() {
   );
 }
 
-/* styles بدون تغيير */
+/* styles */
 
 const container: React.CSSProperties = {
   padding: 16,
@@ -356,22 +361,6 @@ const cardDesc: React.CSSProperties = {
   fontSize: 13,
   color: "#6b7280",
   marginTop: 6,
-};
-
-const emptyBox: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
-  padding: 16,
-  background: "#fff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const emptyText: React.CSSProperties = {
-  color: "#6b7280",
-  fontSize: 13,
-  fontWeight: 500,
 };
 
 const hintBox: React.CSSProperties = {

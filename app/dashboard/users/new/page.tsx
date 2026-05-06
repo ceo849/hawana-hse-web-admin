@@ -1,5 +1,7 @@
 // app/dashboard/users/new/page.tsx
 
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 
@@ -10,11 +12,6 @@ import ErrorState from "@/components/ui/error-state";
 
 type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
-};
-
-type CompanyOption = {
-  id: string;
-  name: string;
 };
 
 function extractErrorMessage(data: unknown): string {
@@ -39,43 +36,6 @@ function extractErrorMessage(data: unknown): string {
   return "Create user failed";
 }
 
-function parseCompanies(value: unknown): CompanyOption[] {
-  if (!Array.isArray(value)) {
-    if (typeof value === "object" && value !== null) {
-      const candidate = value as Record<string, unknown>;
-
-      if (Array.isArray(candidate.data)) {
-        return parseCompanies(candidate.data);
-      }
-
-      if (Array.isArray(candidate.items)) {
-        return parseCompanies(candidate.items);
-      }
-    }
-
-    return [];
-  }
-
-  return value
-    .map((item) => {
-      if (typeof item !== "object" || item === null) {
-        return null;
-      }
-
-      const c = item as Record<string, unknown>;
-
-      if (typeof c.id !== "string" || typeof c.name !== "string") {
-        return null;
-      }
-
-      return {
-        id: c.id,
-        name: c.name,
-      };
-    })
-    .filter((item): item is CompanyOption => item !== null);
-}
-
 export default async function NewUserPage({ searchParams }: PageProps) {
   headers();
   cookies();
@@ -88,25 +48,6 @@ export default async function NewUserPage({ searchParams }: PageProps) {
 
   const error = String(resolvedSearchParams?.error ?? "").trim();
 
-  let companies: CompanyOption[] = [];
-
-  try {
-    const companiesRes = await serverAppFetch("/api/companies", token, {
-      cache: "no-store",
-    });
-
-    if (companiesRes.status === 401) {
-      redirect("/login");
-    }
-
-    if (companiesRes.ok) {
-      const companiesJson = await companiesRes.json().catch(() => []);
-      companies = parseCompanies(companiesJson);
-    }
-  } catch {
-    companies = [];
-  }
-
   async function createUser(formData: FormData) {
     "use server";
 
@@ -117,15 +58,13 @@ export default async function NewUserPage({ searchParams }: PageProps) {
       email: String(formData.get("email") ?? "").trim(),
       password: String(formData.get("password") ?? ""),
       role: String(formData.get("role") ?? "").trim(),
-      companyId: String(formData.get("companyId") ?? "").trim(),
     };
 
     if (
       !payload.fullName ||
       !payload.email ||
       !payload.password ||
-      !payload.role ||
-      !payload.companyId
+      !payload.role
     ) {
       redirect(
         `/dashboard/users/new?error=${encodeURIComponent(
@@ -136,16 +75,11 @@ export default async function NewUserPage({ searchParams }: PageProps) {
 
     try {
       const res = await serverAppFetch(
-        `/api/platform/companies/${payload.companyId}/users`,
+        `/api/users`,
         tokenInner,
         {
           method: "POST",
-          body: JSON.stringify({
-            fullName: payload.fullName,
-            email: payload.email,
-            password: payload.password,
-            role: payload.role,
-          }),
+          body: JSON.stringify(payload),
           headers: {
             "Content-Type": "application/json",
           },
@@ -196,20 +130,6 @@ export default async function NewUserPage({ searchParams }: PageProps) {
 
       <form action={createUser} style={form}>
         <div style={card}>
-          <div>
-            <label style={label}>Company</label>
-            <select name="companyId" required defaultValue="" style={input}>
-              <option value="" disabled>
-                Select company
-              </option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label style={label}>Full Name</label>
             <input

@@ -36,7 +36,6 @@ type UserDto = {
   email: string;
   fullName: string;
   role: Role;
-  companyId: string;
   createdAt: string;
 };
 
@@ -205,7 +204,6 @@ export default async function UsersPage({
                       <th align="left" style={th}>Name</th>
                       <th align="left" style={th}>Email</th>
                       <th align="left" style={th}>Role</th>
-                      <th align="left" style={th}>Company</th>
                     </tr>
                   </thead>
 
@@ -213,7 +211,6 @@ export default async function UsersPage({
                     {users.map((u) => (
                       <tr key={u.id} style={{ borderTop: "1px solid #f3f4f6" }}>
                         <td style={td}>
-                          {/* ✅ FIX */}
                           <Link href={`/dashboard/users/${u.id}`} style={rowLink}>
                             {u.fullName}
                           </Link>
@@ -222,7 +219,6 @@ export default async function UsersPage({
                         <td style={td}>
                           <RoleBadge role={u.role} />
                         </td>
-                        <td style={companyCell}>{u.companyId}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -244,10 +240,6 @@ export default async function UsersPage({
                     </div>
 
                     <RoleBadge role={u.role} />
-                  </div>
-
-                  <div style={userCompany}>
-                    Company: {u.companyId}
                   </div>
                 </Link>
               ))}
@@ -299,7 +291,6 @@ const th: React.CSSProperties = { padding: 10 };
 const td: React.CSSProperties = { padding: 10 };
 
 const emailCell: React.CSSProperties = { ...td };
-const companyCell: React.CSSProperties = { ...td };
 
 const rowLink: React.CSSProperties = {
   color: "#111827",
@@ -322,9 +313,5 @@ const userName: React.CSSProperties = {
 };
 
 const userEmail: React.CSSProperties = {
-  fontSize: 12,
-};
-
-const userCompany: React.CSSProperties = {
   fontSize: 12,
 };

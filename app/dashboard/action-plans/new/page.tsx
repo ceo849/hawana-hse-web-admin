@@ -61,7 +61,6 @@ function userLabel(u: UserLite) {
 }
 
 export default async function NewActionPlanPage({ searchParams }: PageProps) {
-  // ✅ ROOT FIX
   headers();
   cookies();
 

@@ -16,7 +16,6 @@ type User = {
   email: string;
   fullName: string;
   role: UserRole;
-  companyId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,7 +34,6 @@ function isUser(v: unknown): v is User {
     typeof c.email === "string" &&
     typeof c.fullName === "string" &&
     typeof c.role === "string" &&
-    typeof c.companyId === "string" &&
     typeof c.createdAt === "string" &&
     typeof c.updatedAt === "string"
   );
@@ -172,13 +170,11 @@ export default async function UserOverviewPage({
         <div><b>ID:</b> {user.id}</div>
         <div><b>Name:</b> {user.fullName}</div>
         <div><b>Email:</b> {user.email}</div>
-        <div><b>Company:</b> {user.companyId}</div>
         <div><b>Created:</b> {formatDate(user.createdAt)}</div>
       </div>
 
       <div style={metricsGrid}>
         {metricCard("Role", user.role)}
-        {metricCard("Company", user.companyId)}
         {metricCard("Email", user.email)}
       </div>
 

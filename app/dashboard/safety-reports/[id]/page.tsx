@@ -29,14 +29,22 @@ function normalize(v: unknown) {
   return String(v ?? "").trim();
 }
 
+// ✅ UI Mapping (no business logic)
+const STATUS_UI_MAP: Record<string, { background: string; color: string }> = {
+  OPEN: { background: "#fef3c7", color: "#92400e" },
+  IN_PROGRESS: { background: "#dbeafe", color: "#1e40af" },
+  CLOSED: { background: "#dcfce7", color: "#166534" },
+};
+
 function getStatusStyle(status?: string | null) {
   const s = String(status ?? "").toUpperCase();
 
-  if (s === "OPEN") return { background: "#fef3c7", color: "#92400e" };
-  if (s === "IN_PROGRESS") return { background: "#dbeafe", color: "#1e40af" };
-  if (s === "CLOSED") return { background: "#dcfce7", color: "#166534" };
-
-  return { background: "#e5e7eb", color: "#111827" };
+  return (
+    STATUS_UI_MAP[s] ?? {
+      background: "#e5e7eb",
+      color: "#111827",
+    }
+  );
 }
 
 function formatDate(iso?: string | null) {
