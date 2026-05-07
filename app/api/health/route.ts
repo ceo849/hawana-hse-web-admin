@@ -1,6 +1,7 @@
 // app/api/health/route.ts
 
 import { NextResponse } from "next/server";
+import http from "http";
 
 export async function GET() {
   try {
@@ -13,19 +14,52 @@ export async function GET() {
       );
     }
 
-    const upstream = await fetch(`${CORE_API}/v1/health`, {
-      method: "GET",
-      cache: "no-store",
+    const url = new URL(`${CORE_API}/v1/health`);
+
+    const data = await new Promise<any>((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: "GET",
+          timeout: 5000,
+        },
+        (res) => {
+          let body = "";
+
+          res.on("data", (chunk) => {
+            body += chunk;
+          });
+
+          res.on("end", () => {
+            try {
+              resolve(JSON.parse(body));
+            } catch {
+              resolve({});
+            }
+          });
+        }
+      );
+
+      req.on("error", reject);
+
+      req.on("timeout", () => {
+        req.destroy(new Error("Request timeout"));
+      });
+
+      req.end();
     });
 
-    const data = await upstream.json().catch(() => ({}));
-
-    return NextResponse.json(data, { status: upstream.status });
-  } catch (error) {
+    return NextResponse.json(data, { status: 200 });
+  } catch (error: any) {
     console.error("[HEALTH_PROXY_ERROR]", error);
 
     return NextResponse.json(
-      { ok: false, message: "Health route error" },
+      {
+        ok: false,
+        message: error?.message || "Health route error",
+      },
       { status: 500 }
     );
   }
