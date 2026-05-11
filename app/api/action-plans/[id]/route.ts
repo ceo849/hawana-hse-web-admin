@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const CORE_API = (
-  process.env.CORE_API_BASE_URL!
-).replace(/\/$/, "");
-
+const CORE_API = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
 const API_PREFIX = "/v1";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-async function getToken() {
+// ✅ FIX: unified token extraction (cookies + Bearer fallback)
+async function getToken(req: NextRequest) {
   const cookieStore = await cookies();
-  return cookieStore.get("access_token")?.value ?? null;
+  const cookieToken = cookieStore.get("access_token")?.value ?? null;
+
+  const authHeader = req.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : null;
+
+  return cookieToken || bearerToken;
 }
 
 function buildUpstreamUrl(id: string) {
@@ -45,9 +50,9 @@ async function resolveId(params: RouteContext["params"]) {
   return String(id).trim();
 }
 
-export async function GET(_req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, context: RouteContext) {
   try {
-    const token = await getToken();
+    const token = await getToken(req);
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

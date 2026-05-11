@@ -71,16 +71,17 @@ export async function POST(req: Request) {
 
     const isProd = process.env.NODE_ENV === "production";
 
+    // ✅ FIX (ADD ONLY)
     const cookieOptions = {
       httpOnly: true,
-      sameSite: "lax" as const,
-      secure: isProd,
+      sameSite: (isProd ? "none" : "lax") as "lax" | "none",
+      secure: isProd, // required when sameSite=none
       path: "/",
     };
 
     const res = NextResponse.json({
       ok: true,
-      accessToken, // ✅ ADDITIVE (مهم)
+      accessToken, // additive فقط
     });
 
     res.cookies.set("access_token", String(accessToken), {

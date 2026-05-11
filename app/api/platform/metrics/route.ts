@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { api } from "@/lib/core-api";
+
+const CORE_API = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value ?? null;
-
-  console.log("PLATFORM_METRICS_TOKEN:", token);
 
   if (!token) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // ✅ FIX: direct call to Core (no baseUrl)
-    const url = api("/platform/metrics");
-
-    console.log("FINAL URL:", url);
+    // ✅ FIX: add /v1 prefix
+    const url = `${CORE_API}/v1/platform/metrics`;
 
     const upstream = await fetch(url, {
       method: "GET",
@@ -28,9 +25,6 @@ export async function GET(req: NextRequest) {
 
     const bodyText = await upstream.text();
 
-    console.log("PLATFORM_METRICS_STATUS:", upstream.status);
-    console.log("PLATFORM_METRICS_RESPONSE:", bodyText);
-
     return new NextResponse(bodyText, {
       status: upstream.status,
       headers: {
@@ -40,8 +34,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[PLATFORM_METRICS_PROXY_ERROR]", error);
-
     return NextResponse.json(
       { message: "Failed to fetch platform metrics" },
       { status: 500 },

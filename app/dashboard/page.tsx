@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import { headers, cookies } from "next/headers"; // ✅ FIX
+import { headers, cookies } from "next/headers";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
@@ -26,7 +26,6 @@ type DashboardDto = {
 const USE_NEW_DASHBOARD = false;
 
 export default async function DashboardPage() {
-  // ✅ ROOT FIX
   headers();
   cookies();
 
@@ -36,12 +35,9 @@ export default async function DashboardPage() {
 
   try {
     if (!USE_NEW_DASHBOARD) {
-      const dashboardRes = await serverAppFetch(
-        "/api/dashboard",
-        {
-          cache: "no-store",
-        }
-      );
+      const dashboardRes = await serverAppFetch("/api/dashboard", {
+        cache: "no-store",
+      });
 
       if (dashboardRes.status === 401) {
         redirect("/login");
@@ -109,7 +105,7 @@ export default async function DashboardPage() {
       redirect("/login");
     }
 
-    console.error("Dashboard Fetch Error:", err);
+    console.error("FINAL ERROR:", err);
 
     return (
       <div style={container}>
@@ -117,7 +113,6 @@ export default async function DashboardPage() {
           title="Dashboard"
           subtitle="Platform and HSE operational overview"
         />
-
         <ErrorState message="Failed to load dashboard data (network/server error)" />
       </div>
     );

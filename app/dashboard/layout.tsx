@@ -17,46 +17,14 @@ type NavItem = SidebarNavItem & {
 };
 
 const NAV: NavItem[] = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
-  },
-  {
-    href: "/dashboard/users",
-    label: "Users",
-    roles: ["OWNER", "ADMIN"],
-  },
-  {
-    href: "/dashboard/companies",
-    label: "Companies",
-    roles: ["OWNER"],
-  },
-  {
-    href: "/dashboard/sites-projects",
-    label: "Sites / Projects",
-    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
-  },
-  {
-    href: "/dashboard/safety-reports",
-    label: "Safety Reports",
-    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
-  },
-  {
-    href: "/dashboard/action-plans",
-    label: "Action Plans",
-    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
-  },
-  {
-    href: "/dashboard/billing",
-    label: "Billing",
-    roles: ["OWNER", "ADMIN"],
-  },
-  {
-    href: "/dashboard/admin",
-    label: "Admin Panel",
-    roles: ["OWNER"],
-  },
+  { href: "/dashboard", label: "Dashboard", roles: ["OWNER","ADMIN","MANAGER","WORKER","VIEWER"] },
+  { href: "/dashboard/users", label: "Users", roles: ["OWNER","ADMIN"] },
+  { href: "/dashboard/companies", label: "Companies", roles: ["OWNER"] },
+  { href: "/dashboard/sites-projects", label: "Sites / Projects", roles: ["OWNER","ADMIN","MANAGER","WORKER","VIEWER"] },
+  { href: "/dashboard/safety-reports", label: "Safety Reports", roles: ["OWNER","ADMIN","MANAGER","WORKER","VIEWER"] },
+  { href: "/dashboard/action-plans", label: "Action Plans", roles: ["OWNER","ADMIN","MANAGER","WORKER","VIEWER"] },
+  { href: "/dashboard/billing", label: "Billing", roles: ["OWNER","ADMIN"] },
+  { href: "/dashboard/admin", label: "Admin Panel", roles: ["OWNER"] },
 ];
 
 export default async function DashboardLayout({
@@ -64,7 +32,6 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  // ✅ ensure request context (important for Next SSR stability)
   await cookies();
 
   const cookieStore = await cookies();
@@ -74,16 +41,28 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const payload = decodeJwtPayload(accessToken);
-  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const email = payload?.email ?? undefined;
+  // 🔥 ROOT FIX هنا
+  let role: Role = "UNKNOWN";
+  let email: string | undefined = undefined;
 
-  const navItems: SidebarNavItem[] = NAV.filter((item) =>
-    item.roles.includes(role),
-  ).map(({ href, label }) => ({
-    href,
-    label,
-  }));
+  try {
+    const payload = decodeJwtPayload(accessToken);
+
+    role = (payload?.role as Role) ?? "UNKNOWN";
+    email = payload?.email ?? undefined;
+  } catch (err) {
+    console.error("JWT DECODE FAILED:", err);
+
+    // 🔒 controlled failure بدل crash
+    redirect("/login");
+  }
+
+  const navItems: SidebarNavItem[] = NAV
+    .filter((item) => item.roles.includes(role))
+    .map(({ href, label }) => ({
+      href,
+      label,
+    }));
 
   return (
     <div

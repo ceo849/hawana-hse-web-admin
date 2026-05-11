@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const CORE_BASE_URL = (
-  process.env.CORE_API_BASE_URL!
-).replace(/\/$/, "");
-
+const CORE_BASE_URL = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
 const API_PREFIX = "/v1";
 
-// ✅ FIX: دعم Authorization header + cookie
-async function getToken(req: Request) {
-  const authHeader = req.headers.get("authorization");
-
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.replace("Bearer ", "").trim();
-  }
-
-  const cookieStore = await cookies();
-  return cookieStore.get("access_token")?.value ?? null;
+// ✅ unified token extraction
+async function getToken(): Promise<string | null> {
+  const store = await cookies();
+  return store.get("access_token")?.value ?? null;
 }
 
 function buildUpstreamUrl(search: string = "") {
@@ -44,7 +35,7 @@ async function buildProxyResponse(upstream: Response) {
 // =========================
 export async function GET(req: Request) {
   try {
-    const token = await getToken(req);
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -77,7 +68,7 @@ export async function GET(req: Request) {
 // =========================
 export async function POST(req: Request) {
   try {
-    const token = await getToken(req);
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 type ServerAppFetchOptions = RequestInit;
 
@@ -22,14 +22,25 @@ function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-// ===== Base URL (✅ FIX DOCKER NETWORK) =====
-async function getWebBaseUrl(): Promise<string> {
-  // ✅ 1) Docker internal routing (PRIMARY)
-  if (process.env.APP_BASE_URL) {
-    return process.env.APP_BASE_URL;
+// ===== Convert /api → /v1 =====
+function toCorePath(path: string): string {
+  return path.replace(/^\/api/, "/v1");
+}
+
+// ===== Extract Token (FIXED) =====
+async function extractToken(): Promise<string | null> {
+  const store = await cookies();
+  return store.get("access_token")?.value ?? null;
+}
+
+// ===== Base URL (STABLE) =====
+async function getBaseUrl(): Promise<string> {
+  // 1) Core direct (Docker / Production internal)
+  if (process.env.CORE_API_BASE_URL) {
+    return process.env.CORE_API_BASE_URL.replace(/\/$/, "");
   }
 
-  // ✅ 2) SSR header fallback (local/dev/browser)
+  // 2) SSR → Proxy via host
   const h = await headers();
   const host = h.get("host");
 
@@ -37,8 +48,8 @@ async function getWebBaseUrl(): Promise<string> {
     return `http://${host}`;
   }
 
-  // ✅ 3) Final fallback (Docker service name)
-  return "http://web:3000";
+  // 3) Fallback (still proxy-safe via /api in path)
+  return "http://localhost:3005";
 }
 
 // ===== Session =====
@@ -46,17 +57,7 @@ function throwSessionExpired(): never {
   throw new Error("SESSION_EXPIRED");
 }
 
-// ===== Cookie Header =====
-async function getCookieHeader(): Promise<string> {
-  const cookieStore = await cookies();
-
-  return cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-}
-
-// ===== MAIN EXPORT (✅ SUPPORT OLD + NEW SIGNATURE) =====
+// ===== MAIN =====
 export async function serverAppFetch(
   path: string,
   arg2?: ServerAppFetchOptions | string,
@@ -66,27 +67,32 @@ export async function serverAppFetch(
 
   let options: ServerAppFetchOptions = {};
 
-  // ✅ دعم الشكل القديم: (path, token, options)
   if (typeof arg2 === "string" && arg3) {
     options = arg3;
-  }
-  // ✅ دعم الشكل الجديد: (path, options)
-  else if (typeof arg2 === "object") {
+  } else if (typeof arg2 === "object") {
     options = arg2 || {};
   }
 
-  const baseUrl = await getWebBaseUrl();
-  const finalUrl = `${baseUrl}${normalizePath(path)}`;
+  const isCoreDirect = !!process.env.CORE_API_BASE_URL;
 
-  const cookieHeader = await getCookieHeader();
+  const baseUrl = await getBaseUrl();
+
+  const finalPath = isCoreDirect
+    ? toCorePath(normalizePath(path))
+    : normalizePath(path);
+
+  const finalUrl = `${baseUrl}${finalPath}`;
+
+  console.log("FINAL_URL:", finalUrl);
+
+  const token = await extractToken();
 
   const res = await fetch(finalUrl, {
     ...options,
     headers: {
       ...Object.fromEntries(new Headers(options.headers || {})),
-      cookie: cookieHeader,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    credentials: "include",
     cache: "no-store",
   });
 

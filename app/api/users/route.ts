@@ -1,35 +1,13 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-const CORE_API = (
-  process.env.CORE_API_BASE_URL!
-).replace(/\/$/, "");
-
+const CORE_API = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
 const API_PREFIX = "/v1";
 
-// ✅ FIX: دعم Authorization header + cookie (header-first, then raw cookie, ثم fallback)
-function getToken(req: Request): string | null {
-  // 1) Authorization header (للـ internal / server calls)
-  const authHeader = req.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.replace("Bearer ", "").trim();
-  }
-
-  // 2) Raw cookie header (الأكثر موثوقية في Docker/Proxy)
-  const cookieHeader = req.headers.get("cookie");
-  if (cookieHeader) {
-    const cookies = Object.fromEntries(
-      cookieHeader.split("; ").map((c) => {
-        const [k, ...v] = c.split("=");
-        return [k, v.join("=")];
-      })
-    );
-
-    if (cookies["access_token"]) {
-      return cookies["access_token"];
-    }
-  }
-
-  return null;
+// ✅ NEW: unified token extraction
+async function getToken(): Promise<string | null> {
+  const store = await cookies();
+  return store.get("access_token")?.value ?? null;
 }
 
 function buildUpstreamUrl(search: string = "") {
@@ -56,7 +34,7 @@ async function buildProxyResponse(upstream: Response) {
 // =========================
 export async function GET(req: Request) {
   try {
-    const token = getToken(req);
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json(
@@ -92,7 +70,7 @@ export async function GET(req: Request) {
 // =========================
 export async function POST(req: Request) {
   try {
-    const token = getToken(req);
+    const token = await getToken();
 
     if (!token) {
       return NextResponse.json(
