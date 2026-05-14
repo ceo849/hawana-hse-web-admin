@@ -1,5 +1,7 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
+
+import { authCookieOptions } from "@/src/lib/auth-cookie-options";
 
 const CORE_API =
   (process.env.CORE_API_BASE_URL!).replace(/\/$/, "");
@@ -11,6 +13,9 @@ type RefreshResponse = {
 
 export async function POST() {
   try {
+    const headerStore = await headers();
+    const cookieOptions = authCookieOptions(headerStore);
+
     const cookieStore = await cookies();
     const refreshToken = cookieStore.get("refresh_token")?.value ?? null;
 
@@ -47,21 +52,14 @@ export async function POST() {
         { status: upstream.status }
       );
 
-      const isProd = process.env.NODE_ENV === "production";
-
+      // ✅ FIX: use unified options
       res.cookies.set("access_token", "", {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProd,
-        path: "/",
+        ...cookieOptions,
         maxAge: 0,
       });
 
       res.cookies.set("refresh_token", "", {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProd,
-        path: "/",
+        ...cookieOptions,
         maxAge: 0,
       });
 
@@ -85,13 +83,9 @@ export async function POST() {
       access_token: String(accessToken),
     });
 
-    const isProd = process.env.NODE_ENV === "production";
-
+    // ✅ FIX: use unified options
     res.cookies.set("access_token", String(accessToken), {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProd,
-      path: "/",
+      ...cookieOptions,
       maxAge: 60 * 60 * 24,
     });
 

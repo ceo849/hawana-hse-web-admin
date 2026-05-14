@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { authCookieOptions } from "@/src/lib/auth-cookie-options";
+
 // =======================================================
 // ✅ LOGOUT (CLEAN - SINGLE RESPONSIBILITY)
 // =======================================================
@@ -8,23 +10,17 @@ export async function DELETE(req: NextRequest) {
   try {
     const res = NextResponse.json({ ok: true });
 
-    const isProd = process.env.NODE_ENV === "production";
+    const cookieOptions = authCookieOptions(req.headers, req.url);
 
     // Clear access token
     res.cookies.set("access_token", "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProd,
-      path: "/",
+      ...cookieOptions,
       maxAge: 0,
     });
 
     // Clear refresh token
     res.cookies.set("refresh_token", "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProd,
-      path: "/",
+      ...cookieOptions,
       maxAge: 0,
     });
 

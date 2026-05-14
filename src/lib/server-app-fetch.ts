@@ -27,10 +27,45 @@ function toCorePath(path: string): string {
   return path.replace(/^\/api/, "/v1");
 }
 
-// ===== Extract Token (FIXED) =====
-async function extractToken(): Promise<string | null> {
+// ===== Forward request cookies + Bearer (RSC / route subrequests) =====
+async function buildAuthHeaders(
+  optionsHeaders: HeadersInit | undefined
+): Promise<Headers> {
+  const h = new Headers(optionsHeaders || {});
+
+  // ===== 1) Try inbound headers (Next request) =====
+  const inbound = await headers();
+
+  const rawCookie = inbound.get("cookie");
+  if (rawCookie) {
+    h.set("Cookie", rawCookie);
+  }
+
+  const inboundAuth = inbound.get("authorization");
+  if (inboundAuth) {
+    h.set("Authorization", inboundAuth);
+  }
+
+  // ===== 2) Fallback to cookies() store =====
   const store = await cookies();
-  return store.get("access_token")?.value ?? null;
+
+  // Cookie fallback (only if not already set)
+  if (!rawCookie) {
+    const cookieStr = store.toString();
+    if (cookieStr) {
+      h.set("Cookie", cookieStr);
+    }
+  }
+
+  // 🔥 FIX (safe): لا نعمل override لو inboundAuth موجود
+  if (!inboundAuth) {
+    const token = store.get("access_token")?.value ?? null;
+    if (token) {
+      h.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
+  return h;
 }
 
 // ===== Base URL (STABLE) =====
@@ -85,14 +120,9 @@ export async function serverAppFetch(
 
   console.log("FINAL_URL:", finalUrl);
 
-  const token = await extractToken();
-
   const res = await fetch(finalUrl, {
     ...options,
-    headers: {
-      ...Object.fromEntries(new Headers(options.headers || {})),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: await buildAuthHeaders(options.headers),
     cache: "no-store",
   });
 

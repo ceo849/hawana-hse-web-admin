@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
+import { authCookieOptions } from "@/src/lib/auth-cookie-options";
 
 type LoginBody = {
   email?: string;
   password?: string;
 };
 
-const CORE_API =
-  (process.env.CORE_API_BASE_URL!).replace(/\/$/, "");
+const CORE_API = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
 
 export async function POST(req: Request) {
   try {
@@ -40,12 +40,15 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    const contentType = upstream.headers.get("content-type") ?? "";
-    const isJson = contentType.includes("application/json");
+    let data: any = {};
+    let rawText = "";
 
-    const data = isJson
-      ? await upstream.json().catch(() => ({}))
-      : {};
+    try {
+      rawText = await upstream.text();
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = {};
+    }
 
     if (!upstream.ok) {
       return NextResponse.json(
@@ -69,19 +72,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const isProd = process.env.NODE_ENV === "production";
-
-    // ✅ FIX (ADD ONLY)
-    const cookieOptions = {
-      httpOnly: true,
-      sameSite: (isProd ? "none" : "lax") as "lax" | "none",
-      secure: isProd, // required when sameSite=none
-      path: "/",
-    };
+    const cookieOptions = authCookieOptions(req.headers, req.url);
 
     const res = NextResponse.json({
       ok: true,
-      accessToken, // additive فقط
+      accessToken,
     });
 
     res.cookies.set("access_token", String(accessToken), {
