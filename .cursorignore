@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+coverage
+
+.env
+.env.local
+.env.production
+
+*.tar.gz
+*.sql
+*.dump
+
+.DS_Store
+.git
