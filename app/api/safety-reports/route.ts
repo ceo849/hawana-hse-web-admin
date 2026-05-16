@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const CORE_API = (
-  process.env.CORE_API_BASE_URL!
-).replace(/\/$/, "");
+const CORE_API = process.env.CORE_API_BASE_URL!.replace(/\/$/, "");
 
 const API_PREFIX = "/v1";
 
-// ✅ FIX: دعم Authorization header + cookie
+// ✅ Supports Authorization header + HttpOnly cookie token
 async function getToken(req: Request) {
   const authHeader = req.headers.get("authorization");
 
@@ -25,8 +23,7 @@ function buildUpstreamUrl(search: string = "") {
 
 async function buildProxyResponse(upstream: Response) {
   const contentType =
-    upstream.headers.get("content-type") ??
-    "application/json; charset=utf-8";
+    upstream.headers.get("content-type") ?? "application/json; charset=utf-8";
 
   const bodyText = await upstream.text();
 
@@ -63,6 +60,49 @@ export async function GET(req: Request) {
     return buildProxyResponse(upstream);
   } catch (error) {
     console.error("API PROXY ERROR (GET /safety-reports):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
+}
+
+// =========================
+// POST
+// =========================
+export async function POST(req: Request) {
+  try {
+    const token = await getToken(req);
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (POST /safety-reports):", error);
 
     return NextResponse.json(
       { message: "Upstream service unavailable" },
