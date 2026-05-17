@@ -290,7 +290,107 @@ Role:
 
 ---
 
-# 6) CURRENT WEB AUDIT OBSERVATIONS
+# 6) WEB OPEN DOCS INITIAL CLASSIFICATION
+# التصنيف الأولي للملفات المفتوحة في الويب
+
+NOTE:
+
+This section classifies currently open or transitional execution references inside the Web repository.
+
+This classification is governance-oriented only.
+
+No historical documents are removed or invalidated.
+
+---
+
+## HISTORICAL CRITICAL AUDITS
+
+### docs/audit/AUDIT_WEB_BUSINESS_LOGIC_CRITICAL.md
+
+Status:
+
+HISTORICAL CRITICAL AUDIT REFERENCE
+
+Reason:
+
+This document represents a historical detection phase before later governance stabilization.
+
+Current runtime governance validation is instead represented by:
+
+- docs/audit/AUDIT_WEB_FINAL_REPORT.md
+- docs/audit/AUDIT_WEB_BUSINESS_LOGIC.md
+
+Current validated runtime state confirms:
+
+- no active frontend business logic leakage
+- governance-compliant render-only frontend behavior
+
+---
+
+## HISTORICAL PHASE START REFERENCES
+
+### docs/phases/PHASE4_3_START.md
+
+Status:
+
+HISTORICAL PHASE START REFERENCE
+
+Reason:
+
+Phase later officially closed through:
+
+- docs/phases/PHASE4_3_FINAL_CLOSURE.md
+- docs/phases/PHASE4_3_UI_UNIFIED_CLOSURE.md
+
+---
+
+### docs/phases/PHASE4_4_START.md
+
+Status:
+
+DEFERRED / HISTORICAL START REFERENCE
+
+Reason:
+
+Current execution mode is Pilot Stabilization rather than new UX expansion execution.
+
+---
+
+## HISTORICAL EXECUTION CHECKLISTS
+
+### docs/phases/PHASE5_CLOSURE_CHECKLIST.md
+
+Status:
+
+HISTORICAL EXECUTION CHECKLIST
+
+Reason:
+
+Phase 5 was later formally closed through:
+
+- docs/phases/PHASE5_FINAL_CLOSURE.md
+
+---
+
+## ACTIVE ROADMAP REFERENCES
+
+### docs/system/SYSTEM_EXECUTION_PLAN_LOCKED.md
+
+Status:
+
+ACTIVE ROADMAP REFERENCE
+
+Reason:
+
+Document still represents controlled evolution governance direction.
+
+However:
+
+It is NOT treated as immediate execution authority during Pilot Stabilization mode.
+
+---
+
+# 7) CURRENT WEB AUDIT OBSERVATIONS
 # ملاحظات المراجعة الحالية
 
 Current observations:
@@ -308,7 +408,7 @@ Additional future classification is still required.
 
 ---
 
-# 7) CURRENT WEB EXECUTION MODE
+# 8) CURRENT WEB EXECUTION MODE
 # وضع تنفيذ الويب الحالي
 
 Current execution mode:
@@ -335,7 +435,7 @@ Not currently allowed:
 
 ---
 
-# 8) CURRENT FRONTEND GOVERNANCE PRIORITIES
+# 9) CURRENT FRONTEND GOVERNANCE PRIORITIES
 # أولويات حوكمة الواجهة الحالية
 
 Current priorities:
@@ -350,7 +450,7 @@ Current priorities:
 
 ---
 
-# 9) FINAL GOVERNANCE STATEMENT
+# 10) FINAL GOVERNANCE STATEMENT
 # البيان النهائي
 
 Hawana HSE Web Admin is governed as part of a larger enterprise SaaS platform.
