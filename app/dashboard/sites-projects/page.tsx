@@ -52,6 +52,17 @@ function isSiteProject(value: unknown): value is SiteProject {
 }
 
 function parseSiteProjects(value: unknown): SitesProjectsResponse {
+  if (Array.isArray(value)) {
+    const data = value.filter(isSiteProject);
+
+    return {
+      data,
+      meta: {
+        total: data.length,
+      },
+    };
+  }
+
   if (
     typeof value === "object" &&
     value !== null &&
@@ -64,11 +75,13 @@ function parseSiteProjects(value: unknown): SitesProjectsResponse {
       };
     };
 
+    const data = raw.data.filter(isSiteProject);
+
     return {
-      data: raw.data.filter(isSiteProject),
+      data,
       meta: {
         total:
-          typeof raw.meta?.total === "number" ? raw.meta.total : undefined,
+          typeof raw.meta?.total === "number" ? raw.meta.total : data.length,
       },
     };
   }
