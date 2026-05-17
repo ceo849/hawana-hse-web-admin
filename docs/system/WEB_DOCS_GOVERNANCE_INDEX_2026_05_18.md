@@ -183,7 +183,114 @@ It is not yet a final full audit classification.
 
 ---
 
-# 5) CURRENT WEB AUDIT OBSERVATIONS
+# 5) WEB DOCS INITIAL CLASSIFICATION
+# التصنيف الأولي لملفات الويب
+
+NOTE:
+
+This section represents an INITIAL governance classification only.
+
+It does NOT represent a complete final documentation audit.
+
+---
+
+## AUTHORITATIVE GOVERNANCE REFERENCES
+
+These files currently represent the highest operational authority for Web Admin governance.
+
+- docs/web/WEB_ADMIN_TECHNICAL_REFERENCE_FINAL.md
+- docs/web/WEB_ARCHITECTURE_FINAL.md
+- docs/system/SYSTEM_API_CONTRACT_LOCKED.md
+- docs/system/SYSTEM_ARCHITECTURE_FINAL.md
+
+Role:
+
+- authoritative runtime references
+- architecture enforcement
+- API governance
+- UI governance
+- operational alignment
+
+---
+
+## ACTIVE OPERATIONAL GOVERNANCE REFERENCES
+
+These files are currently operationally relevant during pilot stabilization.
+
+- docs/system/WEB_DOCS_GOVERNANCE_INDEX_2026_05_18.md
+- docs/infra/WEB_COMPOSE_RUNTIME_CLASSIFICATION_2026_05_16.md
+- docs/audit/AUDIT_STABILITY_CHECKPOINT_2026-05-01.md
+
+Role:
+
+- operational governance
+- runtime classification
+- deployment awareness
+- stabilization tracking
+
+---
+
+## HISTORICAL / TRANSITIONAL REFERENCES
+
+These files remain important historical execution references.
+
+They should NOT automatically override newer validated governance documents.
+
+- docs/phases/PHASE4_3_START.md
+- docs/phases/PHASE4_4_START.md
+- docs/system/SYSTEM_EXECUTION_PLAN_LOCKED.md
+
+Role:
+
+- execution history
+- architectural transition context
+- governance evolution tracking
+
+---
+
+## AUDIT REFERENCES
+
+Audit files document architectural validation status across the Web layer.
+
+Current validated runtime state indicates governance compliance.
+
+Important note:
+
+Some older audits may describe previously detected violations that were later resolved.
+
+Examples:
+
+- docs/audit/AUDIT_WEB_BUSINESS_LOGIC_CRITICAL.md
+
+This file represents historical detection state and must be interpreted together with:
+
+- docs/audit/AUDIT_WEB_FINAL_REPORT.md
+- docs/audit/AUDIT_WEB_BUSINESS_LOGIC.md
+
+Current validated operational state:
+
+- governance compliant
+- no active frontend business logic leakage confirmed
+
+---
+
+## LEGACY REFERENCES
+
+Legacy files are retained for historical traceability only.
+
+They are NOT operational runtime references.
+
+- docs/legacy/web-architecture-upgrade-local-changes.patch
+
+Role:
+
+- historical migration artifact
+- reference-only
+- non-authoritative
+
+---
+
+# 6) CURRENT WEB AUDIT OBSERVATIONS
 # ملاحظات المراجعة الحالية
 
 Current observations:
@@ -194,12 +301,14 @@ Current observations:
 - Multi-tenant governance exists.
 - UI governance exists.
 - Deployment governance exists.
+- Historical audit progression is traceable.
+- Runtime governance direction is clear.
 
 Additional future classification is still required.
 
 ---
 
-# 6) CURRENT WEB EXECUTION MODE
+# 7) CURRENT WEB EXECUTION MODE
 # وضع تنفيذ الويب الحالي
 
 Current execution mode:
@@ -226,7 +335,7 @@ Not currently allowed:
 
 ---
 
-# 7) CURRENT FRONTEND GOVERNANCE PRIORITIES
+# 8) CURRENT FRONTEND GOVERNANCE PRIORITIES
 # أولويات حوكمة الواجهة الحالية
 
 Current priorities:
@@ -241,7 +350,7 @@ Current priorities:
 
 ---
 
-# 8) FINAL GOVERNANCE STATEMENT
+# 9) FINAL GOVERNANCE STATEMENT
 # البيان النهائي
 
 Hawana HSE Web Admin is governed as part of a larger enterprise SaaS platform.
