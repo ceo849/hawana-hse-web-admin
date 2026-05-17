@@ -17,7 +17,15 @@ type SafetyReport = {
   description: string | null;
   status: string | null;
   createdAt: string | null;
+
   siteProjectId?: string | null;
+
+  // ✅ NEW
+  siteProject?: {
+    id: string;
+    name: string;
+    location: string | null;
+  } | null;
 };
 
 type PageProps = {
@@ -49,8 +57,11 @@ function getStatusStyle(status?: string | null) {
 
 function formatDate(iso?: string | null) {
   if (!iso) return "—";
+
   const d = new Date(iso);
+
   if (Number.isNaN(d.getTime())) return "—";
+
   return new Intl.DateTimeFormat("en-GB").format(d);
 }
 
@@ -66,7 +77,10 @@ export default async function SafetyReportPage({
   const resolvedSearch = await Promise.resolve(searchParams ?? {});
 
   const id = normalize(resolvedParams?.id);
-  if (!id) redirect("/dashboard/safety-reports");
+
+  if (!id) {
+    redirect("/dashboard/safety-reports");
+  }
 
   const token = await requireAccessToken();
 
@@ -88,18 +102,23 @@ export default async function SafetyReportPage({
     return (
       <div style={container}>
         <PageHeader title="Safety Report" subtitle="Report details" />
+
         <ErrorState message="Failed to load safety report (network/server error)" />
       </div>
     );
   }
 
-  if (res.status === 401) redirect("/login");
+  if (res.status === 401) {
+    redirect("/login");
+  }
 
   if (res.status === 404) {
     return (
       <div style={container}>
         <PageHeader title="Safety Report" subtitle="Report details" />
+
         <ErrorState message="Safety report not found" />
+
         <div style={{ marginTop: 20 }}>
           <Link href="/dashboard/safety-reports">Back</Link>
         </div>
@@ -111,6 +130,7 @@ export default async function SafetyReportPage({
     return (
       <div style={container}>
         <PageHeader title="Safety Report" subtitle="Report details" />
+
         <ErrorState message="Failed to load safety report" />
       </div>
     );
@@ -119,6 +139,7 @@ export default async function SafetyReportPage({
   const report = (await res.json()) as SafetyReport;
 
   const err = normalize(resolvedSearch?.err);
+
   const statusStyle = getStatusStyle(report.status);
 
   return (
@@ -128,22 +149,48 @@ export default async function SafetyReportPage({
       {err && <ErrorState message={err} />}
 
       <div style={{ marginBottom: 16 }}>
-        <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
+        <span
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            ...statusStyle,
+          }}
+        >
           {report.status ?? "UNKNOWN"}
         </span>
       </div>
 
       <div style={card}>
-        <div><b>ID:</b> {report.id}</div>
-        <div><b>Title:</b> {report.title ?? "-"}</div>
-        <div><b>Description:</b> {report.description ?? "-"}</div>
-        <div><b>Site / Project:</b> {report.siteProjectId ?? "-"}</div>
-        <div><b>Created At:</b> {formatDate(report.createdAt)}</div>
+        <div>
+          <b>ID:</b> {report.id}
+        </div>
+
+        <div>
+          <b>Title:</b> {report.title ?? "-"}
+        </div>
+
+        <div>
+          <b>Description:</b> {report.description ?? "-"}
+        </div>
+
+        {/* ✅ FIXED */}
+        <div>
+          <b>Site / Project:</b>{" "}
+          {report.siteProject?.name ??
+            report.siteProjectId ??
+            "-"}
+        </div>
+
+        <div>
+          <b>Created At:</b> {formatDate(report.createdAt)}
+        </div>
       </div>
 
       <div style={{ marginTop: 16 }}>
         <Link
-          href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(report.id)}`}
+          href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(
+            report.id
+          )}`}
           style={createActionLink}
         >
           + Create Action Plan
@@ -151,11 +198,17 @@ export default async function SafetyReportPage({
       </div>
 
       <div style={actionsRow}>
-        <Link href={`/dashboard/safety-reports/${report.id}/edit`} style={primaryLink}>
+        <Link
+          href={`/dashboard/safety-reports/${report.id}/edit`}
+          style={primaryLink}
+        >
           Edit
         </Link>
 
-        <Link href="/dashboard/safety-reports" style={secondaryLink}>
+        <Link
+          href="/dashboard/safety-reports"
+          style={secondaryLink}
+        >
           Back
         </Link>
       </div>
