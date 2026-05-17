@@ -18,6 +18,11 @@ type SafetyReport = {
   status: string | null;
   createdAt: string | null;
   siteProjectId?: string | null;
+  siteProject?: {
+    id: string;
+    name: string;
+    location: string | null;
+  } | null;
 };
 
 type SafetyReportsResponse = {
@@ -178,7 +183,7 @@ export default async function SafetyReportsPage() {
                 </div>
 
                 <div style={meta}>
-                  Site: {r.siteProjectId ?? "-"}
+                  Site: {r.siteProject?.name ?? r.siteProjectId ?? "-"}
                 </div>
 
                 <div style={date}>
