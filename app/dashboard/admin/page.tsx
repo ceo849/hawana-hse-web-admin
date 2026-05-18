@@ -34,7 +34,7 @@ export default async function AdminPage() {
       serverAppFetch("/api/safety-reports?page=1&limit=1", {
         cache: "no-store",
       }),
-      serverAppFetch("/api/action-plans?page=1&limit=1", {
+      serverAppFetch("/api/action-plans?limit=1", {
         cache: "no-store",
       }),
     ]);
