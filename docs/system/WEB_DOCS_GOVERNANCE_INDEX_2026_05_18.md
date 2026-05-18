@@ -129,6 +129,55 @@ If documentation conflicts with actual validated runtime:
 
 ---
 
+## RULE 6 — Core Pilot Governance Authority
+
+Core repository remains the authoritative source of truth for:
+
+- pilot governance
+- pilot execution
+- operational maturity tracking
+- operational validation
+- controlled pilot evolution
+
+Web repository must NOT create an independent pilot governance model.
+
+Web documentation is limited to:
+
+- web operational alignment
+- deployment governance
+- UI stabilization governance
+- proxy/runtime validation
+- mobile operational findings
+- web-specific operational references
+
+Forbidden:
+
+- duplicating full pilot governance plans inside Web
+- redefining pilot phases inside Web
+- creating conflicting operational governance layers
+- overriding Core pilot operational truth
+
+Authoritative Core pilot references:
+
+- hawana-hse-core/docs/pilot/PILOT_OPERATIONS_GOVERNANCE_MASTER_PLAN.md
+- hawana-hse-core/docs/pilot/PILOT_INTERNAL_EXECUTION_PLAN_2026_05_18.md
+- hawana-hse-core/docs/pilot/PILOT_MOBILE_OPERATIONAL_AUDIT_FINDINGS_2026_05_18.md
+
+Web operational mirror references:
+
+- docs/deployment/WEB_DEPLOYMENT_RUNBOOK.md
+- docs/system/WEB_DOCS_GOVERNANCE_INDEX_2026_05_18.md
+
+Purpose of this rule:
+
+- prevent governance duplication
+- prevent pilot-document drift
+- preserve single operational truth
+- maintain Core authority
+- maintain Web/Core operational alignment
+
+---
+
 # 4) CURRENT WEB GOVERNANCE REFERENCES
 # المراجع الحالية الأساسية للويب
 
