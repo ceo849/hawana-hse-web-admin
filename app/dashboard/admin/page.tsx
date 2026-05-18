@@ -22,22 +22,26 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  let u: Response;
-  let r: Response;
-  let p: Response;
+  let dashboard: {
+    users?: number;
+    reports?: number;
+    actionPlans?: number;
+  } = {};
 
   try {
-    [u, r, p] = await Promise.all([
-      serverAppFetch("/api/users?page=1&limit=1", {
-        cache: "no-store",
-      }),
-      serverAppFetch("/api/safety-reports?page=1&limit=1", {
-        cache: "no-store",
-      }),
-      serverAppFetch("/api/action-plans?limit=1", {
-        cache: "no-store",
-      }),
-    ]);
+    const dashboardRes = await serverAppFetch("/api/dashboard", {
+      cache: "no-store",
+    });
+
+    if (dashboardRes.status === 401) {
+      redirect("/login");
+    }
+
+    if (!dashboardRes.ok) {
+      throw new Error("ADMIN_DASHBOARD_FETCH_FAILED");
+    }
+
+    dashboard = await dashboardRes.json();
   } catch (err: any) {
     if (err?.message === "SESSION_EXPIRED") {
       redirect("/login");
@@ -55,24 +59,9 @@ export default async function AdminPage() {
     );
   }
 
-  let users = 0;
-  let reports = 0;
-  let plans = 0;
-
-  if (u.ok) {
-    const j = await u.json();
-    users = j?.meta?.total ?? 0;
-  }
-
-  if (r.ok) {
-    const j = await r.json();
-    reports = j?.meta?.total ?? 0;
-  }
-
-  if (p.ok) {
-    const j = await p.json();
-    plans = j?.meta?.total ?? 0;
-  }
+  const users = dashboard.users ?? 0;
+  const reports = dashboard.reports ?? 0;
+  const plans = dashboard.actionPlans ?? 0;
 
   return (
     <div style={container}>
