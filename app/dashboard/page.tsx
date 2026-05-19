@@ -194,8 +194,9 @@ const section: React.CSSProperties = {
 
 const grid: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
   gap: 10,
+  alignItems: "stretch",
 };
 
 const sectionTitle: React.CSSProperties = {

@@ -355,12 +355,16 @@ const card: React.CSSProperties = {
 const cardTitle: React.CSSProperties = {
   fontWeight: 800,
   fontSize: 15,
+  lineHeight: 1.35,
+  wordBreak: "break-word",
 };
 
 const cardDesc: React.CSSProperties = {
   fontSize: 13,
   color: "#6b7280",
   marginTop: 6,
+  lineHeight: 1.45,
+  wordBreak: "break-word",
 };
 
 const hintBox: React.CSSProperties = {
