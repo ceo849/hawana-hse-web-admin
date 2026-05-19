@@ -55,6 +55,16 @@ function formatSiteProjectLabel(site: SiteProject): string {
   return site.name;
 }
 
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string" &&
+    (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export default async function NewSafetyReportPage({
   searchParams,
 }: PageProps) {
@@ -98,8 +108,6 @@ export default async function NewSafetyReportPage({
   async function createSafetyReport(formData: FormData) {
     "use server";
 
-    const tokenInner = await requireAccessToken();
-
     const title = String(formData.get("title") ?? "").trim();
 
     const rawDescription = formData.get("description");
@@ -121,13 +129,35 @@ export default async function NewSafetyReportPage({
     if (description) payload.description = description;
     if (siteProjectId) payload.siteProjectId = siteProjectId;
 
-    const res = await serverAppFetch("/api/safety-reports", tokenInner, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+
+    try {
+      const tokenInner = await requireAccessToken();
+
+      res = await serverAppFetch("/api/safety-reports", tokenInner, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      if (isNextRedirectError(err)) {
+        throw err;
+      }
+
+      if (err?.message === "SESSION_EXPIRED") {
+        redirect("/login");
+      }
+
+      console.error("Create Safety Report Error:", err);
+
+      redirect(
+        `/dashboard/safety-reports/new?error=${encodeURIComponent(
+          "Network/server error while creating safety report"
+        )}`
+      );
+    }
 
     if (res.status === 401) redirect("/login");
 

@@ -36,6 +36,16 @@ function extractErrorMessage(data: unknown): string {
   return "Create user failed";
 }
 
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string" &&
+    (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export default async function NewUserPage({ searchParams }: PageProps) {
   headers();
   cookies();
@@ -50,8 +60,6 @@ export default async function NewUserPage({ searchParams }: PageProps) {
 
   async function createUser(formData: FormData) {
     "use server";
-
-    const tokenInner = await requireAccessToken();
 
     const payload = {
       fullName: String(formData.get("fullName") ?? "").trim(),
@@ -74,6 +82,8 @@ export default async function NewUserPage({ searchParams }: PageProps) {
     }
 
     try {
+      const tokenInner = await requireAccessToken();
+
       const res = await serverAppFetch(
         `/api/users`,
         tokenInner,
@@ -110,6 +120,14 @@ export default async function NewUserPage({ searchParams }: PageProps) {
         throw new Error(message);
       }
     } catch (error) {
+      if (isNextRedirectError(error)) {
+        throw error;
+      }
+
+      if (error instanceof Error && error.message === "SESSION_EXPIRED") {
+        redirect("/login");
+      }
+
       const message =
         error instanceof Error ? error.message : "Create user failed";
 

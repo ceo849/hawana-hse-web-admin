@@ -60,6 +60,16 @@ function userLabel(u: UserLite) {
   return email || u.id;
 }
 
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string" &&
+    (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export default async function NewActionPlanPage({ searchParams }: PageProps) {
   headers();
   cookies();
@@ -96,8 +106,6 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
 
   async function createActionPlan(formData: FormData) {
     "use server";
-
-    const tokenInner = await requireAccessToken();
 
     const title = String(formData.get("title") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
@@ -137,13 +145,35 @@ export default async function NewActionPlanPage({ searchParams }: PageProps) {
       payload.assignedToUserId = assignedToUserId;
     }
 
-    const res = await serverAppFetch("/api/action-plans", tokenInner, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+
+    try {
+      const tokenInner = await requireAccessToken();
+
+      res = await serverAppFetch("/api/action-plans", tokenInner, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      if (isNextRedirectError(err)) {
+        throw err;
+      }
+
+      if (err?.message === "SESSION_EXPIRED") {
+        redirect("/login");
+      }
+
+      console.error("Create Action Plan Error:", err);
+
+      redirect(
+        `${base}&err=${encodeURIComponent(
+          "Network/server error while creating action plan"
+        )}`
+      );
+    }
 
     if (res.status === 401) redirect("/login");
 

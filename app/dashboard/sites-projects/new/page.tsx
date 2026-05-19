@@ -16,6 +16,16 @@ type PageProps = {
   searchParams?: { err?: string } | Promise<{ err?: string }>;
 };
 
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string" &&
+    (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export default async function NewSiteProjectPage({ searchParams }: PageProps) {
   // ✅ ROOT FIX
   headers();
@@ -28,8 +38,6 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
 
   async function createSiteProject(formData: FormData) {
     "use server";
-
-    const tokenInner = await requireAccessToken();
 
     const name = String(formData.get("name") ?? "").trim();
     const location = String(formData.get("location") ?? "").trim();
@@ -49,6 +57,8 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
     if (status) payload.status = status;
 
     try {
+      const tokenInner = await requireAccessToken();
+
       const res = await serverAppFetch(
         "/api/sites-projects",
         tokenInner,
@@ -75,6 +85,10 @@ export default async function NewSiteProjectPage({ searchParams }: PageProps) {
         );
       }
     } catch (error: any) {
+      if (isNextRedirectError(error)) {
+        throw error;
+      }
+
       if (error?.message === "SESSION_EXPIRED") {
         redirect("/login");
       }
