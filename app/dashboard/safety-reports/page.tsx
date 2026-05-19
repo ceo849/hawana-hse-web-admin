@@ -252,11 +252,16 @@ const card: React.CSSProperties = {
 const cardTop: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 10,
+  flexWrap: "wrap",
 };
 
 const title: React.CSSProperties = {
   fontWeight: 800,
   fontSize: 15,
+  lineHeight: 1.35,
+  minWidth: 0,
 };
 
 const meta: React.CSSProperties = {
