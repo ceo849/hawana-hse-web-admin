@@ -51,11 +51,9 @@ Validated Web behavior that works as expected.
 
 | ID | Area | Finding | Severity | Status | Decision / Next Step | Source |
 |---|---|---|---|---|---|---|
-| WEB-RBAC-01 | UI Role Visibility | Worker Dashboard quick actions visibility mismatch | HIGH | OPEN | Review after backend RBAC policy is confirmed | Pilot Zero live test |
-| WEB-RBAC-02 | UI Role Visibility | Worker Action Plans access / visibility requires alignment with Core authorization | HIGH | OPEN | Include in RBAC / UI Role Visibility Audit | Pilot Zero live test |
 | WEB-UI-01 | UI / Data Refresh | Action Plan list/detail status display mismatch observed during testing | MEDIUM | OPEN | Verify later; not classified as Workflow failure | Pilot Zero live test |
 | WEB-UI-02 | UI / Messaging | STATUS_UPDATE_FAILED appears as technical user-facing message | MEDIUM | OPEN | Replace later with operationally clear message | Pilot Zero live test |
-| WEB-UI-03 | UI / Assignment | Manager Assigned To dropdown behavior requires UX/RBAC review | MEDIUM | OPEN | Defer to RBAC audit | Pilot Zero live test |
+| WEB-UI-03 | UI / Assignment | Manager Assigned To dropdown behavior requires UX/RBAC review | MEDIUM | OPEN | Review in Manager assignment UX follow-up | Pilot Zero live test |
 | WEB-UI-04 | UI / Readability | UUID values appear directly in operational screens | LOW | OPEN | Improve readability later | Mobile operational audit |
 | WEB-UI-05 | UI / Labels | Raw enum/status labels appear in some screens | LOW | OPEN | Improve labels later | Mobile operational audit |
 | WEB-MOBILE-01 | Mobile UI | Mobile spacing inconsistency | LOW | OPEN | UI polish later | Mobile operational audit |
@@ -65,6 +63,8 @@ Validated Web behavior that works as expected.
 
 | ID | Area | Finding | Severity | Status | Resolution | Source |
 |---|---|---|---|---|---|---|
+| WEB-RBAC-01 | UI Role Visibility | Worker Dashboard quick actions visibility mismatch | HIGH | RESOLVED | Dashboard quick actions are now role-aware; tag web-rbac-ui-role-visibility-alignment-2026-05-21 | Pilot Zero live test / Web RBAC alignment |
+| WEB-RBAC-02 | UI Role Visibility | Worker Action Plans access / visibility required alignment with Core authorization | HIGH | RESOLVED | Web visibility aligned with Core Worker assigned-only Action Plans policy; mobile quick actions also role-aware | Core RBAC fix / Web RBAC alignment |
 | WEB-AUTH-01 | Auth / Server Actions | Session expiry during create server actions caused Application Error | HIGH | RESOLVED | Web-only fix deployed; expired submit redirects to Login | web-create-session-expiry-fix-2026-05-19 |
 | WEB-DASH-01 | Dashboard / Metrics | Admin Panel Action Plan metrics inconsistency | MEDIUM | RESOLVED | Admin Panel aligned with centralized dashboard metrics flow | Pilot audit |
 | WEB-DEPLOY-01 | Deployment | Apple Silicon image platform mismatch risk | MEDIUM | RESOLVED | linux/amd64 buildx strategy validated | Web deployment validation |
@@ -85,18 +85,18 @@ Validated Web behavior that works as expected.
 
 The current highest Web priority is:
 
-RBAC / UI Role Visibility Audit
+Pilot Validation After RBAC Alignment
 
 Reason:
 
-- Worker Dashboard quick actions visibility mismatch was observed.
-- Worker Action Plans access must align with Core authorization.
-- Frontend must not create independent permission truth.
-- Web UI visibility must follow backend policy after policy is confirmed.
+- Core Worker assigned-only Action Plans access has been implemented.
+- Web Dashboard quick actions are now role-aware.
+- Web Mobile quick actions are now role-aware.
+- Remaining open Web findings are UI refinement, messaging, assignment UX, and validation follow-up.
 
 ## 7) Current Decision
 
-Do not start Web UI permission fixes before backend RBAC policy review.
+Web RBAC UI visibility alignment has been implemented after Core RBAC policy confirmation.
 
 Do not redesign Workflow.
 
@@ -110,7 +110,7 @@ Do not add frontend-derived business logic.
 
 Next controlled phase:
 
-RBAC / Permissions Audit with Web UI visibility alignment.
+Pilot validation and remaining Web UI refinements.
 
 Was anything deleted?
 

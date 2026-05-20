@@ -24,6 +24,7 @@ The current verified Web baseline is:
 Recent Web checkpoint:
 
 - web-create-session-expiry-fix-2026-05-19
+- web-rbac-ui-role-visibility-alignment-2026-05-21
 
 Related Core / Pilot checkpoint:
 
@@ -32,6 +33,7 @@ Related Core / Pilot checkpoint:
 Recent Web documentation update:
 
 - Web documentation entry point added at docs/README.md.
+- Web RBAC UI role visibility alignment documented.
 
 ## 3) Validated Web Behavior
 
@@ -41,8 +43,10 @@ Validated:
 - Dashboard rendering
 - Safety Reports navigation
 - Action Plans navigation for authorized roles
+- Dashboard quick actions are role-aware
+- Mobile quick actions are role-aware
 - Create Safety Report flow
-- Create Action Plan flow
+- Create Action Plan flow for authorized roles
 - API Proxy calls to Core
 - Session expiry handling after Web fix
 - Production Web image deployment
@@ -52,21 +56,20 @@ Validated:
 
 The next highest Web priority is:
 
-RBAC / UI Role Visibility Audit
+Pilot Validation After RBAC Alignment
 
 Reason:
 
-- Worker Dashboard quick actions visibility mismatch was observed.
-- Worker Action Plans access behavior requires alignment with backend RBAC policy.
-- UI role visibility must not conflict with Core authorization.
-- Frontend must remain render-only and must not invent independent permission logic.
+- Core Worker assigned-only Action Plans access has been implemented.
+- Dashboard quick actions are now role-aware.
+- Mobile quick actions are now role-aware.
+- Remaining work is validation and non-RBAC UI refinement.
 
 ## 5) Current Web Open Risk Areas
 
 High:
 
-- Worker Dashboard quick actions visibility mismatch.
-- Worker Action Plans access / visibility alignment.
+- None currently classified after RBAC UI visibility alignment.
 
 Medium:
 
