@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { requireAccessToken } from "@/lib/server-auth";
+import { decodeJwtPayload } from "@/src/auth/jwt";
 import PageHeader from "@/components/ui/page-header";
 import StatsCard from "@/components/ui/stats-card";
 import ActionButton from "@/components/ui/action-button";
@@ -23,13 +24,54 @@ type DashboardDto = {
   };
 };
 
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+
+type QuickAction = {
+  href: string;
+  label: string;
+  roles: Role[];
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    href: "/dashboard/safety-reports/new",
+    label: "+ Safety Report",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER"],
+  },
+  {
+    href: "/dashboard/safety-reports",
+    label: "+ Action Plan (from Report)",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
+  },
+  {
+    href: "/dashboard/action-plans/new",
+    label: "+ Action Plan",
+    roles: ["OWNER", "ADMIN", "MANAGER"],
+  },
+  {
+    href: "/dashboard/sites-projects/new",
+    label: "+ Site / Project",
+    roles: ["OWNER", "ADMIN", "MANAGER"],
+  },
+  {
+    href: "/dashboard/users/new",
+    label: "+ User",
+    roles: ["OWNER", "ADMIN"],
+  },
+];
+
 const USE_NEW_DASHBOARD = false;
 
 export default async function DashboardPage() {
   headers();
   cookies();
 
-  await requireAccessToken();
+  const accessToken = await requireAccessToken();
+  const payload = decodeJwtPayload(accessToken);
+  const role = (payload?.role as Role) ?? "UNKNOWN";
+  const quickActions = QUICK_ACTIONS.filter((item) =>
+    item.roles.includes(role)
+  );
 
   let dashboard: DashboardDto = {};
 
@@ -129,25 +171,11 @@ export default async function DashboardPage() {
         <div style={sectionTitle}>Quick Actions</div>
 
         <div style={grid}>
-          <ActionButton href="/dashboard/safety-reports/new">
-            + Safety Report
-          </ActionButton>
-
-          <ActionButton href="/dashboard/safety-reports">
-            + Action Plan (from Report)
-          </ActionButton>
-
-          <ActionButton href="/dashboard/action-plans/new">
-            + Action Plan
-          </ActionButton>
-
-          <ActionButton href="/dashboard/sites-projects/new">
-            + Site / Project
-          </ActionButton>
-
-          <ActionButton href="/dashboard/users/new">
-            + User
-          </ActionButton>
+          {quickActions.map((item) => (
+            <ActionButton key={item.href} href={item.href}>
+              {item.label}
+            </ActionButton>
+          ))}
         </div>
       </section>
 
