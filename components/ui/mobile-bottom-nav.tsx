@@ -4,14 +4,41 @@ import Link from "next/link";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
-const QUICK_ACTIONS = [
-  { href: "/dashboard/safety-reports/new", label: "Safety Report" },
-  { href: "/dashboard/action-plans/new", label: "Action Plan" },
-  { href: "/dashboard/sites-projects/new", label: "Site / Project" },
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+
+type QuickAction = {
+  href: string;
+  label: string;
+  roles: Role[];
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    href: "/dashboard/safety-reports/new",
+    label: "Safety Report",
+    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER"],
+  },
+  {
+    href: "/dashboard/action-plans/new",
+    label: "Action Plan",
+    roles: ["OWNER", "ADMIN", "MANAGER"],
+  },
+  {
+    href: "/dashboard/sites-projects/new",
+    label: "Site / Project",
+    roles: ["OWNER", "ADMIN", "MANAGER"],
+  },
 ];
 
-export default function MobileBottomNav() {
+type MobileBottomNavProps = {
+  role?: Role;
+};
+
+export default function MobileBottomNav({ role = "OWNER" }: MobileBottomNavProps) {
   const [open, setOpen] = useState(false);
+  const quickActions = QUICK_ACTIONS.filter((item) =>
+    item.roles.includes(role)
+  );
 
   return (
     <>
@@ -50,7 +77,7 @@ export default function MobileBottomNav() {
             zIndex: 60,
           }}
         >
-          {QUICK_ACTIONS.map((item) => (
+          {quickActions.map((item) => (
             <Link
               key={item.href}
               href={item.href}

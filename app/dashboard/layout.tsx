@@ -77,7 +77,7 @@ export default async function DashboardLayout({
         <MobileContainer>{children}</MobileContainer>
 
         <Suspense fallback={null}>
-          <MobileBottomNav />
+          <MobileBottomNav role={role} />
         </Suspense>
       </DashboardShell>
     </div>
