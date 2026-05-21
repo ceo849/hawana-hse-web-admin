@@ -382,7 +382,9 @@ sudo docker inspect hawana-web --format='name={{.Name}}'
 sudo docker inspect hawana-web --format='restart={{.HostConfig.RestartPolicy.Name}}'
 sudo docker inspect hawana-web --format='ports={{json .HostConfig.PortBindings}}'
 sudo docker inspect hawana-web --format='networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-sudo docker inspect hawana-web --format='env={{range .Config.Env}}{{println .}}{{end}}'
+sudo docker inspect hawana-web \
+  --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | sed 's/=.*$/=<hidden>/'
 
 ممنوع تغيير Core أثناء Web-only Deploy.
 
