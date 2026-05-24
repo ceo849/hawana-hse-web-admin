@@ -19,7 +19,6 @@ export default function DashboardHeader({
   onMenuClick,
 }: DashboardHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition>({
     top: 64,
     right: 16,
@@ -27,10 +26,6 @@ export default function DashboardHeader({
 
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useLayoutEffect(() => {
     if (!menuOpen || !triggerRef.current) return;
@@ -205,8 +200,7 @@ export default function DashboardHeader({
         </div>
       </header>
 
-      {mounted &&
-        menuOpen &&
+      {menuOpen &&
         createPortal(
           <div
             ref={menuRef}

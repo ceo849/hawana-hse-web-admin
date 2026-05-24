@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AuditLogModal from "@/components/audit-log-modal";
+import { apiClient } from "@/src/lib/api-client";
 
 export default function AuditLogsClient({
   logs,
@@ -26,13 +27,7 @@ export default function AuditLogsClient({
 
   async function openLog(id: string) {
     try {
-      const res = await fetch(`/api/audit-log/${id}`, {
-        cache: "no-store",
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
+      const data = await apiClient.get(`/api/audit-log/${id}`);
       setSelectedLog(data);
     } catch (err) {
       console.error("Failed to fetch audit log:", err);
