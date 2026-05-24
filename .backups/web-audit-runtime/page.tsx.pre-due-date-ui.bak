@@ -91,43 +91,6 @@ export default async function EditActionPlanPage({
     redirect(`/dashboard/action-plans/${id}`);
   }
 
-
-  async function updateDueDate(formData: FormData) {
-    "use server";
-
-    const tokenInner = await requireAccessToken();
-
-    const dueDate = normalize(formData.get("dueDate"));
-
-    const res = await serverAppFetch(
-      `/api/action-plans/${encodeURIComponent(id)}/due-date`,
-      tokenInner,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          dueDate: dueDate || null,
-        }),
-      }
-    );
-
-    if (res.status === 401) redirect("/login");
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-
-      redirect(
-        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
-          `Due date update failed (${res.status}) ${text}`
-        )}`
-      );
-    }
-
-    redirect(`/dashboard/action-plans/${id}`);
-  }
-
   async function updateActionPlan(formData: FormData) {
     "use server";
 
@@ -218,25 +181,6 @@ export default async function EditActionPlanPage({
           >
             Cancel
           </Link>
-        </div>
-      </form>
-
-      <form action={updateDueDate} style={form}>
-        <div style={card}>
-          <div>
-            <label style={label}>Due Date</label>
-            <input
-              type="date"
-              name="dueDate"
-              style={input}
-            />
-          </div>
-        </div>
-
-        <div style={actionsRow}>
-          <button type="submit" style={primaryBtn}>
-            Update Due Date
-          </button>
         </div>
       </form>
     </div>

@@ -53,9 +53,9 @@ export default function AuditLogsClient({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(160px,1fr) minmax(260px,2fr) minmax(180px,1fr) minmax(120px,140px) minmax(160px,180px)",
+            gridTemplateColumns: "180px 260px 180px 120px 140px",
             fontWeight: 600,
-            minWidth: 980,
+            minWidth: 800,
           }}
         >
           <div>Actor</div>
@@ -77,10 +77,10 @@ export default function AuditLogsClient({
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "minmax(160px,1fr) minmax(260px,2fr) minmax(180px,1fr) minmax(120px,140px) minmax(160px,180px)",
+                  "180px 260px 180px 120px 140px",
                 padding: "8px 0",
                 borderTop: "1px solid #eee",
-                minWidth: 980,
+                minWidth: 800,
               }}
             >
               <div>
