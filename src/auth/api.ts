@@ -16,8 +16,7 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 
 export async function logout(): Promise<void> {
   try {
-    // ✅ FIX: apiClient.post requires body
-    await apiClient.post('/auth/logout', {});
+    await apiClient.delete('/auth/logout');
   } catch {
     // ignore errors (same behavior)
   }
