@@ -18,7 +18,7 @@ This document does not modify Core.
 
 This document does not execute runtime validation.
 
-This dent does not approve production validation.
+This document does not approve production validation.
 
 This document does not approve first real pilot execution.
 
@@ -80,7 +80,9 @@ Checklist typo correction tag:
 
 - first-pilot-web-readiness-checklist-typo-fix-2026-05-30
 
-Current checklist status:RRENT CHECKLIST CREATED — WEB FIRST PILOT READINESS TRACKS CONSOLIDATED
+Current checklist status:
+
+CURRENT CHECKLIST CREATED — WEB FIRST PILOT READINESS TRACKS CONSOLIDATED
 
 ---
 
@@ -161,7 +163,7 @@ CLOSED
 
 Primary closure document:
 
-- docs/FIRST_PILOT_ADDITIONALOLE_USERS_READ_ONLY_ACCESS_CLOSURE_REPORT_2026_05_30.md
+- docs/FIRST_PILOT_ADDITIONAL_ROLE_USERS_READ_ONLY_ACCESS_CLOSURE_REPORT_2026_05_30.md
 
 Final result:
 
