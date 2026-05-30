@@ -6,10 +6,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { requireAccessToken } from "@/lib/server-auth";
+import { decodeJwtPayload } from "@/src/auth/jwt";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
 import EmptyState from "@/components/ui/empty-state";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
+
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+
+const ROLE_UI_CAPABILITIES: Record<Role, { canCreateSafetyReport: boolean }> = {
+  OWNER: { canCreateSafetyReport: true },
+  ADMIN: { canCreateSafetyReport: true },
+  MANAGER: { canCreateSafetyReport: true },
+  WORKER: { canCreateSafetyReport: true },
+  VIEWER: { canCreateSafetyReport: false },
+  UNKNOWN: { canCreateSafetyReport: false },
+};
 
 type SafetyReport = {
   id: string;
@@ -113,7 +125,11 @@ function StatusBadge({ status }: { status: string | null }) {
 }
 
 export default async function SafetyReportsPage() {
-  await requireAccessToken();
+  const token = await requireAccessToken();
+  const payload = decodeJwtPayload(token);
+  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const canShowCreateAction =
+    ROLE_UI_CAPABILITIES[role]?.canCreateSafetyReport ?? false;
 
   let res: Response;
 
@@ -155,9 +171,11 @@ export default async function SafetyReportsPage() {
         title="Safety Reports"
         subtitle="Operational reports"
         action={
-          <Link href="/dashboard/safety-reports/new" style={headerAction}>
-            + New Safety Report
-          </Link>
+          canShowCreateAction ? (
+            <Link href="/dashboard/safety-reports/new" style={headerAction}>
+              + New Safety Report
+            </Link>
+          ) : undefined
         }
       />
 

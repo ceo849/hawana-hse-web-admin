@@ -41,7 +41,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     href: "/dashboard/safety-reports",
     label: "+ Action Plan (from Report)",
-    roles: ["OWNER", "ADMIN", "MANAGER", "WORKER", "VIEWER"],
+    roles: ["OWNER", "ADMIN", "MANAGER"],
   },
   {
     href: "/dashboard/action-plans/new",

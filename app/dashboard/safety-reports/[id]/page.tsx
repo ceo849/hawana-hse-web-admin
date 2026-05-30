@@ -7,9 +7,21 @@ import { headers, cookies } from "next/headers"; // ✅ FIX
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
+import { decodeJwtPayload } from "@/src/auth/jwt";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
+
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+
+const ROLE_UI_CAPABILITIES: Record<Role, { canCreateActionPlan: boolean; canEditSafetyReport: boolean }> = {
+  OWNER: { canCreateActionPlan: true, canEditSafetyReport: true },
+  ADMIN: { canCreateActionPlan: true, canEditSafetyReport: true },
+  MANAGER: { canCreateActionPlan: true, canEditSafetyReport: true },
+  WORKER: { canCreateActionPlan: false, canEditSafetyReport: false },
+  VIEWER: { canCreateActionPlan: false, canEditSafetyReport: false },
+  UNKNOWN: { canCreateActionPlan: false, canEditSafetyReport: false },
+};
 
 type SafetyReport = {
   id: string;
@@ -83,6 +95,9 @@ export default async function SafetyReportPage({
   }
 
   const token = await requireAccessToken();
+  const payload = decodeJwtPayload(token);
+  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const capabilities = ROLE_UI_CAPABILITIES[role] ?? ROLE_UI_CAPABILITIES.UNKNOWN;
 
   let res: Response;
 
@@ -186,24 +201,28 @@ export default async function SafetyReportPage({
         </div>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <Link
-          href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(
-            report.id
-          )}`}
-          style={createActionLink}
-        >
-          + Create Action Plan
-        </Link>
-      </div>
+      {capabilities.canCreateActionPlan && (
+        <div style={{ marginTop: 16 }}>
+          <Link
+            href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(
+              report.id
+            )}`}
+            style={createActionLink}
+          >
+            + Create Action Plan
+          </Link>
+        </div>
+      )}
 
       <div style={actionsRow}>
-        <Link
-          href={`/dashboard/safety-reports/${report.id}/edit`}
-          style={primaryLink}
-        >
-          Edit
-        </Link>
+        {capabilities.canEditSafetyReport && (
+          <Link
+            href={`/dashboard/safety-reports/${report.id}/edit`}
+            style={primaryLink}
+          >
+            Edit
+          </Link>
+        )}
 
         <Link
           href="/dashboard/safety-reports"

@@ -5,9 +5,21 @@ import { headers, cookies } from "next/headers"; // ✅ FIX
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
+import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
+
+type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
+
+const ROLE_UI_CAPABILITIES: Record<Role, { canUpdateStatus: boolean; canEditActionPlan: boolean }> = {
+  OWNER: { canUpdateStatus: true, canEditActionPlan: true },
+  ADMIN: { canUpdateStatus: true, canEditActionPlan: true },
+  MANAGER: { canUpdateStatus: true, canEditActionPlan: true },
+  WORKER: { canUpdateStatus: true, canEditActionPlan: false },
+  VIEWER: { canUpdateStatus: false, canEditActionPlan: false },
+  UNKNOWN: { canUpdateStatus: false, canEditActionPlan: false },
+};
 
 type ActionPlanStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 
@@ -114,6 +126,9 @@ export default async function ActionPlanPage({
   if (!id) redirect("/dashboard/action-plans");
 
   const token = await requireAccessToken();
+  const payload = decodeJwtPayload(token);
+  const role: Role = (payload?.role as Role) ?? "UNKNOWN";
+  const capabilities = ROLE_UI_CAPABILITIES[role] ?? ROLE_UI_CAPABILITIES.UNKNOWN;
 
   let res: Response;
 
@@ -216,25 +231,29 @@ export default async function ActionPlanPage({
         {metricCard("Next Steps", nextStatuses.length)}
       </div>
 
-      <div style={statusActionsRow}>
-        {nextStatuses.map((s) => (
-          <form key={s} action={updateStatus}>
-            <input type="hidden" name="id" value={ap.id} />
-            <input type="hidden" name="status" value={s} />
+      {capabilities.canUpdateStatus && (
+        <div style={statusActionsRow}>
+          {nextStatuses.map((s) => (
+            <form key={s} action={updateStatus}>
+              <input type="hidden" name="id" value={ap.id} />
+              <input type="hidden" name="status" value={s} />
 
-            <button type="submit" style={statusBtn}>
-              {s === "IN_PROGRESS" && "Start"}
-              {s === "COMPLETED" && "Complete"}
-              {s === "VERIFIED" && "Verify"}
-            </button>
-          </form>
-        ))}
-      </div>
+              <button type="submit" style={statusBtn}>
+                {s === "IN_PROGRESS" && "Start"}
+                {s === "COMPLETED" && "Complete"}
+                {s === "VERIFIED" && "Verify"}
+              </button>
+            </form>
+          ))}
+        </div>
+      )}
 
       <div style={actionsRow}>
-        <Link href={actionPlanEditPath(ap.id)} style={primaryLink}>
-          Edit
-        </Link>
+        {capabilities.canEditActionPlan && (
+          <Link href={actionPlanEditPath(ap.id)} style={primaryLink}>
+            Edit
+          </Link>
+        )}
 
         <Link href="/dashboard/action-plans" style={secondaryLink}>
           Back
