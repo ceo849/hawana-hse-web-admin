@@ -16,7 +16,7 @@ This checklist separates current state from historical intermediate documents an
 
 This document does not execute runtime validation.
 
-This document does approve production validation.
+This document does not approve production validation.
 
 This document does not approve first real pilot execution.
 
@@ -90,7 +90,7 @@ CLOSED
 
 Primary closure document:
 
-- docs/FIRST_PILOT_WEB_LOGOUT_TRACK_CLOSURE_DEON_2026_05_30.md
+- docs/FIRST_PILOT_WEB_LOGOUT_TRACK_CLOSURE_DECISION_2026_05_30.md
 
 Final result:
 
@@ -193,7 +193,7 @@ This checklist does not approve:
 - first real pilot execution
 - runtime workflow validation
 - write-operation testing
-- POST / H / PUT / DELETE testing
+- POST / PATCH / PUT / DELETE testing
 - database mutation
 - tenant creation
 - user creation
