@@ -41,7 +41,7 @@ Routes tested:
 ADMIN:
 
 GET /api/users: 200
-GET /api/dash00
+GET /api/dashboard: 200
 GET /api/sites-projects: 200
 GET /api/safety-reports: 200
 GET /api/action-plans: 200
