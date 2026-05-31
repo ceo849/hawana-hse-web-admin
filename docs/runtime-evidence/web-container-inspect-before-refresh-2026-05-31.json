@@ -1,0 +1,228 @@
+[
+    {
+        "Id": "170cfadb0b43dcfb7f6e7b62d408a90570fc3dd6671ffaffaad070dfc7d5e576",
+        "Created": "2026-05-24T01:17:34.115125791Z",
+        "Path": "docker-entrypoint.sh",
+        "Args": [
+            "node",
+            "server.js"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 731,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-05-30T16:26:22.038733917Z",
+            "FinishedAt": "2026-05-30T00:51:37.980303045Z"
+        },
+        "Image": "sha256:6416ff4fcfb45ed71966c1f9bbe78fcf70c733790ef33b56d4e335ae9adaaa9b",
+        "ResolvConfPath": "/var/lib/docker/containers/170cfadb0b43dcfb7f6e7b62d408a90570fc3dd6671ffaffaad070dfc7d5e576/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/170cfadb0b43dcfb7f6e7b62d408a90570fc3dd6671ffaffaad070dfc7d5e576/hostname",
+        "HostsPath": "/var/lib/docker/containers/170cfadb0b43dcfb7f6e7b62d408a90570fc3dd6671ffaffaad070dfc7d5e576/hosts",
+        "LogPath": "/var/lib/docker/containers/170cfadb0b43dcfb7f6e7b62d408a90570fc3dd6671ffaffaad070dfc7d5e576/170cfadb0b43dcfb7f6e7b62d408a90570fc3dd6671ffaffaad070dfc7d5e576-json.log",
+        "Name": "/hawana-web",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "hawana-hse-core_default",
+            "PortBindings": {
+                "3000/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "3005"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                20,
+                100
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "170cfadb0b43",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "3000/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "NEXT_PUBLIC_API_BASE_URL=/api",
+                "NEXT_PUBLIC_API_PREFIX=/v1",
+                "CORE_API_BASE_URL=http://hawana-core:3001",
+                "DOCKER_ENV=true",
+                "NODE_ENV=production",
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "NODE_VERSION=20.20.2",
+                "YARN_VERSION=1.22.22"
+            ],
+            "Cmd": [
+                "node",
+                "server.js"
+            ],
+            "Image": "hawana-hse-web-admin:latest",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": [
+                "docker-entrypoint.sh"
+            ],
+            "Labels": {},
+            "StopTimeout": 1
+        },
+        "NetworkSettings": {
+            "SandboxID": "f29e841984eea2cc314fce909383a0472ba7ed60f6c467bb330957e9f2811554",
+            "SandboxKey": "/var/run/docker/netns/f29e841984ee",
+            "Ports": {
+                "3000/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "3005"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "3005"
+                    }
+                ]
+            },
+            "Networks": {
+                "hawana-hse-core_default": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "cf85faa865d056107aa948d8615ce69a3fbcc10d6ee387597abba481be539667",
+                    "EndpointID": "3e090b646f8479c309cbd87f2f55b271d52c54ba75fe8c1811f18ee176d69756",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.2",
+                    "MacAddress": "46:d2:93:c1:66:f7",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "hawana-web",
+                        "170cfadb0b43"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:1ca9539c492f96b8707e992b516c38b893679d9b35bc48412fd75df493a25eeb",
+            "size": 2006,
+            "platform": {
+                "architecture": "arm64",
+                "os": "linux"
+            }
+        }
+    }
+]
