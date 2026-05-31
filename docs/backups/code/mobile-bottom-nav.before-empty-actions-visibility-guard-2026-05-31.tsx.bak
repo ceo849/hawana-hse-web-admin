@@ -40,10 +40,6 @@ export default function MobileBottomNav({ role = "OWNER" }: MobileBottomNavProps
     item.roles.includes(role)
   );
 
-  if (quickActions.length === 0) {
-    return null;
-  }
-
   return (
     <>
       {/* Floating Button */}
