@@ -657,3 +657,685 @@ Governed Multi-Tenant SaaS Platform
 ────────────────────────────────────────────
 END OF DOCUMENT
 ────────────────────────────────────────────
+────────────────────────────────────────────
+19) MANDATORY WEB DEPLOYMENT GOVERNANCE ADDENDUM
+────────────────────────────────────────────
+
+This addendum upgrades the Web Deployment Runbook from an operational deployment guide into a mandatory governance control system.
+
+This addendum is binding for all future Web production deployment work.
+
+This addendum does not replace previous sections.
+
+It governs how the previous sections must be applied.
+
+────────────────────────────────────────────
+19.1) Runbook Authority
+────────────────────────────────────────────
+
+This runbook is the official Web deployment authority.
+
+Any future Web deployment must comply with:
+
+- Architecture rules
+- API Proxy rules
+- serverAppFetch rules
+- HttpOnly cookie rules
+- Image platform rules
+- Server pull rules
+- Rollback rules
+- Evidence rules
+- Final closure rules
+- Current state handoff rules
+
+If any future instruction conflicts with this runbook:
+
+STOP.
+
+Create a controlled exception plan.
+
+────────────────────────────────────────────
+19.2) Mandatory Architecture Preservation
+────────────────────────────────────────────
+
+The mandatory architecture remains:
+
+Web → API Proxy → Core → PostgreSQL
+
+Web deployment must preserve:
+
+- UI does not call Core directly.
+- UI does not use :3001.
+- Web business routes use /api only.
+- Server-side Web flows use serverAppFetch only.
+- CORE_API_BASE_URL remains server-side only.
+- NEXT_PUBLIC_API_BASE_URL remains /api.
+- HttpOnly cookie flow remains active.
+- Backend remains source of truth.
+- companyId remains JWT/backend-owned.
+- Billing remains backend-controlled.
+- Workflow remains backend-controlled.
+
+Forbidden:
+
+- Direct UI → Core calls
+- Frontend Workflow derivation
+- Frontend Billing derivation
+- Passing companyId from UI as authority
+- Public Core exposure
+- Runtime patching inside container
+- Changing Core during Web deployment
+- Changing DB during Web deployment
+- Changing Nginx during Web deployment
+- Changing Docker network during Web deployment
+
+If any forbidden item is required:
+
+STOP.
+
+Create a separate controlled plan.
+
+────────────────────────────────────────────
+19.3) Documentation Intensity Rule
+────────────────────────────────────────────
+
+Not every Web step requires the full deployment documentation chain.
+
+Documentation intensity must be based on risk.
+
+High-risk Web actions require full governance chain.
+
+Examples:
+
+- Production Web deployment
+- Web container replacement
+- Production server image pull
+- Docker cleanup or prune
+- Runtime environment change
+- Nginx change
+- Docker network change
+- Rollback
+- Any action affecting production runtime
+
+Required high-risk documentation chain:
+
+Plan → Approval Checkpoint → Execution → Result Evidence → Final Closure → Current State Report
+
+Medium-risk Web actions require reduced chain.
+
+Examples:
+
+- UI visibility correction
+- API Proxy correction
+- SSR correction
+- Layout correction
+- Read-only dashboard correction
+- Role visibility alignment
+
+Required medium-risk documentation chain:
+
+Execution Plan → Result Evidence → Commit → Tag
+
+Low-risk Web actions require minimal documentation.
+
+Examples:
+
+- Documentation-only report
+- Current state note
+- Handoff file
+- Read-only audit
+- Typo-safe documentation correction
+
+Required low-risk documentation chain:
+
+Single document OR focused commit
+
+────────────────────────────────────────────
+19.4) Mandatory Checkpoint Chain For Production Deployment
+────────────────────────────────────────────
+
+A Web production deployment must be executed through checkpoints.
+
+Valid chain:
+
+1. Web current state inspection
+2. Web deployment readiness plan
+3. Local build approval checkpoint
+4. Local build validation result
+5. Web Docker image build approval checkpoint
+6. Web image build and push validation result
+7. Server pull approval checkpoint
+8. Server pull result
+9. Controlled Web container replacement approval checkpoint
+10. Controlled Web container replacement result
+11. Post-replacement functional validation approval checkpoint
+12. Post-replacement functional validation result
+13. Authenticated functional validation approval checkpoint
+14. Authenticated functional validation result
+15. Final deployment closure
+16. Current state report
+
+Each checkpoint must answer:
+
+- What is approved?
+- What is not approved?
+- What must not be touched?
+- What is the rollback path?
+- What evidence is required?
+- What is the next valid action?
+
+A step is not allowed to proceed until the previous step has evidence.
+
+If any step fails:
+
+STOP.
+
+Document the failure.
+
+Create a corrected plan or approval checkpoint.
+
+Do not improvise.
+
+────────────────────────────────────────────
+19.5) Disk Space Gate Before Server Pull
+────────────────────────────────────────────
+
+Before any production server image pull, disk space must be checked.
+
+Mandatory server read-only commands:
+
+df -h /
+df -ih /
+sudo docker system df -v
+
+Minimum safe condition:
+
+- Root filesystem must have at least 5GB available.
+- Root filesystem should not be above 85% used.
+- Inodes must not be under pressure.
+- Docker reclaimable space must be understood before pull.
+
+If available space is below 5GB or root usage is above 85%:
+
+STOP.
+
+Do not pull Web image.
+
+Do not stop Web container.
+
+Do not replace Web container.
+
+Create a controlled production server disk cleanup plan.
+
+────────────────────────────────────────────
+19.6) Controlled Cleanup Governance
+────────────────────────────────────────────
+
+Production server cleanup is high-risk.
+
+Cleanup must never be performed casually.
+
+Forbidden:
+
+- docker system prune -a without bounded plan
+- docker volume prune
+- deleting active containers
+- deleting active images
+- deleting database volumes
+- deleting PostgreSQL data
+- deleting unknown files
+- deleting production env files
+- deleting rollback containers before closure
+- deleting backup containers without explicit approval
+- Docker Compose action during cleanup
+- Core restart during cleanup
+- DB restart during cleanup
+
+Allowed only with explicit approval:
+
+- Removing explicitly listed stopped legacy containers
+- Removing explicitly listed unused legacy images
+- Removing dangling images only
+- Removing temporary validation files
+- Read-only disk audits
+
+Cleanup approval must include:
+
+- Exact candidate list
+- Confirmation that candidates are unused
+- Confirmation that no active runtime container is touched
+- Confirmation that no volume is deleted
+- Confirmation that no DB data is touched
+- Required post-cleanup health checks
+- Required evidence result
+
+────────────────────────────────────────────
+19.7) No Blind Command Execution Rule
+────────────────────────────────────────────
+
+Commands inside this runbook are templates, not blind commands.
+
+Before execution, every command must be reviewed and populated with correct values.
+
+Required values include:
+
+- IMAGE_TAG
+- WEB_PROD_IMAGE
+- WEB_NEW_IMAGE
+- WEB_OLD_NAME
+- WEB_BACKUP_NAME
+- WEB_ENV_FILE
+- Deployment scope
+- Deployment date
+- Branch name
+- Git tag
+- Evidence file path
+
+If a command contains placeholders such as:
+
+<IMAGE_TAG>
+<scope>
+YYYY-MM-DD
+
+STOP.
+
+Replace placeholders before execution.
+
+If a pasted command is partial, malformed, or includes terminal artifacts:
+
+STOP.
+
+Run a read-only safety check before continuing.
+
+────────────────────────────────────────────
+19.8) Production Server Tooling Limitation Rule
+────────────────────────────────────────────
+
+Production server must not be modified to satisfy convenience tooling during deployment.
+
+Do not install tools during deployment unless a separate infra plan approves it.
+
+Examples of tools that must not be assumed:
+
+- node
+- jq
+- npm
+- pnpm
+- build tools
+- local project dependencies
+
+Allowed baseline tools:
+
+- shell
+- docker
+- curl
+- grep
+- sed
+- awk
+- df
+- du
+- ls
+- cat for read-only output only
+
+If response preview or JSON formatting requires a missing tool:
+
+- Do not install the tool.
+- Mark preview limitation as non-blocking if HTTP status validation is sufficient.
+- Document the limitation in evidence.
+
+────────────────────────────────────────────
+19.9) Server Documentation Rule
+────────────────────────────────────────────
+
+The production server is not a documentation workspace.
+
+Forbidden on production server:
+
+- Creating Markdown documentation files
+- Writing official reports
+- Editing repository docs
+- Using cat > docs/*.md
+- Storing deployment evidence as official docs outside Git
+
+Correct flow:
+
+Server evidence → Local documentation → Git commit → Git tag → Remote push
+
+Runtime-only files allowed on server:
+
+- Restricted env backup file for rollback
+- Temporary cookie jar for validation
+- Temporary response files for validation
+
+Temporary validation files must be deleted after validation when safe.
+
+Secrets must not be printed or documented.
+
+────────────────────────────────────────────
+19.10) Controlled Web Replacement Rule
+────────────────────────────────────────────
+
+The current runbook contains direct replacement commands.
+
+For zero-risk governance, direct removal of hawana-web is not the preferred first action.
+
+Preferred controlled replacement pattern:
+
+1. Record current Web image.
+2. Record current Web image id.
+3. Record current Web restart policy.
+4. Record current Web network.
+5. Record current Web port bindings.
+6. Save current Web env to restricted server file without printing secrets.
+7. Stop old Web container.
+8. Rename old Web container to backup name.
+9. Start new Web container with same name, same network, same ports, same approved env.
+10. Validate health.
+11. Validate authenticated business routes.
+12. Preserve backup container until final closure.
+
+The command:
+
+sudo docker rm -f hawana-web
+
+must not be used as the primary deployment path unless:
+
+- backup strategy is documented
+- rollback path is already approved
+- old image is recorded
+- old env is preserved
+- operator has explicit approval
+
+Rollback must not touch:
+
+- Core
+- PostgreSQL
+- Billing
+- companyId
+- Workflow
+- Volumes
+- Nginx unless explicitly scoped
+
+────────────────────────────────────────────
+19.11) Functional Validation Rule
+────────────────────────────────────────────
+
+Health checks are mandatory but not sufficient.
+
+A Web deployment cannot be accepted by /api/health alone.
+
+Minimum validation layers:
+
+1. Web container running
+2. Web active image confirmed
+3. Web logs safe tail reviewed
+4. Public /api/health returns 200
+5. Login through Web works
+6. Dashboard loads
+7. Safety Reports loads
+8. Action Plans loads
+9. Users route behavior matches role
+10. Billing route behavior remains valid
+11. Session persistence remains valid
+12. Logout behavior remains valid
+13. API Proxy flow remains intact
+14. No direct Core URL appears in UI output
+15. Core health remains passed
+16. Core readiness remains passed
+17. Postgres remains running
+18. No restart loop
+19. Safe logs review
+
+Business validation must preserve:
+
+Web → API Proxy → Core
+
+Direct UI to Core validation is not accepted.
+
+────────────────────────────────────────────
+19.12) Web Audit Rule
+────────────────────────────────────────────
+
+Before production deployment, Web audit must confirm:
+
+- No direct Core calls from UI
+- No browser-side :3001 usage
+- No companyId authority from UI
+- No frontend Workflow derivation
+- No frontend Billing derivation
+- API Proxy routes remain the boundary
+- serverAppFetch remains approved server-side Core access path
+- NEXT_PUBLIC_API_BASE_URL remains /api
+- CORE_API_BASE_URL remains server-side only
+
+If audit fails:
+
+STOP.
+
+Do not build.
+
+Do not deploy.
+
+────────────────────────────────────────────
+19.13) Rollback Governance Rule
+────────────────────────────────────────────
+
+Rollback must be ready before replacement.
+
+A Web replacement is not approved unless:
+
+- Old Web image is recorded.
+- Old Web container can be preserved.
+- Backup container name is defined.
+- Current Web env is saved without printing secrets.
+- Rollback command path is known.
+- Core is not touched.
+- Postgres is not touched.
+- Volumes are not touched.
+- Nginx is not touched unless explicitly scoped.
+
+If new Web fails:
+
+STOP.
+
+Rollback.
+
+Do not debug by random restarts.
+
+Do not change Core.
+
+Do not change DB.
+
+Do not change Nginx.
+
+Do not change Docker network.
+
+────────────────────────────────────────────
+19.14) Failure Documentation Rule
+────────────────────────────────────────────
+
+Every failed high-risk Web step must be documented.
+
+Failure result must include:
+
+- What failed
+- Exact failure type
+- Root cause if known
+- What was not touched
+- Current runtime status
+- Whether rollback was needed
+- Whether rollback was executed
+- Next valid action
+
+Failure documentation is mandatory.
+
+────────────────────────────────────────────
+19.15) Final Closure Rule
+────────────────────────────────────────────
+
+A Web production deployment chain is not complete until a final closure document exists.
+
+Final closure must include:
+
+- Deployment result
+- Active Web image
+- Image platform
+- Runtime status
+- Rollback status
+- Health validation
+- Functional validation
+- Architecture status
+- Core untouched confirmation
+- DB untouched confirmation
+- Billing untouched confirmation
+- companyId untouched confirmation
+- Workflow untouched confirmation
+- Deletion summary
+- Production acceptance decision
+- First real pilot status if applicable
+
+If final closure is missing:
+
+Deployment is not formally closed.
+
+────────────────────────────────────────────
+19.16) Current State Handoff Rule
+────────────────────────────────────────────
+
+After final closure, create a current state report.
+
+Required example:
+
+docs/deployment/WEB_CURRENT_STATE_AFTER_<SCOPE>_CLOSURE_<YYYY_MM_DD>.md
+
+The current state report must include:
+
+- Current Git HEAD
+- Current tag
+- Current active Web image
+- Current platform
+- Current runtime state
+- Current Core image
+- Current Core state
+- Current architecture state
+- Current next valid track
+- What remains pending
+- What is not approved yet
+
+This file becomes the source-of-truth anchor for future chats.
+
+Future conversations must read the latest Web current state report before continuing Web deployment or pilot work.
+
+────────────────────────────────────────────
+19.17) Final Governance Control
+────────────────────────────────────────────
+
+Before any future Web deployment execution, answer:
+
+Does this preserve Web → API Proxy → Core?
+
+If no:
+
+STOP.
+
+Does this use /api only from UI?
+
+If no:
+
+STOP.
+
+Does this preserve serverAppFetch for server-side Core access?
+
+If no:
+
+STOP.
+
+Does this touch Core?
+
+If yes:
+
+STOP and create separate Core plan.
+
+Does this touch DB?
+
+If yes:
+
+STOP and create separate DB plan.
+
+Does this touch Billing?
+
+If yes:
+
+STOP and create separate Billing plan.
+
+Does this touch companyId?
+
+If yes:
+
+STOP and create separate architecture review.
+
+Does this touch Workflow?
+
+If yes:
+
+STOP and create separate Workflow plan.
+
+Does this touch Nginx or Docker network?
+
+If yes:
+
+STOP and create separate Infra plan.
+
+Does this lack rollback?
+
+If yes:
+
+STOP.
+
+Does this lack evidence plan?
+
+If yes:
+
+STOP.
+
+Does this lack final current state handoff after closure?
+
+If yes:
+
+Deployment chain is incomplete.
+
+────────────────────────────────────────────
+20) ADDENDUM DELETION CONFIRMATION
+────────────────────────────────────────────
+
+Was anything deleted by creating this Web deployment governance addendum?
+
+No.
+
+This addendum is additive only.
+
+No production files were deleted.
+
+No repository files were deleted.
+
+No database records were deleted.
+
+No PostgreSQL volumes were deleted.
+
+No Docker containers were changed.
+
+No Docker images were changed.
+
+No Core logic was changed.
+
+No Billing logic was changed.
+
+No companyId logic was changed.
+
+No Workflow logic was changed.
+
+No architecture changes were made.
+
+────────────────────────────────────────────
+END OF WEB DEPLOYMENT GOVERNANCE ADDENDUM
+────────────────────────────────────────────
