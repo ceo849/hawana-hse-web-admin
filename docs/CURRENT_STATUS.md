@@ -3,7 +3,7 @@
 Document Type: Web Current Status Summary  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE SUMMARY  
-Last Updated: 2026-05-20  
+Last Updated: 2026-06-11  
 
 ## 1) Current Web Baseline
 
@@ -23,8 +23,9 @@ The current verified Web baseline is:
 
 Recent Web checkpoint:
 
-- web-create-session-expiry-fix-2026-05-19
 - web-rbac-ui-role-visibility-alignment-2026-05-21
+- web-controlled-deployment-final-closure-2026-06-01
+- first-pilot-governance-reality-consolidation-2026-06-10
 
 Related Core / Pilot checkpoint:
 
@@ -34,6 +35,13 @@ Recent Web documentation update:
 
 - Web documentation entry point added at docs/README.md.
 - Web RBAC UI role visibility alignment documented.
+- Controlled Web Deployment Closure documented.
+- First Pilot Governance Reality Consolidation documented.
+
+Current authoritative reality references:
+
+- docs/deployment/WEB_CURRENT_STATE_AFTER_CONTROLLED_DEPLOYMENT_CLOSURE_2026_06_01.md
+- docs/FIRST_PILOT_GOVERNANCE_REALITY_CONSOLIDATION_REVIEW_2026_06_10.md
 
 ## 3) Validated Web Behavior
 
@@ -56,14 +64,16 @@ Validated:
 
 The next highest Web priority is:
 
-Pilot Validation After RBAC Alignment
+First Pilot Governance Start Approval Readiness Review
 
 Reason:
 
-- Core Worker assigned-only Action Plans access has been implemented.
-- Dashboard quick actions are now role-aware.
-- Mobile quick actions are now role-aware.
-- Remaining work is validation and non-RBAC UI refinement.
+- Controlled Web Deployment is closed.
+- Web Logout Track is closed.
+- Additional Role Users Validation is closed.
+- Core ↔ Web Governance Alignment is closed.
+- No active Web runtime blocker has been identified.
+- Remaining open items are governance approval checkpoints.
 
 ## 5) Current Web Open Risk Areas
 
