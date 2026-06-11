@@ -24,12 +24,16 @@ Core repository remains the source of truth for system-wide governance and pilot
 - No direct UI → Core calls allowed
 - Frontend remains render-only
 - Session expiry create action fix deployed
-- Mobile operational stabilization in progress
-- RBAC / UI role visibility audit required next
+- Controlled Web Deployment Closure completed
+- Additional Role Users Validation closed
+- Web Logout Validation closed
+- First Pilot Governance Reality Consolidation completed
 
 Latest relevant checkpoint:
 
 - web-create-session-expiry-fix-2026-05-19
+- web-controlled-deployment-final-closure-2026-06-01
+- first-pilot-governance-reality-consolidation-2026-06-10
 - pilot-zero-live-findings-2026-05-19
 
 ## 3) Docs Map
@@ -60,14 +64,16 @@ Latest relevant checkpoint:
 
 The current highest Web priority is:
 
-RBAC / UI Role Visibility Audit
+First Pilot Governance Start Approval Readiness Review
 
 Reason:
 
-- Worker Dashboard quick actions visibility mismatch was observed.
-- Worker Action Plans access behavior requires alignment with backend RBAC policy.
-- UI visibility must not conflict with Core authorization.
-- Frontend must remain render-only and must not invent permission logic.
+- Controlled Web Deployment Closure completed.
+- Additional Role Users Validation closed.
+- Web Logout Validation closed.
+- Core ↔ Web Governance Alignment closed.
+- No active Web runtime blocker identified.
+- Remaining open items are governance approval checkpoints.
 
 ## 6) Final Rule
 
