@@ -3,7 +3,7 @@
 Document Type: Web Chat Handoff Context  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE HANDOFF  
-Last Updated: 2026-05-20  
+Last Updated: 2026-06-11  
 
 ## 1) Purpose
 
@@ -95,14 +95,16 @@ Current Web baseline:
 
 Current highest Web priority:
 
-RBAC / UI Role Visibility Audit
+First Pilot Governance Start Approval Readiness Review
 
 Reason:
 
-- Worker Dashboard quick actions visibility mismatch was observed.
-- Worker Action Plans access / visibility requires alignment with Core authorization.
-- UI visibility must not conflict with backend RBAC policy.
-- Frontend must not create independent permission truth.
+- Controlled Web Deployment Closure completed.
+- Web Logout Track closed.
+- Additional Role Users Validation closed.
+- Core ↔ Web Governance Alignment closed.
+- No active Web runtime blocker identified.
+- Remaining open items are governance approval checkpoints.
 
 ## 5) Web Documentation Entry Points
 
@@ -128,6 +130,8 @@ Web tags:
 
 - web-create-session-expiry-fix-2026-05-19
 - web-docs-organization-baseline-2026-05-20
+- web-controlled-deployment-final-closure-2026-06-01
+- first-pilot-governance-reality-consolidation-2026-06-10
 
 Core tags relevant to Web work:
 
@@ -143,17 +147,19 @@ Do not assume current status from memory only.
 
 Highest active Web findings:
 
-- WEB-RBAC-01: Worker Dashboard quick actions visibility mismatch.
-- WEB-RBAC-02: Worker Action Plans access / visibility requires alignment with Core authorization.
 - WEB-UI-01: Action Plan list/detail status display mismatch observed.
 - WEB-UI-02: STATUS_UPDATE_FAILED appears as technical user-facing message.
-- WEB-UI-03: Manager Assigned To dropdown behavior requires UX/RBAC review.
+- WEB-UI-03: Manager Assigned To dropdown behavior requires UX review.
 
 Resolved Web findings:
 
 - WEB-AUTH-01: Session expiry during create server actions fixed.
 - WEB-DASH-01: Admin Panel Action Plan metrics inconsistency resolved.
-- WEB-DEPLOY-01: Apple Silicon image platform mismatch risk resolved through linux/amd64 build strategy.
+- WEB-DEPLOY-01: Apple Silicon image platform mismatch risk resolved.
+- WEB-RBAC-01: Worker Dashboard quick actions visibility alignment completed.
+- WEB-RBAC-02: Worker Action Plans visibility alignment completed.
+- WEB-LOGOUT-01: Web Logout Validation Track closed.
+- WEB-ROLES-01: Additional Role Users Validation Track closed.
 
 See:
 
@@ -222,6 +228,8 @@ Read these files first and summarize the current Web state before any execution:
 - docs/FINDINGS_REGISTER.md
 - docs/CHAT_HANDOFF_CONTEXT.md
 - docs/system/WEB_DOCS_GOVERNANCE_INDEX_2026_05_18.md
+- docs/deployment/WEB_CURRENT_STATE_AFTER_CONTROLLED_DEPLOYMENT_CLOSURE_2026_06_01.md
+- docs/FIRST_PILOT_GOVERNANCE_REALITY_CONSOLIDATION_REVIEW_2026_06_10.md
 
 Then wait for approval before suggesting commands.
 
