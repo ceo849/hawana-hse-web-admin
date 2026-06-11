@@ -64,6 +64,40 @@ Current stable references:
 
 ---
 
+
+# 2A) CURRENT AUTHORITATIVE WEB REALITY
+
+Current authoritative Web reality:
+
+- Web Runtime = Stable
+- API Proxy = Stable
+- Authentication = Stable
+- Additional Role Users Validation = Closed
+- Web Logout Validation = Closed
+- Core ↔ Web Governance Alignment = Closed
+- Controlled Web Deployment = Closed
+- Architecture = Preserved
+- Web → API Proxy → Core = Preserved
+- Frontend Remains Render-Only
+- No Direct UI → Core Access Approved
+
+Current pilot reality:
+
+- First Real Pilot = NOT APPROVED YET
+- No Active Web Runtime Blocker Identified
+- Open Items = Governance Approval Items
+- Pilot Tenant Approval Pending
+- Pilot User Approval Pending
+- Pilot Start Approval Pending
+
+Authoritative current-state references:
+
+- docs/deployment/WEB_CURRENT_STATE_AFTER_CONTROLLED_DEPLOYMENT_CLOSURE_2026_06_01.md
+- docs/FIRST_PILOT_GOVERNANCE_REALITY_CONSOLIDATION_REVIEW_2026_06_10.md
+
+---
+
+
 # 3) WEB GOVERNANCE RULES | قواعد حوكمة الويب
 
 ## RULE 1 — No Direct Core Access
