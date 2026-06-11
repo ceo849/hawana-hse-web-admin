@@ -3,7 +3,7 @@
 Document Type: Web Findings Register  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE REGISTER  
-Last Updated: 2026-05-20  
+Last Updated: 2026-06-11  
 
 ## 1) Purpose
 
@@ -85,14 +85,16 @@ Validated Web behavior that works as expected.
 
 The current highest Web priority is:
 
-Pilot Validation After RBAC Alignment
+First Pilot Governance Start Approval Readiness Review
 
 Reason:
 
-- Core Worker assigned-only Action Plans access has been implemented.
-- Web Dashboard quick actions are now role-aware.
-- Web Mobile quick actions are now role-aware.
-- Remaining open Web findings are UI refinement, messaging, assignment UX, and validation follow-up.
+- Controlled Web Deployment Closure completed.
+- Additional Role Users Validation closed.
+- Web Logout Validation closed.
+- Core ↔ Web Governance Alignment closed.
+- No active Web runtime blocker identified.
+- Remaining open items are governance approval checkpoints.
 
 ## 7) Current Decision
 
