@@ -65,42 +65,9 @@ export async function GET(req: Request) {
 // =========================
 // POST
 // =========================
-export async function POST(req: Request) {
-  try {
-    const token = await getToken();
-
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    let body: unknown;
-
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { message: "Invalid request body" },
-        { status: 400 }
-      );
-    }
-
-    const upstream = await fetch(buildUpstreamUrl(), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-
-    return buildProxyResponse(upstream);
-  } catch (error) {
-    console.error("API PROXY ERROR (POST /companies):", error);
-
-    return NextResponse.json(
-      { message: "Upstream service unavailable" },
-      { status: 503 }
-    );
-  }
+export async function POST(_req: Request) {
+  return NextResponse.json(
+    { message: "Tenant-scoped company creation has been disabled" },
+    { status: 410 }
+  );
 }
