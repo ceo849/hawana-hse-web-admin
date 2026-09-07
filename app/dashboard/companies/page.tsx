@@ -8,10 +8,7 @@ import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import PageHeader from "@/components/ui/page-header";
 import ErrorState from "@/components/ui/error-state";
-import { decodeJwtPayload } from "@/src/auth/jwt";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
-
-type Role = "OWNER" | "ADMIN" | "MANAGER" | "WORKER" | "VIEWER" | "UNKNOWN";
 
 type CompanyDto = {
   id: string;
@@ -118,10 +115,6 @@ export default async function CompaniesPage({
 
   const token = await requireAccessToken();
 
-  const payload = decodeJwtPayload(token);
-  const currentRole: Role = (payload?.role as Role) ?? "UNKNOWN";
-  const canShowCreateAction = currentRole === "OWNER";
-
   const page = Math.max(1, Number(resolvedSearchParams.page ?? "1") || 1);
   const search = resolvedSearchParams.search ?? "";
   const limit = 10;
@@ -184,13 +177,6 @@ export default async function CompaniesPage({
       <PageHeader
         title="Companies"
         subtitle="Tenant company administration"
-        action={
-          canShowCreateAction ? (
-            <Link href="/dashboard/companies/new" style={headerAction}>
-              + New Company
-            </Link>
-          ) : undefined
-        }
       />
 
       <section style={section}>
@@ -310,14 +296,6 @@ const sectionTitle: React.CSSProperties = {
 const sectionMeta: React.CSSProperties = {
   fontSize: 12,
   color: "#9ca3af",
-};
-
-const headerAction: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 12,
-  background: "#111827",
-  color: "#fff",
-  textDecoration: "none",
 };
 
 const tableCard: React.CSSProperties = {
