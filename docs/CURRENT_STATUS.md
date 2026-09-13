@@ -3,7 +3,8 @@
 Document Type: Web Current Status Summary  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE SUMMARY  
-Last Updated: 2026-06-11  
+Last Updated: 2026-09-14
+Update Scope: UI-06 / WEB-UI-02 documentation reconciliation only. Other current-state statements retain their prior evidence basis and were not independently revalidated by this update.
 
 ## 1) Current Web Baseline
 
@@ -75,6 +76,14 @@ Reason:
 - No active Web runtime blocker has been identified.
 - Remaining open items are governance approval checkpoints.
 
+UI-06 / WEB-UI-02 closure — 2026-09-13:
+
+- Technical error-key exposure in the Action Plan status-update rendering path is CLOSED.
+- STATUS_UPDATE_FAILED is mapped to: `Unable to update the Action Plan status. Please try again.`
+- Unknown error keys are not rendered raw to the user.
+- Closure level: CONTROLLED ENGINEERING IMPLEMENTATION + REMOTE PRESERVATION + BOUNDED ISOLATED LOCAL RUNTIME VERIFICATION.
+- This is NOT Production Runtime Verification, NOT Production Deployment, and NOT real-Core negative-path end-to-end verification.
+
 ## 5) Current Web Open Risk Areas
 
 High:
@@ -84,7 +93,6 @@ High:
 Medium:
 
 - Action Plan list/detail status refresh mismatch.
-- Technical error messages such as STATUS_UPDATE_FAILED.
 - Manager Assigned To dropdown UX inconsistency.
 
 Low:

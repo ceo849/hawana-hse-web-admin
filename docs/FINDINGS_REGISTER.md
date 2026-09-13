@@ -3,7 +3,7 @@
 Document Type: Web Findings Register  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE REGISTER  
-Last Updated: 2026-06-11  
+Last Updated: 2026-09-14
 
 ## 1) Purpose
 
@@ -52,7 +52,6 @@ Validated Web behavior that works as expected.
 | ID | Area | Finding | Severity | Status | Decision / Next Step | Source |
 |---|---|---|---|---|---|---|
 | WEB-UI-01 | UI / Data Refresh | Action Plan list/detail status display mismatch observed during testing | MEDIUM | OPEN | Verify later; not classified as Workflow failure | Pilot Zero live test |
-| WEB-UI-02 | UI / Messaging | STATUS_UPDATE_FAILED appears as technical user-facing message | MEDIUM | OPEN | Replace later with operationally clear message | Pilot Zero live test |
 | WEB-UI-03 | UI / Assignment | Manager Assigned To dropdown behavior requires UX/RBAC review | MEDIUM | OPEN | Review in Manager assignment UX follow-up | Pilot Zero live test |
 | WEB-UI-04 | UI / Readability | UUID values appear directly in operational screens | LOW | OPEN | Improve readability later | Mobile operational audit |
 | WEB-UI-05 | UI / Labels | Raw enum/status labels appear in some screens | LOW | OPEN | Improve labels later | Mobile operational audit |
@@ -68,6 +67,7 @@ Validated Web behavior that works as expected.
 | WEB-AUTH-01 | Auth / Server Actions | Session expiry during create server actions caused Application Error | HIGH | RESOLVED | Web-only fix deployed; expired submit redirects to Login | web-create-session-expiry-fix-2026-05-19 |
 | WEB-DASH-01 | Dashboard / Metrics | Admin Panel Action Plan metrics inconsistency | MEDIUM | RESOLVED | Admin Panel aligned with centralized dashboard metrics flow | Pilot audit |
 | WEB-DEPLOY-01 | Deployment | Apple Silicon image platform mismatch risk | MEDIUM | RESOLVED | linux/amd64 buildx strategy validated | Web deployment validation |
+| WEB-UI-02 | UI / Messaging | STATUS_UPDATE_FAILED exposed as a technical user-facing message | MEDIUM | RESOLVED | Technical error-key exposure is closed in the verified Web rendering path. STATUS_UPDATE_FAILED is mapped to "Unable to update the Action Plan status. Please try again."; unknown error keys are not rendered raw. Verified at Controlled Engineering Implementation + Remote Preservation + Bounded Isolated Local Runtime Verification level. NOT Production Runtime Verification and NOT Production Deployment. | UI-06 controlled closure — 2026-09-13 |
 
 ## 5) Passed Web Validations
 

@@ -3,7 +3,8 @@
 Document Type: Web Chat Handoff Context  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE HANDOFF  
-Last Updated: 2026-06-11  
+Last Updated: 2026-09-14
+Update Scope: UI-06 / WEB-UI-02 documentation reconciliation only. Other handoff and current-state statements retain their prior evidence basis and were not independently revalidated by this update.
 
 ## 1) Purpose
 
@@ -148,7 +149,6 @@ Do not assume current status from memory only.
 Highest active Web findings:
 
 - WEB-UI-01: Action Plan list/detail status display mismatch observed.
-- WEB-UI-02: STATUS_UPDATE_FAILED appears as technical user-facing message.
 - WEB-UI-03: Manager Assigned To dropdown behavior requires UX review.
 
 Resolved Web findings:
@@ -160,6 +160,7 @@ Resolved Web findings:
 - WEB-RBAC-02: Worker Action Plans visibility alignment completed.
 - WEB-LOGOUT-01: Web Logout Validation Track closed.
 - WEB-ROLES-01: Additional Role Users Validation Track closed.
+- WEB-UI-02: Technical error-key exposure CLOSED on 2026-09-13. Known STATUS_UPDATE_FAILED is mapped to an operational user-facing message and unknown error keys are not rendered raw. Closure level: Controlled Engineering Implementation + Remote Preservation + Bounded Isolated Local Runtime Verification. NOT Production Runtime Verification or Production Deployment.
 
 See:
 
