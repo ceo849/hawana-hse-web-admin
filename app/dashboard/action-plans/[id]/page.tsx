@@ -50,6 +50,18 @@ function normalizeId(raw: unknown): string {
   return String(raw ?? "").trim();
 }
 
+function getUserFacingErrorMessage(raw: unknown): string | null {
+  const errorKey = normalizeId(raw);
+
+  if (!errorKey) return null;
+
+  if (errorKey === "STATUS_UPDATE_FAILED") {
+    return "Unable to update the Action Plan status. Please try again.";
+  }
+
+  return null;
+}
+
 function actionPlanEditPath(id: string) {
   return `/dashboard/action-plans/${encodeURIComponent(id)}/edit`;
 }
@@ -173,7 +185,7 @@ export default async function ActionPlanPage({
   const ap = (await res.json()) as ActionPlan;
 
   const nextStatuses = allowedNextStatuses(ap.status);
-  const err = normalizeId(resolvedSearchParams?.err);
+  const errorMessage = getUserFacingErrorMessage(resolvedSearchParams?.err);
   const statusStyle = getStatusStyle(ap.status);
 
   async function updateStatus(formData: FormData) {
@@ -210,7 +222,7 @@ export default async function ActionPlanPage({
         subtitle="Plan insight and control"
       />
 
-      {err && <ErrorState message={err} />}
+      {errorMessage && <ErrorState message={errorMessage} />}
 
       <div style={{ marginBottom: 16 }}>
         <span style={{ padding: "6px 10px", borderRadius: 999, ...statusStyle }}>
