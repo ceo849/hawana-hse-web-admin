@@ -74,3 +74,42 @@ export async function GET(req: NextRequest, context: RouteContext) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest, context: RouteContext) {
+  try {
+    const token = req.cookies.get("access_token")?.value ?? null;
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = await resolveId(context.params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing safety report id" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.text();
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body,
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (PATCH /safety-reports/[id]):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
+}

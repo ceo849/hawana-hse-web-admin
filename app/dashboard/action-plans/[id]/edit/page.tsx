@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic";
 
 import { headers, cookies } from "next/headers"; // ✅ FIX
 
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAccessToken } from "@/lib/server-auth";
 import { serverAppFetch } from "@/src/lib/server-app-fetch";
@@ -61,7 +60,7 @@ export default async function EditActionPlanPage({
       <div style={container}>
         <PageHeader
           title="Edit Action Plan"
-          subtitle="Update the action plan title and description"
+          subtitle="Update the action plan due date"
         />
         <ErrorState message="Failed to load action plan (network/server error)" />
       </div>
@@ -75,7 +74,7 @@ export default async function EditActionPlanPage({
       <div style={container}>
         <PageHeader
           title="Edit Action Plan"
-          subtitle="Update the action plan title and description"
+          subtitle="Update the action plan due date"
         />
         <ErrorState message="Failed to load action plan" />
       </div>
@@ -128,98 +127,14 @@ export default async function EditActionPlanPage({
     redirect(`/dashboard/action-plans/${id}`);
   }
 
-  async function updateActionPlan(formData: FormData) {
-    "use server";
-
-    const tokenInner = await requireAccessToken();
-
-    const title = normalize(formData.get("title"));
-    const description = normalize(formData.get("description"));
-
-    if (!title) {
-      redirect(
-        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
-          "Title is required"
-        )}`
-      );
-    }
-
-    const res = await serverAppFetch(
-      `/api/action-plans/${encodeURIComponent(id)}`,
-      tokenInner,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          description: description || null,
-        }),
-      }
-    );
-
-    if (res.status === 401) redirect("/login");
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      redirect(
-        `/dashboard/action-plans/${id}/edit?error=${encodeURIComponent(
-          `Update failed (${res.status}) ${text}`
-        )}`
-      );
-    }
-
-    redirect(`/dashboard/action-plans/${id}`);
-  }
-
   return (
     <div style={container}>
       <PageHeader
         title="Edit Action Plan"
-        subtitle="Update the action plan title and description"
+        subtitle="Update the action plan due date"
       />
 
       {error && <ErrorState message={error} />}
-
-      <form action={updateActionPlan} style={form}>
-        <div style={card}>
-          <div>
-            <label style={label}>Title</label>
-            <input
-              name="title"
-              defaultValue={ap.title}
-              required
-              placeholder="Update action plan title"
-              style={input}
-            />
-          </div>
-
-          <div>
-            <label style={label}>Description</label>
-            <textarea
-              name="description"
-              defaultValue={ap.description ?? ""}
-              rows={4}
-              placeholder="Update description"
-              style={input}
-            />
-          </div>
-        </div>
-
-        <div style={actionsRow}>
-          <button type="submit" style={primaryBtn}>
-            Update Action Plan
-          </button>
-
-          <Link
-            href={`/dashboard/action-plans/${ap.id}`}
-            style={cancelLink}
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
 
       <form action={updateDueDate} style={form}>
         <div style={card}>
@@ -289,10 +204,4 @@ const primaryBtn: React.CSSProperties = {
   borderRadius: 10,
   background: "#111",
   color: "#fff",
-};
-
-const cancelLink: React.CSSProperties = {
-  textDecoration: "none",
-  color: "#111827",
-  fontWeight: 600,
 };

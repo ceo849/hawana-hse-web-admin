@@ -22,11 +22,6 @@ function normalizePath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-// ===== Convert /api → /v1 =====
-function toCorePath(path: string): string {
-  return path.replace(/^\/api/, "/v1");
-}
-
 // ===== Forward request cookies + Bearer (RSC / route subrequests) =====
 async function buildAuthHeaders(
   optionsHeaders: HeadersInit | undefined
@@ -68,14 +63,14 @@ async function buildAuthHeaders(
   return h;
 }
 
-// ===== Base URL (STABLE) =====
+// ===== Web Self Base URL =====
 async function getBaseUrl(): Promise<string> {
-  // 1) Core direct (Docker / Production internal)
-  if (process.env.CORE_API_BASE_URL) {
-    return process.env.CORE_API_BASE_URL.replace(/\/$/, "");
+  // 1) Explicit internal Web origin for containerized/runtime environments
+  if (process.env.WEB_INTERNAL_BASE_URL) {
+    return process.env.WEB_INTERNAL_BASE_URL.replace(/\/$/, "");
   }
 
-  // 2) SSR → Proxy via host
+  // 2) SSR → same Web runtime via inbound host
   const h = await headers();
   const host = h.get("host");
 
@@ -83,7 +78,7 @@ async function getBaseUrl(): Promise<string> {
     return `http://${host}`;
   }
 
-  // 3) Fallback (still proxy-safe via /api in path)
+  // 3) Local development fallback
   return "http://localhost:3005";
 }
 
@@ -108,14 +103,8 @@ export async function serverAppFetch(
     options = arg2 || {};
   }
 
-  const isCoreDirect = !!process.env.CORE_API_BASE_URL;
-
   const baseUrl = await getBaseUrl();
-
-  const finalPath = isCoreDirect
-    ? toCorePath(normalizePath(path))
-    : normalizePath(path);
-
+  const finalPath = normalizePath(path);
   const finalUrl = `${baseUrl}${finalPath}`;
 
   console.log("FINAL_URL:", finalUrl);

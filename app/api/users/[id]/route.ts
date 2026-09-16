@@ -123,3 +123,38 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     );
   }
 }
+
+export async function DELETE(_req: Request, { params }: RouteContext) {
+  try {
+    const token = await getToken();
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = await resolveId(params);
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "Missing user id" },
+        { status: 400 }
+      );
+    }
+
+    const upstream = await fetch(buildUpstreamUrl(id), {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return buildProxyResponse(upstream);
+  } catch (error) {
+    console.error("API PROXY ERROR (DELETE /users/[id]):", error);
+
+    return NextResponse.json(
+      { message: "Upstream service unavailable" },
+      { status: 503 }
+    );
+  }
+}
