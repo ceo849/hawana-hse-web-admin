@@ -72,10 +72,12 @@ async function getBaseUrl(): Promise<string> {
 
   // 2) SSR → same Web runtime via inbound host
   const h = await headers();
-  const host = h.get("host");
+  const host = h.get("x-forwarded-host") || h.get("host");
+  const proto =
+    h.get("x-forwarded-proto")?.split(",")[0]?.trim() || "http";
 
   if (host) {
-    return `http://${host}`;
+    return `${proto}://${host}`;
   }
 
   // 3) Local development fallback
