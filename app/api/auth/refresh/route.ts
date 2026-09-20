@@ -80,7 +80,6 @@ export async function POST() {
 
     const res = NextResponse.json({
       ok: true,
-      access_token: String(accessToken),
     });
 
     // ✅ FIX: use unified options

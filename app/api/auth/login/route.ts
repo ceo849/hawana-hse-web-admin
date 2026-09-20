@@ -76,7 +76,6 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({
       ok: true,
-      accessToken,
     });
 
     res.cookies.set("access_token", String(accessToken), {
