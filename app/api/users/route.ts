@@ -14,6 +14,48 @@ function buildUpstreamUrl(search: string = "") {
   return `${CORE_API}${API_PREFIX}/users${search}`;
 }
 
+const CREATE_USER_FALLBACK_MESSAGE = "Unable to create user";
+
+const SAFE_CREATE_USER_MESSAGES = new Set([
+  "email is required",
+  "fullName is required",
+  "password is required",
+  "password must be at least 8 characters",
+  "role is required",
+  "Invalid role",
+  "email already exists",
+  "User limit reached for current plan",
+  "Insufficient authority to create user with requested role",
+]);
+
+function sanitizeCreateUserMessage(value: unknown): string {
+  if (Array.isArray(value)) {
+    const messages = value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (
+      messages.length > 0 &&
+      messages.every((message) => SAFE_CREATE_USER_MESSAGES.has(message))
+    ) {
+      return messages.join(" | ");
+    }
+
+    return CREATE_USER_FALLBACK_MESSAGE;
+  }
+
+  if (typeof value === "string") {
+    const message = value.trim();
+
+    if (SAFE_CREATE_USER_MESSAGES.has(message)) {
+      return message;
+    }
+  }
+
+  return CREATE_USER_FALLBACK_MESSAGE;
+}
+
 async function buildProxyResponse(upstream: Response) {
   const contentType =
     upstream.headers.get("content-type") ??
@@ -27,6 +69,30 @@ async function buildProxyResponse(upstream: Response) {
       "content-type": contentType,
     },
   });
+}
+
+async function buildCreateUserProxyResponse(upstream: Response) {
+  if (upstream.ok) {
+    return buildProxyResponse(upstream);
+  }
+
+  const contentType = upstream.headers.get("content-type") ?? "";
+  let message = CREATE_USER_FALLBACK_MESSAGE;
+
+  if (contentType.includes("application/json")) {
+    const data = (await upstream.json().catch(() => null)) as
+      | Record<string, unknown>
+      | null;
+
+    if (data) {
+      message = sanitizeCreateUserMessage(data.message ?? data.error);
+    }
+  }
+
+  return NextResponse.json(
+    { message },
+    { status: upstream.status }
+  );
 }
 
 // =========================
@@ -100,7 +166,7 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    return buildProxyResponse(upstream);
+    return buildCreateUserProxyResponse(upstream);
   } catch (error) {
     console.error("API PROXY ERROR (POST /users):", error);
 

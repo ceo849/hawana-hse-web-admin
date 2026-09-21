@@ -14,26 +14,56 @@ type PageProps = {
   searchParams?: Promise<{ error?: string }> | { error?: string };
 };
 
+const CREATE_USER_FALLBACK_MESSAGE = "Unable to create user";
+
+const SAFE_CREATE_USER_MESSAGES = new Set([
+  "email is required",
+  "fullName is required",
+  "password is required",
+  "password must be at least 8 characters",
+  "role is required",
+  "Invalid role",
+  "email already exists",
+  "User limit reached for current plan",
+  "Insufficient authority to create user with requested role",
+]);
+
+function sanitizeCreateUserMessage(value: unknown): string {
+  if (Array.isArray(value)) {
+    const messages = value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (
+      messages.length > 0 &&
+      messages.every((message) => SAFE_CREATE_USER_MESSAGES.has(message))
+    ) {
+      return messages.join(" | ");
+    }
+
+    return CREATE_USER_FALLBACK_MESSAGE;
+  }
+
+  if (typeof value === "string") {
+    const message = value.trim();
+
+    if (SAFE_CREATE_USER_MESSAGES.has(message)) {
+      return message;
+    }
+  }
+
+  return CREATE_USER_FALLBACK_MESSAGE;
+}
+
 function extractErrorMessage(data: unknown): string {
   if (typeof data !== "object" || data === null) {
-    return "Create user failed";
+    return CREATE_USER_FALLBACK_MESSAGE;
   }
 
   const candidate = data as Record<string, unknown>;
 
-  if (Array.isArray(candidate.message)) {
-    return candidate.message.map(String).join(" | ");
-  }
-
-  if (typeof candidate.message === "string" && candidate.message.trim()) {
-    return candidate.message;
-  }
-
-  if (typeof candidate.error === "string" && candidate.error.trim()) {
-    return candidate.error;
-  }
-
-  return "Create user failed";
+  return sanitizeCreateUserMessage(candidate.message ?? candidate.error);
 }
 
 function isNextRedirectError(error: unknown): boolean {
@@ -113,7 +143,7 @@ export default async function NewUserPage({ searchParams }: PageProps) {
         } else {
           const text = await res.text().catch(() => "");
           if (text.trim()) {
-            message = text;
+            message = sanitizeCreateUserMessage(text);
           }
         }
 
@@ -129,7 +159,9 @@ export default async function NewUserPage({ searchParams }: PageProps) {
       }
 
       const message =
-        error instanceof Error ? error.message : "Create user failed";
+        error instanceof Error
+          ? sanitizeCreateUserMessage(error.message)
+          : CREATE_USER_FALLBACK_MESSAGE;
 
       redirect(`/dashboard/users/new?error=${encodeURIComponent(message)}`);
     }
