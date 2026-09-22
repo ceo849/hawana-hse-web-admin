@@ -35,6 +35,9 @@ Latest relevant checkpoint:
 - web-controlled-deployment-final-closure-2026-06-01
 - first-pilot-governance-reality-consolidation-2026-06-10
 - pilot-zero-live-findings-2026-05-19
+- SR-21 current-state anchor: `docs/deployment/WEB_CURRENT_STATE_AFTER_SR21_CONTROLLED_PRODUCTION_EVOLUTION_CLOSURE_2026_09_18.md`
+- `finding1-auth-response-remediation-verified-2026-09-20`
+- `finding2-create-user-error-sanitization-verified-2026-09-21`
 
 ## 3) Docs Map
 
@@ -64,7 +67,7 @@ Latest relevant checkpoint:
 
 The current highest Web priority is:
 
-First Pilot Governance Start Approval Readiness Review
+FIRST REAL PILOT GOVERNANCE READINESS REVIEW (Core-governed system-wide track)
 
 Reason:
 
@@ -73,7 +76,7 @@ Reason:
 - Web Logout Validation closed.
 - Core ↔ Web Governance Alignment closed.
 - No active Web runtime blocker identified.
-- Remaining open items are governance approval checkpoints.
+- Open Web-specific MEDIUM/LOW findings remain and require separate review or refinement; they are not automatically classified as Pilot blockers. System-wide Pilot readiness and approval remain governed by Core.
 
 ## 6) Final Rule
 
@@ -86,6 +89,22 @@ Read:
 docs/system/WEB_DOCS_GOVERNANCE_INDEX_2026_05_18.md
 
 If the issue is system-wide or pilot-wide, document it in Core first.
+
+## Current Evidence Refresh — 2026-09-22
+
+Current Web documentation should be interpreted using the following precedence:
+
+1. Validated runtime / Production evidence.
+2. Current Core system-wide and pilot governance authority.
+3. SR-21 Web current-state anchor for the SR-21 closure state.
+4. Later verified Web remediation evidence for Finding 1 and Finding 2.
+5. Historical June 2026 Web / Pilot documents as context, not newer runtime truth.
+
+Current system-wide track:
+
+`FIRST REAL PILOT GOVERNANCE READINESS REVIEW`
+
+External Pilot remains NOT APPROVED.
 
 Was anything deleted?
 

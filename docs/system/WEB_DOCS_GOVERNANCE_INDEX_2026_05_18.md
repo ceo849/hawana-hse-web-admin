@@ -85,12 +85,18 @@ Current pilot reality:
 
 - First Real Pilot = NOT APPROVED YET
 - No Active Web Runtime Blocker Identified
-- Open Items = Governance Approval Items
+- Open Web-specific MEDIUM/LOW findings remain under separate Web review; system-wide Pilot readiness and approval remain governed by Core
 - Pilot Tenant Approval Pending
 - Pilot User Approval Pending
 - Pilot Start Approval Pending
 
-Authoritative current-state references:
+Current Web evidence references:
+
+- docs/deployment/WEB_CURRENT_STATE_AFTER_SR21_CONTROLLED_PRODUCTION_EVOLUTION_CLOSURE_2026_09_18.md
+- Finding 1 auth-response remediation: commit `5ec7bd52afdea90dac73546b065a7eade509b2e8`, tag `finding1-auth-response-remediation-verified-2026-09-20`
+- Finding 2 create-user error sanitization: commit `52859a21398cbbe6cae1fdbb0dd5bd0bf355a1a0`, tag `finding2-create-user-error-sanitization-verified-2026-09-21`
+
+Historical Web / Pilot context references:
 
 - docs/deployment/WEB_CURRENT_STATE_AFTER_CONTROLLED_DEPLOYMENT_CLOSURE_2026_06_01.md
 - docs/FIRST_PILOT_GOVERNANCE_REALITY_CONSOLIDATION_REVIEW_2026_06_10.md
@@ -554,5 +560,27 @@ Governed Operational Interface Layer
 Not as an isolated UI application.
 
 ---
+
+# CURRENT WEB REALITY ADDENDUM — 2026-09-22
+
+This additive governance entry aligns Web documentation navigation with the latest verified Web evidence and the current Core-governed pilot track.
+
+Current Web evidence chain:
+
+- SR-21 Controlled Production Evolution: CLOSED WITH VERIFIED PRODUCTION EVIDENCE.
+- SR-21 current-state anchor: `docs/deployment/WEB_CURRENT_STATE_AFTER_SR21_CONTROLLED_PRODUCTION_EVOLUTION_CLOSURE_2026_09_18.md`.
+- Finding 1: CLOSED — auth-response token exposure remediated and remotely preserved.
+- Finding 2: CLOSED — create-user technical error exposure remediated and remotely preserved.
+
+Current governance boundary:
+
+- Architecture remains `Web → API Proxy → Core`.
+- Core remains authoritative for system-wide and pilot governance.
+- Current system-wide track: `FIRST REAL PILOT GOVERNANCE READINESS REVIEW`.
+- External Pilot: NOT APPROVED.
+- Pilot Tenant approval: Pending.
+- Pilot Start approval: Pending.
+- Web-specific MEDIUM/LOW findings remain separate review items and are not automatically Pilot blockers.
+- Historical June 2026 references remain preserved as historical evidence.
 
 END OF DOCUMENT

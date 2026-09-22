@@ -3,8 +3,8 @@
 Document Type: Web Chat Handoff Context  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE HANDOFF  
-Last Updated: 2026-09-14
-Update Scope: UI-06 / WEB-UI-02 documentation reconciliation only. Other handoff and current-state statements retain their prior evidence basis and were not independently revalidated by this update.
+Last Updated: 2026-09-22
+Update Scope: Current Web handoff reconciliation after SR-21 closure, Finding 1 auth-response remediation, Finding 2 create-user error sanitization, and alignment with the current Core-governed pilot-readiness track. Historical evidence remains preserved.
 
 ## 1) Purpose
 
@@ -96,7 +96,7 @@ Current Web baseline:
 
 Current highest Web priority:
 
-First Pilot Governance Start Approval Readiness Review
+FIRST REAL PILOT GOVERNANCE READINESS REVIEW (Core-governed system-wide track)
 
 Reason:
 
@@ -105,7 +105,7 @@ Reason:
 - Additional Role Users Validation closed.
 - Core ↔ Web Governance Alignment closed.
 - No active Web runtime blocker identified.
-- Remaining open items are governance approval checkpoints.
+- Open Web-specific MEDIUM/LOW findings remain and require separate review or refinement; they are not automatically classified as Pilot blockers. System-wide Pilot readiness and approval remain governed by Core.
 
 ## 5) Web Documentation Entry Points
 
@@ -260,6 +260,26 @@ docs/FINDINGS_REGISTER.md
 Current Web state updates go to:
 
 docs/CURRENT_STATUS.md
+
+## Current Web Handoff Reconciliation — 2026-09-22
+
+Latest verified Web evidence chain:
+
+1. SR-21 Controlled Production Evolution closed with verified Production evidence.
+2. SR-21 current-state anchor preserved at `docs/deployment/WEB_CURRENT_STATE_AFTER_SR21_CONTROLLED_PRODUCTION_EVOLUTION_CLOSURE_2026_09_18.md`.
+3. Finding 1 closed under commit `5ec7bd52afdea90dac73546b065a7eade509b2e8` and tag `finding1-auth-response-remediation-verified-2026-09-20`.
+4. Finding 2 closed under commit `52859a21398cbbe6cae1fdbb0dd5bd0bf355a1a0` and tag `finding2-create-user-error-sanitization-verified-2026-09-21`.
+
+Current continuation boundary:
+
+- Web architecture remains `Web → API Proxy → Core`.
+- Core remains the source of truth for system-wide and pilot governance.
+- Current system-wide track: `FIRST REAL PILOT GOVERNANCE READINESS REVIEW`.
+- External Pilot: NOT APPROVED.
+- Pilot Tenant approval: Pending.
+- Pilot Start approval: Pending.
+- Existing Web MEDIUM/LOW findings remain open unless separately reviewed.
+- Their existence does not by itself establish a Pilot blocker.
 
 Was anything deleted?
 

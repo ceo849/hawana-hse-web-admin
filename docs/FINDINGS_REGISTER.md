@@ -3,7 +3,7 @@
 Document Type: Web Findings Register  
 Repository: hawana-hse-web-admin  
 Status: ACTIVE REGISTER  
-Last Updated: 2026-09-14
+Last Updated: 2026-09-22
 
 ## 1) Purpose
 
@@ -85,7 +85,7 @@ Validated Web behavior that works as expected.
 
 The current highest Web priority is:
 
-First Pilot Governance Start Approval Readiness Review
+FIRST REAL PILOT GOVERNANCE READINESS REVIEW (Core-governed system-wide track)
 
 Reason:
 
@@ -94,7 +94,7 @@ Reason:
 - Web Logout Validation closed.
 - Core ↔ Web Governance Alignment closed.
 - No active Web runtime blocker identified.
-- Remaining open items are governance approval checkpoints.
+- Open Web-specific MEDIUM/LOW findings remain and require separate review or refinement; they are not automatically classified as Pilot blockers. System-wide Pilot readiness and approval remain governed by Core.
 
 ## 7) Current Decision
 
@@ -113,6 +113,33 @@ Do not add frontend-derived business logic.
 Next controlled phase:
 
 Pilot validation and remaining Web UI refinements.
+
+## Current Findings Alignment — 2026-09-22
+
+This additive section records later verified Web remediation without repurposing or silently reclassifying historical Web finding IDs.
+
+### Finding 1 — Auth response token exposure
+
+- Status: CLOSED.
+- Commit: `5ec7bd52afdea90dac73546b065a7eade509b2e8`.
+- Tag: `finding1-auth-response-remediation-verified-2026-09-20`.
+- Verified effect: auth tokens are no longer returned in client-visible login/refresh response bodies.
+
+### Finding 2 — Create-user technical error exposure
+
+- Status: CLOSED.
+- Commit: `52859a21398cbbe6cae1fdbb0dd5bd0bf355a1a0`.
+- Tag: `finding2-create-user-error-sanitization-verified-2026-09-21`.
+- Verified effect: create-user technical errors are sanitized while safe business errors remain preserved.
+
+### Existing Web findings boundary
+
+- `WEB-UI-01`, `WEB-UI-03`, `WEB-UI-04`, `WEB-UI-05`, `WEB-MOBILE-01`, and `WEB-MOBILE-02` remain OPEN unless separately reviewed.
+- No severity or status reclassification of those six findings is performed by this documentation reconciliation.
+- Their existence does not automatically establish a Pilot blocker.
+- System-wide Pilot readiness and authorization remain governed by Core.
+- Current Core-governed track: `FIRST REAL PILOT GOVERNANCE READINESS REVIEW`.
+- External Pilot remains NOT APPROVED.
 
 Was anything deleted?
 
