@@ -203,14 +203,25 @@ export default async function SafetyReportPage({
 
       {capabilities.canCreateActionPlan && (
         <div style={{ marginTop: 16 }}>
-          <Link
-            href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(
-              report.id
-            )}`}
-            style={createActionLink}
-          >
-            + Create Action Plan
-          </Link>
+          {String(report.status ?? "").toUpperCase() === "CLOSED" ? (
+            <Link
+              href={`/dashboard/safety-reports/${encodeURIComponent(
+                report.id
+              )}/reopen`}
+              style={createActionLink}
+            >
+              Reopen with Action Plan
+            </Link>
+          ) : (
+            <Link
+              href={`/dashboard/action-plans/new?reportId=${encodeURIComponent(
+                report.id
+              )}`}
+              style={createActionLink}
+            >
+              + Create Action Plan
+            </Link>
+          )}
         </div>
       )}
 
