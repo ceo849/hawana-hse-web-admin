@@ -506,6 +506,8 @@ const primaryButton: React.CSSProperties = {
   borderRadius: 8,
   cursor: "pointer",
   fontWeight: 600,
+  background: "#111",
+  color: "#fff",
 };
 
 const secondaryLink: React.CSSProperties = {
